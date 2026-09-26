@@ -138,3 +138,106 @@
 .todolist-pref-header > button:hover {
   background-color: #d1fae5;
 }
+
+/* Custom Academic Tags Styling */
+.todolist-pref-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 28px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.todolist-pref-tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.todolist-pref-tag-delete {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.todolist-pref-tag-delete:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.todolist-pref-color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-sizing: border-box;
+  border: 2px solid transparent;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.todolist-pref-color-dot:hover {
+  transform: scale(1.15);
+}
+
+.todolist-pref-color-dot.active {
+  border-color: #0f172a;
+  transform: scale(1.2);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+}
+
+.todolist-pref-btn {
+  font: inherit;
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  background-color: #ffffff;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.todolist-pref-btn:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.todolist-pref-btn-primary {
+  background-color: #ecfdf5 !important;
+  border-color: #059669 !important;
+  color: #065f46 !important;
+  font-weight: 600;
+}
+
+.todolist-pref-btn-primary:hover {
+  background-color: #d1fae5 !important;
+}
+
+.todolist-pref-btn-danger {
+  background-color: #fef2f2 !important;
+  border-color: #ef4444 !important;
+  color: #b91c1c !important;
+  font-weight: 600;
+}
+
+.todolist-pref-btn-danger:hover {
+  background-color: #fee2e2 !important;
+}
+
+.todolist-export-grid button {
+  text-align: left;
+  padding: 7px 12px;
+}

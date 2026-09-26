@@ -277,6 +277,66 @@ window.Todolist_Preferences = (() => {
     }
   }
 
+  async function renderCustomTagsManager(doc, win) {
+    const listEl = doc.getElementById('todolist-pref-tags-list');
+    if (!listEl) return;
+    listEl.replaceChildren();
+
+    const zot = win?.Zotero || window.Zotero || (typeof Zotero !== 'undefined' ? Zotero : null);
+    if (!zot?.Todolist?.loadData) {
+      const emptySpan = doc.createElementNS(HTML, 'span');
+      emptySpan.textContent = '暂无自定义标签 (Zotero 就绪后即可管理)';
+      emptySpan.style.color = '#94a3b8';
+      emptySpan.style.fontSize = '12px';
+      listEl.appendChild(emptySpan);
+      return;
+    }
+
+    try {
+      const data = await zot.Todolist.loadData();
+      const tags = data.customTags || [];
+
+      if (tags.length === 0) {
+        const emptySpan = doc.createElementNS(HTML, 'span');
+        emptySpan.textContent = '暂无自定义标签，可在下方输入名称并选择颜色创建。';
+        emptySpan.style.color = '#94a3b8';
+        emptySpan.style.fontSize = '12px';
+        listEl.appendChild(emptySpan);
+        return;
+      }
+
+      for (const tag of tags) {
+        const badge = doc.createElementNS(HTML, 'span');
+        badge.className = 'todolist-pref-tag-badge';
+        badge.style.backgroundColor = (tag.color || '#3b82f6') + '20';
+        badge.style.color = tag.color || '#3b82f6';
+        badge.style.borderColor = (tag.color || '#3b82f6') + '40';
+
+        const label = doc.createElementNS(HTML, 'span');
+        label.textContent = `${tag.icon || '🏷️'} ${tag.name}`;
+        badge.appendChild(label);
+
+        const delBtn = doc.createElementNS(HTML, 'button');
+        delBtn.type = 'button';
+        delBtn.className = 'todolist-pref-tag-delete';
+        delBtn.textContent = '×';
+        delBtn.title = `删除标签 "${tag.name}"`;
+        delBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const current = await zot.Todolist.loadData();
+          const updatedTags = (current.customTags || []).filter((t) => t.id !== tag.id);
+          await zot.Todolist.saveData({ customTags: updatedTags });
+          renderCustomTagsManager(doc, win);
+        });
+        badge.appendChild(delBtn);
+
+        listEl.appendChild(badge);
+      }
+    } catch (err) {
+      zot?.logError?.('[Todolist] renderCustomTagsManager error: ' + err);
+    }
+  }
+
   return {
     init(win) {
       const doc = win.document;
@@ -291,6 +351,53 @@ window.Todolist_Preferences = (() => {
         renderGroup(doc, 'todolist-pref-academic', FIELDS.academic);
         renderGroup(doc, 'todolist-pref-focus', FIELDS.focus);
         renderGroup(doc, 'todolist-pref-maintenance', FIELDS.maintenance);
+
+        // Render Custom Tags Manager
+        renderCustomTagsManager(doc, win);
+
+        // Tag Color Palette Selection
+        let activeTagColor = '#ef4444';
+        const palette = doc.getElementById('todolist-tag-color-palette');
+        if (palette) {
+          const dots = palette.querySelectorAll('.todolist-pref-color-dot');
+          dots.forEach((dot) => {
+            dot.addEventListener('click', () => {
+              dots.forEach((d) => d.classList.remove('active'));
+              dot.classList.add('active');
+              activeTagColor = dot.getAttribute('data-color') || '#ef4444';
+            });
+          });
+        }
+
+        // Add Tag Action
+        const addTagBtn = doc.getElementById('todolist-btn-add-tag');
+        const tagInput = doc.getElementById('todolist-new-tag-name');
+        const handleAddTag = async () => {
+          const name = tagInput?.value?.trim();
+          if (!name) return;
+          const zot = win?.Zotero || window.Zotero || (typeof Zotero !== 'undefined' ? Zotero : null);
+          if (!zot?.Todolist) return;
+
+          const current = await zot.Todolist.loadData();
+          const tags = current.customTags || [];
+          tags.push({
+            id: 'tag_' + Date.now(),
+            name: name,
+            color: activeTagColor || '#3b82f6',
+            icon: '🏷️'
+          });
+          await zot.Todolist.saveData({ customTags: tags });
+          if (tagInput) tagInput.value = '';
+          renderCustomTagsManager(doc, win);
+        };
+
+        addTagBtn?.addEventListener('click', handleAddTag);
+        tagInput?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddTag();
+          }
+        });
 
         // Open Internal Tab
         const openTabBtn = doc.getElementById('todolist-btn-open-workspace');
@@ -317,20 +424,65 @@ window.Todolist_Preferences = (() => {
         }
 
         // Export JSON
-        const exportJsonBtn = doc.getElementById('todolist-btn-export-json');
-        if (exportJsonBtn) {
-          exportJsonBtn.addEventListener('click', () => {
-            Zotero?.Todolist?.exportData?.('json');
-          });
-        }
+        doc.getElementById('todolist-btn-export-json')?.addEventListener('click', () => {
+          Zotero?.Todolist?.exportData?.('json');
+        });
+
+        // Export CSV
+        doc.getElementById('todolist-btn-export-csv')?.addEventListener('click', () => {
+          Zotero?.Todolist?.exportData?.('csv');
+        });
 
         // Export Markdown
-        const exportMdBtn = doc.getElementById('todolist-btn-export-markdown');
-        if (exportMdBtn) {
-          exportMdBtn.addEventListener('click', () => {
-            Zotero?.Todolist?.exportData?.('markdown');
-          });
-        }
+        doc.getElementById('todolist-btn-export-markdown')?.addEventListener('click', () => {
+          Zotero?.Todolist?.exportData?.('markdown');
+        });
+
+        // Export TXT
+        doc.getElementById('todolist-btn-export-txt')?.addEventListener('click', () => {
+          Zotero?.Todolist?.exportData?.('txt');
+        });
+
+        // Import JSON
+        doc.getElementById('todolist-btn-import-file')?.addEventListener('click', async () => {
+          const mode = doc.getElementById('todolist-import-mode')?.value || 'merge';
+          const status = doc.getElementById('todolist-import-status');
+          if (status) {
+            status.textContent = '正在准备导入…';
+            status.style.color = '#059669';
+          }
+          const res = await Zotero?.Todolist?.importDataFile?.(mode, win);
+          if (res?.success) {
+            if (status) status.textContent = `✅ 成功导入 ${res.count} 个任务与标签数据！`;
+            renderCustomTagsManager(doc, win);
+          } else if (res?.error) {
+            if (status) {
+              status.textContent = `❌ 导入失败：${res.error}`;
+              status.style.color = '#ef4444';
+            }
+          } else {
+            if (status) status.textContent = '';
+          }
+        });
+
+        // Print Tasks
+        doc.getElementById('todolist-btn-print')?.addEventListener('click', () => {
+          Zotero?.Todolist?.printTasks?.(win);
+        });
+
+        // Copy Tasks Summary
+        doc.getElementById('todolist-btn-copy-summary')?.addEventListener('click', () => {
+          Zotero?.Todolist?.copyTasksSummary?.(win);
+        });
+
+        // Clear All Data
+        doc.getElementById('todolist-btn-clear-all')?.addEventListener('click', async () => {
+          if (win.confirm('⚠️ 警告：确定要清空所有待办任务、历史记录与自定义标签吗？此操作无法撤销！')) {
+            await Zotero?.Todolist?.clearAllData?.(win);
+            renderCustomTagsManager(doc, win);
+            if (statusEl) statusEl.textContent = '所有数据已清空。';
+          }
+        });
 
         // Reset button
         const resetBtn = doc.getElementById('todolist-btn-reset-defaults');

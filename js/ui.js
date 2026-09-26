@@ -84,8 +84,11 @@ const UI = {
       this.showStats();
     });
 
-    // Settings button
+    // Settings buttons (directly opens Zotero native preferences)
     document.getElementById('btn-settings')?.addEventListener('click', () => {
+      this.openSettings();
+    });
+    document.getElementById('btn-zotero-prefs')?.addEventListener('click', () => {
       this.openSettings();
     });
 
@@ -583,6 +586,29 @@ const UI = {
       return;
     }
 
+    // Zotero copy citation button click
+    if (e.target.closest('.task-action.zotero-copy-citation')) {
+      e.stopPropagation();
+      const task = TaskManager.getTaskById(taskId);
+      if (task) {
+        let citation = '';
+        if (task.zoteroAuthor && task.zoteroYear) {
+          citation = `${task.zoteroAuthor} (${task.zoteroYear}). ${task.zoteroItemTitle || task.title}`;
+        } else if (task.zoteroItemTitle) {
+          citation = `《${task.zoteroItemTitle}》`;
+        } else {
+          citation = task.title;
+        }
+        if (typeof Advanced !== 'undefined' && Advanced.copyToClipboard) {
+          Advanced.copyToClipboard(citation);
+        } else if (navigator.clipboard) {
+          navigator.clipboard.writeText(citation);
+        }
+        this.showToast(`已复制文献引用: ${citation.slice(0, 32)}${citation.length > 32 ? '…' : ''}`);
+      }
+      return;
+    }
+
     // Zotero sync note button click
     if (e.target.closest('.task-action.zotero-sync-note')) {
       e.stopPropagation();
@@ -992,21 +1018,27 @@ const UI = {
       { key: 'done', title: '已完成', icon: '✅' }
     ];
 
-    container.innerHTML = columns.map(col => `
-      <div class="kanban-column ${col.key}" data-column="${col.key}">
-        <div class="kanban-column-header">
-          <div class="kanban-column-title">
-            <span>${col.icon}</span>
-            <span>${col.title}</span>
+    const totalCount = Object.values(kanbanData).reduce((sum, list) => sum + (list || []).length, 0);
+
+    container.innerHTML = columns.map(col => {
+      const colTasks = kanbanData[col.key] || [];
+      const pct = totalCount > 0 ? Math.round((colTasks.length / totalCount) * 100) : 0;
+      return `
+        <div class="kanban-column ${col.key}" data-column="${col.key}">
+          <div class="kanban-column-header">
+            <div class="kanban-column-title">
+              <span>${col.icon}</span>
+              <span>${col.title}</span>
+            </div>
+            <span class="kanban-column-count" title="${pct}% 的任务">${colTasks.length}${totalCount > 0 ? ` · ${pct}%` : ''}</span>
           </div>
-          <span class="kanban-column-count">${(kanbanData[col.key] || []).length}</span>
+          <div class="kanban-column-content" data-column="${col.key}">
+            ${colTasks.map(task => this.createKanbanTask(task)).join('')}
+            ${colTasks.length === 0 ? '<div class="kanban-empty">暂无任务</div>' : ''}
+          </div>
         </div>
-        <div class="kanban-column-content" data-column="${col.key}">
-          ${(kanbanData[col.key] || []).map(task => this.createKanbanTask(task)).join('')}
-          ${(kanbanData[col.key] || []).length === 0 ? '<div class="kanban-empty">暂无任务</div>' : ''}
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     container.querySelectorAll('.kanban-task').forEach(card => {
       DragDrop.makeKanbanDraggable(card);
@@ -1054,126 +1086,12 @@ const UI = {
     `;
   },
 
-  // Render custom tags list in settings modal
-  renderCustomTagsInSettings() {
-    const container = document.getElementById('settings-tags-container');
-    if (!container || typeof Tags === 'undefined') return;
-
-    container.innerHTML = Tags.renderCustomTagsManager();
-
-    // Attach delete handlers
-    container.querySelectorAll('.btn-delete-custom-tag').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const tagId = btn.dataset.tagId;
-        if (tagId) {
-          await Tags.deleteCustomTag(tagId);
-          this.renderCustomTagsInSettings();
-          this.showToast('已删除自定义标签');
-          this.render();
-        }
-      });
-    });
-  },
-
-  // Open settings modal
+  // Open settings (delegates directly to Zotero native preferences)
   openSettings() {
-    const dialog = document.getElementById('settings-modal');
-    if (!dialog) return;
-
-    this.renderCustomTagsInSettings();
-
-    // Wire up buttons (only once)
-    if (!dialog._wired) {
-      // Export JSON
-      document.getElementById('btn-export-json')?.addEventListener('click', async () => {
-        await DataManager.exportData();
-        this.showToast('JSON 数据已导出');
-      });
-
-      // Export CSV
-      document.getElementById('btn-export-csv')?.addEventListener('click', async () => {
-        const tasks = await Storage.getTasks();
-        Advanced.exportToCSV(tasks);
-        this.showToast('CSV 文件已导出');
-      });
-
-      // Export Markdown
-      document.getElementById('btn-export-md')?.addEventListener('click', async () => {
-        const tasks = await Storage.getTasks();
-        Advanced.exportToMarkdown(tasks);
-        this.showToast('Markdown 文件已导出');
-      });
-
-      // Export TXT
-      document.getElementById('btn-export-txt')?.addEventListener('click', async () => {
-        const tasks = await Storage.getTasks();
-        Advanced.exportToText(tasks);
-        this.showToast('TXT 文件已导出');
-      });
-
-      // Import
-      document.getElementById('btn-import-data')?.addEventListener('click', () => {
-        document.getElementById('import-file')?.click();
-      });
-
-      document.getElementById('import-file')?.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        try {
-          const result = await DataManager.importData(file, 'merge');
-          this.showToast(`已导入 ${result.imported} 个任务`);
-          this.render();
-        } catch (error) {
-          this.showToast('导入失败：' + error.message);
-        }
-        e.target.value = '';
-      });
-
-      // Print
-      document.getElementById('btn-print')?.addEventListener('click', async () => {
-        const tasks = await Storage.getTasks();
-        Advanced.printTasks(tasks);
-      });
-
-      // Share summary
-      document.getElementById('btn-share-summary')?.addEventListener('click', async () => {
-        const tasks = await Storage.getTasks();
-        const summary = Advanced.generateSummary(tasks);
-        await Advanced.copyToClipboard(summary);
-        this.showToast('任务概览已复制到剪贴板');
-      });
-
-      // Clear data
-      document.getElementById('btn-clear-data')?.addEventListener('click', async () => {
-        if (confirm('确定要清除所有数据吗？此操作不可恢复。')) {
-          await DataManager.clearAllTasks();
-          this.showToast('所有数据已清除');
-          this.render();
-          dialog.close();
-        }
-      });
-
-      // Close
-      document.getElementById('btn-close-settings')?.addEventListener('click', () => {
-        dialog.close();
-      });
-      document.getElementById('btn-close-settings-x')?.addEventListener('click', () => {
-        dialog.close();
-      });
-
-      // Zotero native preferences shortcut from modal
-      document.getElementById('btn-open-zotero-prefs')?.addEventListener('click', () => {
-        dialog.close();
-        if (typeof ZoteroBridge !== 'undefined') {
-          ZoteroBridge.openPreferences();
-        }
-      });
-
-      dialog._wired = true;
+    if (typeof ZoteroBridge !== 'undefined' && ZoteroBridge.openPreferences) {
+      ZoteroBridge.openPreferences();
+      this.showToast('已唤起 Zotero 偏好设置面板');
     }
-
-    dialog.showModal();
   },
 
   // Open templates panel
@@ -1503,6 +1421,9 @@ const UI = {
       </div>
       <div class="task-actions">
         ${task.zoteroItemKey ? `
+          <button class="task-action zotero-copy-citation" title="复制文献学术引用" data-item-key="${task.zoteroItemKey}">
+            📋
+          </button>
           <button class="task-action zotero-sync-note" title="同步待办至 Zotero 文献笔记 (支持云同步)" data-item-key="${task.zoteroItemKey}">
             📝
           </button>

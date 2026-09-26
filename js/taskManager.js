@@ -338,8 +338,8 @@ const TaskManager = {
     }
 
     // Filter by category
-    if (filters.category) {
-      filtered = filtered.filter(t => t.category === filters.category);
+    if (filters.category && filters.category !== 'all') {
+      filtered = filtered.filter(t => t.category === filters.category || t.academicType === filters.category);
     }
 
     // Filter by literature
@@ -360,6 +360,9 @@ const TaskManager = {
     // Filter by status
     if (filters.status) {
       switch (filters.status) {
+        case 'literature':
+          filtered = filtered.filter(t => Boolean(t.zoteroItemKey) || (t.academicType && t.academicType !== 'generic'));
+          break;
         case 'today':
           filtered = filtered.filter(t => !t.completed && Utils.isToday(t.dueDate));
           break;
