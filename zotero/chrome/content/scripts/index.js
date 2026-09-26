@@ -163,6 +163,456 @@
       }
     },
 
+    ensureItemPaneStyles(doc) {
+      if (!doc) return;
+      if (doc.getElementById('todolist-itempane-styles')) return;
+      try {
+        const style = doc.createElementNS
+          ? doc.createElementNS('http://www.w3.org/1999/xhtml', 'style')
+          : doc.createElement('style');
+        style.id = 'todolist-itempane-styles';
+        style.textContent = `
+          .td-pane-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 6px 2px 10px 2px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 12px;
+            box-sizing: border-box;
+            width: 100%;
+          }
+
+          /* Header card & Progress bar */
+          .td-header-card {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.025);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            box-sizing: border-box;
+          }
+          .td-header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+          .td-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            line-height: 1.3;
+          }
+          .td-status-empty {
+            background: rgba(100, 116, 139, 0.12);
+            color: #64748b;
+          }
+          .td-status-active {
+            background: rgba(16, 185, 129, 0.12);
+            color: #059669;
+          }
+          .td-status-done {
+            background: rgba(16, 185, 129, 0.2);
+            color: #047857;
+          }
+          .td-progress-pct {
+            font-size: 11px;
+            font-weight: 700;
+            color: #059669;
+          }
+          .td-progress-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+          }
+          .td-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            border-radius: 3px;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+
+          /* Empty State Card */
+          .td-empty-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 14px 12px;
+            gap: 8px;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid rgba(0, 0, 0, 0.09);
+            border-radius: 8px;
+            box-sizing: border-box;
+          }
+          .td-empty-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+          }
+          .td-empty-desc {
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.4;
+            max-width: 260px;
+          }
+          .td-btn-milestone-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #059669, #10b981) !important;
+            border: none !important;
+            border-radius: 6px !important;
+            cursor: pointer !important;
+            box-shadow: 0 1px 3px rgba(5, 150, 105, 0.3);
+            appearance: none;
+            -moz-appearance: none;
+            transition: all 0.15s ease;
+            margin-top: 2px;
+          }
+          .td-btn-milestone-primary:hover {
+            background: linear-gradient(135deg, #047857, #059669) !important;
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.4);
+            transform: translateY(-1px);
+          }
+          .td-btn-milestone-primary:active {
+            transform: translateY(0);
+          }
+
+          /* Task List */
+          .td-task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 2px;
+            box-sizing: border-box;
+          }
+          .td-task-card {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 7px 9px;
+            border-radius: 7px;
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+            transition: border-color 0.15s, box-shadow 0.15s;
+            box-sizing: border-box;
+          }
+          .td-task-card:hover {
+            border-color: rgba(5, 150, 105, 0.4);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+          }
+          .td-task-card.is-completed {
+            opacity: 0.65;
+            background: #f8fafc;
+          }
+          .td-task-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .td-prio-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+          }
+          .td-prio-high { background: #ef4444; }
+          .td-prio-medium { background: #f59e0b; }
+          .td-prio-low { background: #10b981; }
+
+          .td-checkbox {
+            cursor: pointer;
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            accent-color: #059669;
+            flex-shrink: 0;
+          }
+          .td-task-title {
+            flex: 1;
+            font-size: 12px;
+            font-weight: 500;
+            color: #1e293b;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+          }
+          .td-task-title.is-done {
+            text-decoration: line-through;
+            color: #94a3b8;
+          }
+          .td-badge-date {
+            font-size: 10px;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: rgba(217, 119, 6, 0.12);
+            color: #d97706;
+            flex-shrink: 0;
+            line-height: 1.3;
+          }
+          .td-badge-date.is-overdue {
+            background: rgba(239, 68, 68, 0.12);
+            color: #dc2626;
+            font-weight: 600;
+          }
+          .td-subtask-toggle {
+            font-size: 10px;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.05);
+            color: #475569;
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+            border: none;
+            appearance: none;
+            -moz-appearance: none;
+            line-height: 1.3;
+          }
+          .td-subtask-toggle:hover {
+            background: rgba(0, 0, 0, 0.09);
+          }
+          .td-task-delete {
+            background: none !important;
+            border: none !important;
+            color: #94a3b8 !important;
+            cursor: pointer !important;
+            font-size: 14px !important;
+            line-height: 1 !important;
+            padding: 0 3px !important;
+            opacity: 0.5;
+            appearance: none;
+            -moz-appearance: none;
+            flex-shrink: 0;
+          }
+          .td-task-delete:hover {
+            opacity: 1;
+            color: #ef4444 !important;
+          }
+
+          /* Subtask list */
+          .td-subtask-list {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            margin-left: 20px;
+            padding-left: 6px;
+            border-left: 2px solid rgba(0, 0, 0, 0.07);
+            margin-top: 3px;
+            margin-bottom: 2px;
+          }
+          .td-subtask-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            color: #475569;
+          }
+          .td-subtask-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .td-subtask-title.is-done {
+            text-decoration: line-through;
+            color: #94a3b8;
+          }
+
+          /* Compound Quick Add Row */
+          .td-quick-box {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 5px 3px 6px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            margin-top: 2px;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            box-sizing: border-box;
+          }
+          .td-quick-box:focus-within {
+            border-color: #059669;
+            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.15);
+          }
+          .td-prio-select {
+            font-size: 11px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            background: rgba(0, 0, 0, 0.03);
+            color: #475569;
+            cursor: pointer;
+            outline: none;
+            flex-shrink: 0;
+          }
+          .td-quick-input {
+            flex: 1;
+            border: none !important;
+            background: transparent !important;
+            font-size: 12px;
+            color: #1e293b;
+            outline: none;
+            padding: 3px 4px;
+            min-width: 0;
+            box-sizing: border-box;
+          }
+          .td-quick-input::placeholder {
+            color: #94a3b8;
+          }
+          .td-quick-submit {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            background: #059669 !important;
+            color: #ffffff !important;
+            border: none !important;
+            cursor: pointer !important;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1;
+            flex-shrink: 0;
+            appearance: none;
+            -moz-appearance: none;
+            transition: background 0.15s;
+          }
+          .td-quick-submit:hover {
+            background: #047857 !important;
+          }
+
+          /* Action Buttons Grid (2 Columns, perfectly aligned, no overflow) */
+          .td-action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 4px;
+            box-sizing: border-box;
+          }
+          .td-action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 5px 6px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #334155 !important;
+            background: #ffffff !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            border-radius: 6px !important;
+            cursor: pointer !important;
+            text-decoration: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            appearance: none;
+            -moz-appearance: none;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+            box-sizing: border-box;
+          }
+          .td-action-btn:hover {
+            background: #f8fafc !important;
+            border-color: rgba(5, 150, 105, 0.4) !important;
+            color: #059669 !important;
+            transform: translateY(-0.5px);
+          }
+          .td-action-btn:active {
+            transform: translateY(0);
+          }
+          .td-action-btn-pdf {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(59, 130, 246, 0.1)) !important;
+            border-color: rgba(37, 99, 235, 0.25) !important;
+            color: #1d4ed8 !important;
+            font-weight: 600;
+          }
+          .td-action-btn-pdf:hover {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(59, 130, 246, 0.18)) !important;
+            border-color: #2563eb !important;
+            color: #1e40af !important;
+          }
+
+          /* Dark theme support */
+          @media (prefers-color-scheme: dark) {
+            .td-pane-wrap { color: #e2e8f0; }
+            .td-header-card {
+              background: rgba(255, 255, 255, 0.04);
+              border-color: rgba(255, 255, 255, 0.08);
+            }
+            .td-empty-card {
+              background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+              border-color: rgba(255, 255, 255, 0.1);
+            }
+            .td-empty-title { color: #f1f5f9; }
+            .td-empty-desc { color: #94a3b8; }
+            .td-task-card {
+              background: #1e293b;
+              border-color: rgba(255, 255, 255, 0.08);
+            }
+            .td-task-card.is-completed {
+              background: rgba(30, 41, 59, 0.6);
+            }
+            .td-task-title { color: #f1f5f9; }
+            .td-subtask-item { color: #cbd5e1; }
+            .td-quick-box {
+              background: #1e293b;
+              border-color: #334155;
+            }
+            .td-prio-select {
+              background: #0f172a;
+              border-color: #334155;
+              color: #e2e8f0;
+            }
+            .td-quick-input { color: #f1f5f9; }
+            .td-action-btn {
+              background: #1e293b !important;
+              border-color: rgba(255, 255, 255, 0.1) !important;
+              color: #e2e8f0 !important;
+            }
+            .td-action-btn:hover {
+              background: #334155 !important;
+              border-color: #10b981 !important;
+              color: #34d399 !important;
+            }
+            .td-action-btn-pdf {
+              background: rgba(37, 99, 235, 0.15) !important;
+              border-color: rgba(59, 130, 246, 0.35) !important;
+              color: #60a5fa !important;
+            }
+          }
+        `;
+        (doc.head || doc.documentElement || doc.body).appendChild(style);
+      } catch (e) {
+        Zotero.logError?.('[Todolist] Failed to inject itemPane styles: ' + e);
+      }
+    },
+
     getDataFilePath() {
       const baseDir = Zotero.DataDirectory?.dir || PathUtils.profileDir;
       return PathUtils.join(baseDir, 'todolist-data.json');
@@ -1018,7 +1468,11 @@
           header: { l10nID: 'todolist-item-pane-header', icon },
           sidenav: { l10nID: 'todolist-item-pane-header', icon },
           onInit: ({ doc, body, item, refresh }) => {
-            this.ensureLocalization(doc);
+            const document = doc || body?.ownerDocument;
+            if (document) {
+              this.ensureLocalization(document);
+              this.ensureItemPaneStyles(document);
+            }
             const target = getLiteratureItem(item);
             const state = {
               itemKey: target?.key || null,
@@ -1047,11 +1501,27 @@
           },
           onRender: async ({ doc, body, item, setSectionSummary }) => {
             if (!body) return;
+            const document = doc || body.ownerDocument;
+            if (document) {
+              this.ensureItemPaneStyles(document);
+            }
             body.replaceChildren();
             const target = getLiteratureItem(item);
             if (!target) return;
 
+            const state = sectionStates.get(body);
             const html = 'http://www.w3.org/1999/xhtml';
+            const createEl = (tag, className = '', text = null) => {
+              const el = document.createElementNS
+                ? document.createElementNS(html, tag)
+                : document.createElement(tag);
+              if (className) el.className = className;
+              if (text !== null && text !== undefined) {
+                el.textContent = text;
+              }
+              return el;
+            };
+
             const data = await this.loadData();
             const targetKey = target.key;
             const tasks = (data.tasks || []).filter((t) => t.zoteroItemKey === targetKey);
@@ -1062,75 +1532,86 @@
 
             setSectionSummary?.(total ? `${done}/${total} (${pct}%)` : '');
 
-            const wrapper = doc.createElementNS(html, 'div');
-            wrapper.setAttribute('style', 'display:flex;flex-direction:column;gap:8px;padding:8px 4px;font-size:12px;');
+            const wrapper = createEl('div', 'td-pane-wrap');
 
-            // Progress header
-            const summaryRow = doc.createElementNS(html, 'div');
-            summaryRow.setAttribute('style', 'display:flex;align-items:center;justify-content:space-between;color:var(--text-secondary,#64748b);font-size:11px;');
-            summaryRow.innerHTML = total
-              ? `<span>研读待办：<strong>${done}/${total}</strong> 已完成</span><span style="font-weight:700;color:var(--accent-color,#059669);">${pct}%</span>`
-              : '<span>此文献暂无研读待办事项</span>';
-            wrapper.appendChild(summaryRow);
+            // 1. Header & Progress Card
+            const headerCard = createEl('div', 'td-header-card');
+            const headerTop = createEl('div', 'td-header-top');
 
-            // Graphical Progress Bar
+            let statusText = '暂无待办';
+            let badgeClass = 'td-status-badge td-status-empty';
+            if (total > 0) {
+              if (done === total) {
+                statusText = `🎉 精读已完成 (${done}/${total})`;
+                badgeClass = 'td-status-badge td-status-done';
+              } else {
+                statusText = `⏳ 研读进行中 (${done}/${total})`;
+                badgeClass = 'td-status-badge td-status-active';
+              }
+            }
+            const statusBadge = createEl('span', badgeClass, statusText);
+            headerTop.appendChild(statusBadge);
+
+            if (total > 0) {
+              const pctSpan = createEl('span', 'td-progress-pct', `${pct}%`);
+              headerTop.appendChild(pctSpan);
+            }
+            headerCard.appendChild(headerTop);
+
             const showProgressBar = this.getPref('itemPaneShowProgressBar', true);
             if (total > 0 && showProgressBar) {
-              const progressBar = doc.createElementNS(html, 'div');
-              progressBar.setAttribute('style', 'background:var(--fill-quinary,#e2e8f0);border-radius:4px;height:6px;width:100%;overflow:hidden;');
-              const progressFill = doc.createElementNS(html, 'div');
-              progressFill.setAttribute('style', `background:var(--accent-color,#059669);height:6px;width:${pct}%;border-radius:4px;transition:width 0.3s ease;`);
-              progressBar.appendChild(progressFill);
-              wrapper.appendChild(progressBar);
+              const track = createEl('div', 'td-progress-track');
+              const fill = createEl('div', 'td-progress-fill');
+              fill.style.width = `${pct}%`;
+              track.appendChild(fill);
+              headerCard.appendChild(track);
             }
+            wrapper.appendChild(headerCard);
 
-            // Empty state card
+            // 2. Empty State Card
             if (total === 0) {
-              const emptyCard = doc.createElementNS(html, 'div');
-              emptyCard.setAttribute('style', 'display:flex;flex-direction:column;align-items:center;text-align:center;padding:12px 8px;gap:8px;background:var(--fill-quinary,#f8fafc);border-radius:6px;border:1px solid var(--border-color,rgba(0,0,0,0.08));margin:2px 0;');
+              const emptyCard = createEl('div', 'td-empty-card');
 
-              const emptyText = doc.createElementNS(html, 'div');
-              emptyText.setAttribute('style', 'font-size:12px;color:var(--text-secondary,#64748b);font-weight:500;');
-              emptyText.textContent = '📖 此文献尚未建立研读计划与待办';
+              const emptyTitle = createEl('div', 'td-empty-title', '📚 暂未建立学术研读清单');
+              const emptyDesc = createEl('div', 'td-empty-desc', '可一键为本文献自动规划 5 步精读里程碑，或在下方快速添加待办');
 
-              const btnCreateMilestones = doc.createElementNS(html, 'button');
+              const btnCreateMilestones = createEl('button', 'td-btn-milestone-primary', '⚡ 一键生成 5 步精读清单');
               btnCreateMilestones.type = 'button';
-              btnCreateMilestones.textContent = '⚡ 一键生成 5 步精读清单';
-              btnCreateMilestones.setAttribute('style', 'padding:5px 12px;font-size:11px;font-weight:600;background:var(--accent-color,#059669);color:#ffffff;border:none;border-radius:4px;cursor:pointer;');
-              btnCreateMilestones.addEventListener('click', () => {
-                this.createReadingMilestones(target, Zotero.getMainWindow?.());
+              btnCreateMilestones.title = '为本文献快速拆解：通读、算法、实验、复现与批判性总结';
+              btnCreateMilestones.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await this.createReadingMilestones(target, Zotero.getMainWindow?.());
+                state?.refresh?.();
               });
 
-              emptyCard.appendChild(emptyText);
+              emptyCard.appendChild(emptyTitle);
+              emptyCard.appendChild(emptyDesc);
               emptyCard.appendChild(btnCreateMilestones);
               wrapper.appendChild(emptyCard);
             }
 
-            // Task list inside pane
+            // 3. Task List Inside Pane
             if (total > 0) {
-              const taskList = doc.createElementNS(html, 'div');
-              taskList.setAttribute('style', 'display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;');
-
+              const taskList = createEl('div', 'td-task-list');
               const showSubtasks = this.getPref('itemPaneShowSubtasks', true);
 
               for (const t of tasks) {
-                const taskContainer = doc.createElementNS(html, 'div');
-                taskContainer.setAttribute('style', 'display:flex;flex-direction:column;gap:3px;padding:6px 8px;border-radius:6px;background:var(--fill-quinary,#f1f5f9);border:1px solid rgba(0,0,0,0.04);');
+                const taskCard = createEl('div', `td-task-card ${t.completed ? 'is-completed' : ''}`);
 
-                const row = doc.createElementNS(html, 'div');
-                row.setAttribute('style', 'display:flex;align-items:center;gap:6px;cursor:pointer;');
+                const row = createEl('div', 'td-task-row');
 
                 // Priority dot
-                const prioDot = doc.createElementNS(html, 'span');
-                const pColor = t.priority === 'high' ? '#ef4444' : (t.priority === 'low' ? '#10b981' : '#f59e0b');
-                prioDot.setAttribute('style', `width:7px;height:7px;border-radius:50%;background:${pColor};flex-shrink:0;`);
-                prioDot.title = `优先级: ${t.priority || '中'}`;
+                const prio = t.priority || 'medium';
+                const prioDot = createEl('span', `td-prio-dot td-prio-${prio}`);
+                const prioLabel = prio === 'high' ? '高' : (prio === 'low' ? '低' : '中');
+                prioDot.title = `优先级: ${prioLabel}`;
                 row.appendChild(prioDot);
 
-                const checkbox = doc.createElementNS(html, 'input');
+                // Checkbox
+                const checkbox = createEl('input', 'td-checkbox');
                 checkbox.type = 'checkbox';
                 checkbox.checked = Boolean(t.completed);
-                checkbox.setAttribute('style', 'cursor:pointer;');
+                checkbox.title = t.completed ? '标记为未完成' : '标记为已完成';
                 checkbox.addEventListener('change', async (e) => {
                   e.stopPropagation();
                   t.completed = checkbox.checked;
@@ -1140,70 +1621,53 @@
                   if (this.getPref('autoSyncChildNote', true)) {
                     await this.syncTasksToChildNote(target);
                   }
+                  state?.refresh?.();
                 });
                 row.appendChild(checkbox);
 
-                const titleSpan = doc.createElementNS(html, 'span');
-                titleSpan.setAttribute('style', `flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;${t.completed ? 'text-decoration:line-through;opacity:0.6;' : ''}`);
-                titleSpan.textContent = t.title;
-                titleSpan.title = t.title;
+                // Title
+                const titleSpan = createEl('span', `td-task-title ${t.completed ? 'is-done' : ''}`, t.title);
+                titleSpan.title = `${t.title} (点击在看板中查看详情)`;
+                titleSpan.addEventListener('click', () => {
+                  this.openTodolist({ mode: 'view_task', taskId: t.id }, Zotero.getMainWindow?.());
+                });
                 row.appendChild(titleSpan);
 
-                // Due date chip
+                // Due date badge
                 if (t.dueDate) {
-                  const dueBadge = doc.createElementNS(html, 'span');
-                  dueBadge.setAttribute('style', 'font-size:10px;padding:1px 4px;border-radius:3px;background:rgba(217,119,6,0.12);color:#d97706;flex-shrink:0;');
-                  dueBadge.textContent = t.dueDate.length > 5 ? t.dueDate.slice(5) : t.dueDate;
-                  dueBadge.title = `截止日期: ${t.dueDate}`;
+                  const todayStr = new Date().toISOString().slice(0, 10);
+                  const isOverdue = !t.completed && t.dueDate < todayStr;
+                  const dateText = (isOverdue ? '⚠️ ' : '📅 ') + (t.dueDate.length > 5 ? t.dueDate.slice(5) : t.dueDate);
+                  const dueBadge = createEl('span', `td-badge-date ${isOverdue ? 'is-overdue' : ''}`, dateText);
+                  dueBadge.title = isOverdue ? `已逾期！截止日期: ${t.dueDate}` : `截止日期: ${t.dueDate}`;
                   row.appendChild(dueBadge);
                 }
 
-                // Subtask count indicator
+                // Subtask toggle button if subtasks exist
+                let subList = null;
                 if (Array.isArray(t.subtasks) && t.subtasks.length > 0) {
                   const doneSubs = t.subtasks.filter((s) => s.completed).length;
-                  const subBadge = doc.createElementNS(html, 'span');
-                  subBadge.setAttribute('style', 'font-size:10px;padding:1px 4px;border-radius:3px;background:var(--fill-quaternary,#e2e8f0);color:var(--text-secondary,#475569);flex-shrink:0;');
-                  subBadge.textContent = `${doneSubs}/${t.subtasks.length}`;
-                  row.appendChild(subBadge);
-                }
+                  const subToggle = createEl('button', 'td-subtask-toggle', `☑️ ${doneSubs}/${t.subtasks.length}`);
+                  subToggle.type = 'button';
+                  subToggle.title = '展开/收起子任务清单';
+                  row.appendChild(subToggle);
 
-                // Delete task button
-                const delBtn = doc.createElementNS(html, 'button');
-                delBtn.type = 'button';
-                delBtn.textContent = '×';
-                delBtn.setAttribute('style', 'background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;line-height:1;padding:0 3px;opacity:0.6;');
-                delBtn.title = '删除此待办';
-                delBtn.addEventListener('click', async (e) => {
-                  e.stopPropagation();
-                  data.tasks = data.tasks.filter((tk) => tk.id !== t.id);
-                  await this.saveData({ tasks: data.tasks });
-                  await this.tagItemOnTaskEvent(target.key, 'complete_check', target.libraryID);
-                  if (this.getPref('autoSyncChildNote', true)) {
-                    await this.syncTasksToChildNote(target);
-                  }
-                });
-                row.appendChild(delBtn);
+                  subList = createEl('div', 'td-subtask-list');
+                  if (!showSubtasks) subList.style.display = 'none';
 
-                // Clicking row opens full workspace focused on this task
-                row.addEventListener('click', () => {
-                  this.openTodolist({ mode: 'view_task', taskId: t.id }, Zotero.getMainWindow?.());
-                });
-
-                taskContainer.appendChild(row);
-
-                // Subtask interactive list
-                if (showSubtasks && Array.isArray(t.subtasks) && t.subtasks.length > 0) {
-                  const subList = doc.createElementNS(html, 'div');
-                  subList.setAttribute('style', 'display:flex;flex-direction:column;gap:3px;margin-left:22px;margin-top:2px;font-size:11px;color:var(--text-secondary,#64748b);');
+                  subToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isHidden = subList.style.display === 'none';
+                    subList.style.display = isHidden ? 'flex' : 'none';
+                  });
 
                   for (const sub of t.subtasks) {
-                    const subRow = doc.createElementNS(html, 'div');
-                    subRow.setAttribute('style', 'display:flex;align-items:center;gap:5px;cursor:pointer;');
+                    const subRow = createEl('div', 'td-subtask-item');
 
-                    const subCheck = doc.createElementNS(html, 'input');
+                    const subCheck = createEl('input', 'td-checkbox');
                     subCheck.type = 'checkbox';
                     subCheck.checked = Boolean(sub.completed);
-                    subCheck.setAttribute('style', 'cursor:pointer;transform:scale(0.85);');
+                    subCheck.style.transform = 'scale(0.85)';
                     subCheck.addEventListener('change', async (e) => {
                       e.stopPropagation();
                       sub.completed = subCheck.checked;
@@ -1220,38 +1684,69 @@
                       if (this.getPref('autoSyncChildNote', true) && this.getPref('childNoteAutoUpdateOnSubtask', true)) {
                         await this.syncTasksToChildNote(target);
                       }
+                      state?.refresh?.();
                     });
 
-                    const subSpan = doc.createElementNS(html, 'span');
-                    subSpan.setAttribute('style', `overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${sub.completed ? 'text-decoration:line-through;opacity:0.5;' : ''}`);
-                    subSpan.textContent = sub.title;
-
+                    const subSpan = createEl('span', `td-subtask-title ${sub.completed ? 'is-done' : ''}`, sub.title);
                     subRow.appendChild(subCheck);
                     subRow.appendChild(subSpan);
                     subList.appendChild(subRow);
                   }
-                  taskContainer.appendChild(subList);
                 }
 
-                taskList.appendChild(taskContainer);
+                // Delete task button
+                const delBtn = createEl('button', 'td-task-delete', '×');
+                delBtn.type = 'button';
+                delBtn.title = '删除此待办';
+                delBtn.addEventListener('click', async (e) => {
+                  e.stopPropagation();
+                  data.tasks = data.tasks.filter((tk) => tk.id !== t.id);
+                  await this.saveData({ tasks: data.tasks });
+                  await this.tagItemOnTaskEvent(target.key, 'complete_check', target.libraryID);
+                  if (this.getPref('autoSyncChildNote', true)) {
+                    await this.syncTasksToChildNote(target);
+                  }
+                  state?.refresh?.();
+                });
+                row.appendChild(delBtn);
+
+                taskCard.appendChild(row);
+                if (subList) taskCard.appendChild(subList);
+                taskList.appendChild(taskCard);
               }
               wrapper.appendChild(taskList);
             }
 
-            // Quick task addition input row
-            const quickRow = doc.createElementNS(html, 'div');
-            quickRow.setAttribute('style', 'display:flex;gap:6px;align-items:center;margin-top:4px;');
+            // 4. Compound Quick Add Row
+            const quickBox = createEl('div', 'td-quick-box');
 
-            const quickInput = doc.createElementNS(html, 'input');
+            const prioSelect = createEl('select', 'td-prio-select');
+            const defaultPrio = this.getPref('defaultPriority', 'medium');
+            const priorities = [
+              { val: 'medium', label: '🟡 中' },
+              { val: 'high', label: '🔴 高' },
+              { val: 'low', label: '🟢 低' }
+            ];
+            for (const p of priorities) {
+              const opt = createEl('option', '', p.label);
+              opt.value = p.val;
+              if (p.val === defaultPrio) opt.selected = true;
+              prioSelect.appendChild(opt);
+            }
+
+            const quickInput = createEl('input', 'td-quick-input');
             quickInput.type = 'text';
-            quickInput.placeholder = '+ 添加研读待办 (按 Enter 保存)...';
-            quickInput.setAttribute('style', 'flex:1;padding:5px 8px;border-radius:4px;border:1px solid var(--border-color,#cbd5e1);font-size:12px;');
+            quickInput.placeholder = '+ 添加研读待办 (Enter 保存)...';
+
+            const quickBtn = createEl('button', 'td-quick-submit', '+');
+            quickBtn.type = 'button';
+            quickBtn.title = '添加待办任务';
 
             const handleQuickAdd = async () => {
               const text = quickInput.value.trim();
               if (!text) return;
               const meta = serializeLiteratureItem(target);
-              const defaultPrio = this.getPref('defaultPriority', 'medium');
+              const selectedPrio = prioSelect.value || defaultPrio;
               const defaultType = this.getPref('defaultTaskType', 'literature_reading');
               const inheritTags = this.getPref('autoTagFromItem', true);
               const newTask = {
@@ -1260,7 +1755,7 @@
                 description: `文献研读待办：${meta.title} (${meta.authors} ${meta.year})`,
                 dueDate: null,
                 dueTime: null,
-                priority: defaultPrio,
+                priority: selectedPrio,
                 category: '论文研读',
                 completed: false,
                 createdAt: new Date().toISOString(),
@@ -1284,6 +1779,7 @@
               if (this.getPref('autoSyncChildNote', true)) {
                 await this.syncTasksToChildNote(target);
               }
+              state?.refresh?.();
             };
 
             quickInput.addEventListener('keydown', (e) => {
@@ -1292,63 +1788,65 @@
                 handleQuickAdd();
               }
             });
+            quickBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              handleQuickAdd();
+            });
 
-            quickRow.appendChild(quickInput);
-            wrapper.appendChild(quickRow);
+            quickBox.appendChild(prioSelect);
+            quickBox.appendChild(quickInput);
+            quickBox.appendChild(quickBtn);
+            wrapper.appendChild(quickBox);
 
-            // Action buttons row
-            const actionRow = doc.createElementNS(html, 'div');
-            actionRow.setAttribute('style', 'display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;');
+            // 5. Action Buttons Grid (2 Columns, perfectly aligned, no overflow)
+            const actionGrid = createEl('div', 'td-action-grid');
 
-            const btnOpenBoard = doc.createElementNS(html, 'button');
+            const btnOpenBoard = createEl('button', 'td-action-btn', '📋 待办看板');
             btnOpenBoard.type = 'button';
-            btnOpenBoard.textContent = '📋 待办看板';
-            btnOpenBoard.setAttribute('style', 'padding:3px 8px;font-size:11px;cursor:pointer;');
+            btnOpenBoard.title = '在主标签页中打开 Todolist 学术看板';
             btnOpenBoard.addEventListener('click', () => {
               this.openTodolist({ mode: 'filter_item', itemKey: target.key }, Zotero.getMainWindow?.());
             });
-            actionRow.appendChild(btnOpenBoard);
+            actionGrid.appendChild(btnOpenBoard);
 
-            const btnSubwin = doc.createElementNS(html, 'button');
+            const btnSubwin = createEl('button', 'td-action-btn', '🗗 伴读子窗口');
             btnSubwin.type = 'button';
-            btnSubwin.textContent = '🗗 伴读子窗口';
-            btnSubwin.setAttribute('style', 'padding:3px 8px;font-size:11px;cursor:pointer;');
+            btnSubwin.title = '打开轻量伴读窗口，适合与 PDF 左右分屏对照';
             btnSubwin.addEventListener('click', () => {
               this.openStandaloneWindow({ mode: 'filter_item', itemKey: target.key }, Zotero.getMainWindow?.(), 'subwindow');
             });
-            actionRow.appendChild(btnSubwin);
+            actionGrid.appendChild(btnSubwin);
 
-            const btnMilestones = doc.createElementNS(html, 'button');
+            const btnMilestones = createEl('button', 'td-action-btn', '⚡ 精读清单');
             btnMilestones.type = 'button';
-            btnMilestones.textContent = '⚡ 生成精读清单';
-            btnMilestones.setAttribute('style', 'padding:3px 8px;font-size:11px;cursor:pointer;');
-            btnMilestones.addEventListener('click', () => {
-              this.createReadingMilestones(target, Zotero.getMainWindow?.());
+            btnMilestones.title = '一键为本篇文献生成 5 项精读里程碑待办';
+            btnMilestones.addEventListener('click', async () => {
+              await this.createReadingMilestones(target, Zotero.getMainWindow?.());
+              state?.refresh?.();
             });
-            actionRow.appendChild(btnMilestones);
+            actionGrid.appendChild(btnMilestones);
 
-            const btnSyncNote = doc.createElementNS(html, 'button');
+            const btnSyncNote = createEl('button', 'td-action-btn', '📝 同步子笔记');
             btnSyncNote.type = 'button';
-            btnSyncNote.textContent = '📝 同步为文献笔记';
-            btnSyncNote.setAttribute('style', 'padding:3px 8px;font-size:11px;cursor:pointer;');
+            btnSyncNote.title = '将本文献的所有研读待办同步导出为文献子笔记 (云端)';
             btnSyncNote.addEventListener('click', async () => {
               await this.syncTasksToChildNote(target);
+              this.showNotice('同步成功', '已更新文献子笔记研读清单');
             });
-            actionRow.appendChild(btnSyncNote);
+            actionGrid.appendChild(btnSyncNote);
 
             const meta = serializeLiteratureItem(target);
             if (meta?.pdfUri) {
-              const btnPdf = doc.createElementNS(html, 'button');
+              const btnPdf = createEl('button', 'td-action-btn td-action-btn-pdf', '📖 打开伴读 PDF');
               btnPdf.type = 'button';
-              btnPdf.textContent = '📖 打开伴读 PDF';
-              btnPdf.setAttribute('style', 'padding:3px 8px;font-size:11px;cursor:pointer;');
+              btnPdf.title = '在 Zotero 内置阅读器中打开该文献的 PDF 全文';
               btnPdf.addEventListener('click', () => {
                 this.openPdfAttachment(target);
               });
-              actionRow.appendChild(btnPdf);
+              actionGrid.appendChild(btnPdf);
             }
 
-            wrapper.appendChild(actionRow);
+            wrapper.appendChild(actionGrid);
             body.appendChild(wrapper);
           },
         });
