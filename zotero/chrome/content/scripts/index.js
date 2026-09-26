@@ -1412,8 +1412,39 @@
       }
     },
 
+    registerMenus() {
+      if (Zotero.MenuManager && typeof Zotero.MenuManager.registerMenu === 'function') {
+        try {
+          this._menuManagerId = Zotero.MenuManager.registerMenu({
+            menuID: 'todolist-itemmenu-create',
+            pluginID: ADDON_ID,
+            target: 'main/library/item',
+            menus: [
+              {
+                menuType: 'menuitem',
+                label: '添加为待办',
+                icon: `${CHROME_ROOT}icons/todolist.svg`,
+                onCommand: () => {
+                  try {
+                    this.createTaskFromSelection();
+                  } catch (err) {
+                    Zotero.logError?.('[Todolist] Failed to create task: ' + err);
+                  }
+                },
+              },
+            ],
+          });
+        } catch (err) {
+          Zotero.logError?.('[Todolist] MenuManager.registerMenu failed: ' + err);
+        }
+      }
+    },
+
     init() {
       this.initWindowListener();
+
+      // Register modern MenuManager if available (Zotero 8+)
+      this.registerMenus();
 
       const windows = Services.wm.getEnumerator('navigator:browser');
       while (windows.hasMoreElements()) {
@@ -1891,9 +1922,34 @@
       Services.wm.addListener(windowListener);
     },
 
+    createXULElement(doc, tagName) {
+      if (typeof doc.createXULElement === 'function') {
+        return doc.createXULElement(tagName);
+      }
+      const xulNs = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
+      if (typeof doc.createElementNS === 'function') {
+        return doc.createElementNS(xulNs, tagName);
+      }
+      return doc.createElement(tagName);
+    },
+
     addToWindow(window) {
       if (!window || !window.document) return;
       const doc = window.document;
+
+      // Always clean up any stale or previous context menu items first (guarantees "仅保留添加为待办")
+      const staleMenuIds = [
+        'todolist-itemmenu-separator',
+        'todolist-itemmenu-create',
+        'todolist-collectionmenu-create',
+        'todolist-collectionmenu-plan',
+        'todolist-reader-context-create',
+      ];
+      for (const id of staleMenuIds) {
+        try {
+          doc.getElementById(id)?.remove();
+        } catch (_) {}
+      }
 
       if (doc.getElementById('todolist-tools-menu')) return;
 
@@ -1903,9 +1959,7 @@
       // 1. Add to "Tools" (工具) Menu
       const toolsPopup = doc.getElementById('menu_ToolsPopup');
       if (toolsPopup) {
-        const toolsItem = doc.createXULElement
-          ? doc.createXULElement('menuitem')
-          : doc.createElement('menuitem');
+        const toolsItem = this.createXULElement(doc, 'menuitem');
         toolsItem.id = 'todolist-tools-menu';
         toolsItem.setAttribute('label', 'Todolist 学术待办看板');
         toolsItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
@@ -1916,9 +1970,7 @@
         toolsPopup.appendChild(toolsItem);
         windowElements.push(toolsItem);
 
-        const prefItem = doc.createXULElement
-          ? doc.createXULElement('menuitem')
-          : doc.createElement('menuitem');
+        const prefItem = this.createXULElement(doc, 'menuitem');
         prefItem.id = 'todolist-tools-preferences';
         prefItem.setAttribute('label', 'Todolist 偏好设置...');
         prefItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
@@ -1930,81 +1982,37 @@
         windowElements.push(prefItem);
       }
 
-      // 2. Add to Item Context Menu (文献右键菜单)
-      const itemMenu = doc.getElementById('zotero-itemmenu');
-      if (itemMenu) {
-        const separator = doc.createXULElement
-          ? doc.createXULElement('menuseparator')
-          : doc.createElement('menuseparator');
-        separator.id = 'todolist-itemmenu-separator';
-        itemMenu.appendChild(separator);
-        windowElements.push(separator);
+      // 2. Add to Item Context Menu (文献右键菜单 - 仅保留“添加为待办”)
+      // If MenuManager already registered natively (Zotero 8+), do not manually inject into #zotero-itemmenu
+      if (!this._menuManagerId) {
+        const itemMenu = doc.getElementById('zotero-itemmenu');
+        if (itemMenu) {
+          const separator = this.createXULElement(doc, 'menuseparator');
+          separator.id = 'todolist-itemmenu-separator';
+          itemMenu.appendChild(separator);
+          windowElements.push(separator);
 
-        // Add reading task for selected paper (仅保留添加为待办)
-        const createFromItem = doc.createXULElement
-          ? doc.createXULElement('menuitem')
-          : doc.createElement('menuitem');
-        createFromItem.id = 'todolist-itemmenu-create';
-        createFromItem.setAttribute('label', '添加为待办');
-        createFromItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
-        createFromItem.setAttribute('class', 'menuitem-iconic');
+          const createFromItem = this.createXULElement(doc, 'menuitem');
+          createFromItem.id = 'todolist-itemmenu-create';
+          createFromItem.setAttribute('label', '添加为待办');
+          createFromItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
+          createFromItem.setAttribute('class', 'menuitem-iconic');
 
-        let lastTriggerTime = 0;
-        const triggerCreate = (e) => {
-          const now = Date.now();
-          if (now - lastTriggerTime < 400) return;
-          lastTriggerTime = now;
-          if (e) {
-            e.stopPropagation?.();
-          }
-          this.createTaskFromSelection(window, doc, itemMenu);
-        };
+          // ONLY use 'command' event! Never attach 'click' or 'mousedown', which conflicts with Gecko popup manager!
+          createFromItem.addEventListener('command', (e) => {
+            try {
+              this.createTaskFromSelection(window, doc, itemMenu);
+            } catch (err) {
+              Zotero.logError?.('[Todolist] Failed to create task from item context menu: ' + err);
+            }
+          });
 
-        createFromItem.addEventListener('command', triggerCreate);
-        createFromItem.addEventListener('click', triggerCreate);
-        itemMenu.appendChild(createFromItem);
-        windowElements.push(createFromItem);
+          itemMenu.appendChild(createFromItem);
+          windowElements.push(createFromItem);
+        }
       }
 
-      // 3. Add to Collection Context Menu (分类目录右键菜单)
-      const collectionMenu = doc.getElementById('zotero-collectionmenu');
-      if (collectionMenu) {
-        const colItem = doc.createXULElement
-          ? doc.createXULElement('menuitem')
-          : doc.createElement('menuitem');
-        colItem.id = 'todolist-collectionmenu-create';
-        colItem.setAttribute('label', '为此分类创建专题研读规划');
-        colItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
-        colItem.setAttribute('class', 'menuitem-iconic');
-
-        colItem.addEventListener('command', () => {
-          const collection = window.ZoteroPane ? window.ZoteroPane.getSelectedCollection() : null;
-          if (collection) {
-            this.openTodolist({ mode: 'create_from_collection', collectionName: collection.name }, window);
-          }
-        });
-        collectionMenu.appendChild(colItem);
-        windowElements.push(colItem);
-
-        // Batch reading plan for all papers in collection
-        const colPlanItem = doc.createXULElement
-          ? doc.createXULElement('menuitem')
-          : doc.createElement('menuitem');
-        colPlanItem.id = 'todolist-collectionmenu-plan';
-        colPlanItem.setAttribute('label', '⚡ 为此分类所有文献批量生成研读清单');
-        colPlanItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
-        colPlanItem.setAttribute('class', 'menuitem-iconic');
-        colPlanItem.addEventListener('command', () => {
-          const collection = window.ZoteroPane ? window.ZoteroPane.getSelectedCollection() : null;
-          if (collection) {
-            this.createCollectionReadingPlan(collection, window);
-          }
-        });
-        collectionMenu.appendChild(colPlanItem);
-        windowElements.push(colPlanItem);
-      }
-
-      // 4. Inject Tab Icon Style
+      // 3. Inject Tab Icon Style
       try {
         if (!doc.getElementById('todolist-tab-style')) {
           const style = doc.createElement('style');
@@ -2019,25 +2027,6 @@
           `;
           (doc.head || doc.documentElement).appendChild(style);
           windowElements.push(style);
-        }
-      } catch (_) {}
-
-      // 4b. Add to Reader Context Menu (PDF 阅读器右键菜单)
-      try {
-        const readerContextMenu = doc.getElementById('reader-context-menu') || doc.getElementById('viewer-context-menu');
-        if (readerContextMenu) {
-          const readerItem = doc.createXULElement
-            ? doc.createXULElement('menuitem')
-            : doc.createElement('menuitem');
-          readerItem.id = 'todolist-reader-context-create';
-          readerItem.setAttribute('label', '添加到 Todolist 研读待办');
-          readerItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
-          readerItem.setAttribute('class', 'menuitem-iconic');
-          readerItem.addEventListener('command', () => {
-            this.createTaskFromReader(window);
-          });
-          readerContextMenu.appendChild(readerItem);
-          windowElements.push(readerItem);
         }
       } catch (_) {}
 
@@ -2296,9 +2285,7 @@
       }
 
       if (!btn) {
-        btn = doc.createXULElement
-          ? doc.createXULElement('toolbarbutton')
-          : doc.createElement('toolbarbutton');
+        btn = this.createXULElement(doc, 'toolbarbutton');
 
         btn.id = 'todolist-toolbar-button';
         btn.setAttribute('label', 'Todolist');
@@ -2319,7 +2306,6 @@
         };
 
         btn.addEventListener('command', trigger);
-        btn.addEventListener('click', trigger);
       }
 
       // Find the proper anchor: the LAST action button in the toolbar before the search box spacer
@@ -2447,6 +2433,9 @@
     },
 
     removeFromWindow(window) {
+      if (!window || !window.document) return;
+      const doc = window.document;
+
       const elements = injectedElements.get(window);
       if (elements) {
         for (const el of elements) {
@@ -2459,6 +2448,24 @@
           } catch (_) {}
         }
         injectedElements.delete(window);
+      }
+
+      // Explicit cleanup of all Todolist DOM elements by ID
+      const allTodolistIds = [
+        'todolist-tools-menu',
+        'todolist-tools-preferences',
+        'todolist-itemmenu-separator',
+        'todolist-itemmenu-create',
+        'todolist-collectionmenu-create',
+        'todolist-collectionmenu-plan',
+        'todolist-reader-context-create',
+        'todolist-toolbar-button',
+        'todolist-tab-style',
+      ];
+      for (const id of allTodolistIds) {
+        try {
+          doc.getElementById(id)?.remove();
+        } catch (_) {}
       }
     },
 
@@ -2790,6 +2797,14 @@
     async shutdown() {
       // Unregister data listeners
       this._dataListeners.clear();
+
+      // Unregister MenuManager
+      if (this._menuManagerId && Zotero.MenuManager && typeof Zotero.MenuManager.unregisterMenu === 'function') {
+        try {
+          Zotero.MenuManager.unregisterMenu(this._menuManagerId);
+        } catch (_) {}
+        this._menuManagerId = null;
+      }
 
       // Clean windows
       const windows = Services.wm.getEnumerator('navigator:browser');
