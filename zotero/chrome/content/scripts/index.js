@@ -162,6 +162,14 @@
         if (exists) {
           const content = await IOUtils.readUTF8(filePath);
           this._cachedData = JSON.parse(content);
+          if (Array.isArray(this._cachedData?.tasks)) {
+            const seen = new Set();
+            this._cachedData.tasks = this._cachedData.tasks.filter((t) => {
+              if (!t || !t.id || seen.has(t.id)) return false;
+              seen.add(t.id);
+              return true;
+            });
+          }
           return this._cachedData;
         }
       } catch (e) {
@@ -185,6 +193,14 @@
     },
 
     async saveData(data) {
+      if (Array.isArray(data.tasks)) {
+        const seen = new Set();
+        data.tasks = data.tasks.filter((t) => {
+          if (!t || !t.id || seen.has(t.id)) return false;
+          seen.add(t.id);
+          return true;
+        });
+      }
       this._cachedData = { ...this._cachedData, ...data };
       const filePath = this.getDataFilePath();
       try {

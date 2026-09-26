@@ -909,6 +909,16 @@ const UI = {
     this.updateHeaderProgress();
     this.updateCategorySelect();
 
+    if (this.currentView === 'kanban') {
+      this.renderKanban();
+      return;
+    }
+
+    if (this.currentView === 'calendar') {
+      Calendar.render();
+      return;
+    }
+
     const filters = {
       search: this.currentSearch,
       priority: this.currentPriorityFilter,
@@ -1200,6 +1210,7 @@ const UI = {
   createSectionElement(section, tasks) {
     const sectionEl = document.createElement('div');
     sectionEl.className = `task-section ${section.className}`;
+    sectionEl.dataset.section = section.key;
 
     sectionEl.innerHTML = `
       <div class="task-section-header">
@@ -1212,7 +1223,7 @@ const UI = {
           <path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
         </svg>
       </div>
-      <div class="task-section-content"></div>
+      <div class="task-section-content" data-section="${section.key}"></div>
     `;
 
     // Toggle section collapse

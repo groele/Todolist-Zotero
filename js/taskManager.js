@@ -22,9 +22,21 @@ const TaskManager = {
     this._literatureFilter = null;
   },
 
-  // Load tasks from storage
+  // Load tasks from storage with automatic deduplication
   async loadTasks() {
-    this._tasks = await Storage.getTasks();
+    const raw = await Storage.getTasks();
+    const seen = new Set();
+    const unique = [];
+    for (const t of (raw || [])) {
+      if (!t || !t.id) continue;
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      unique.push(t);
+    }
+    this._tasks = unique;
+    if (raw && raw.length !== unique.length) {
+      await Storage.saveTasks(this._tasks);
+    }
     return this._tasks;
   },
 
@@ -33,7 +45,7 @@ const TaskManager = {
     return [...this._tasks];
   },
 
-  // Add a new task
+  // Add a new task (ensures exactly 1 task added without double push)
   async addTask(taskData) {
     const task = {
       id: Utils.generateId(),
@@ -60,9 +72,16 @@ const TaskManager = {
       academicType: taskData.academicType || null
     };
 
-    await Storage.addTask(task);
+    // Prevent duplicate entries
+    this._tasks = this._tasks.filter(t => t.id !== task.id);
     this._tasks.push(task);
+    await Storage.saveTasks(this._tasks);
     return task;
+  },
+
+  // Alias for compatibility
+  async createTask(taskData) {
+    return this.addTask(taskData);
   },
 
   // Update an existing task
@@ -83,7 +102,7 @@ const TaskManager = {
     }
 
     this._tasks[index] = { ...this._tasks[index], ...changes };
-    await Storage.updateTask(id, this._tasks[index]);
+    await Storage.saveTasks(this._tasks);
     return this._tasks[index];
   },
 
@@ -179,8 +198,9 @@ const TaskManager = {
       }))
     };
 
-    await Storage.addTask(newTask);
+    this._tasks = this._tasks.filter(t => t.id !== newTask.id);
     this._tasks.push(newTask);
+    await Storage.saveTasks(this._tasks);
     return newTask;
   },
 
@@ -468,38 +488,37 @@ const TaskManager = {
     const tasks = this._tasks;
 
     return {
+      overdue: tasks.filter(t => !t.completed && this.getKanbanStatus(t) === 'overdue'),
       todo: tasks.filter(t => !t.completed && this.getKanbanStatus(t) === 'todo'),
       'in-progress': tasks.filter(t => !t.completed && this.getKanbanStatus(t) === 'in-progress'),
-      overdue: tasks.filter(t => !t.completed && this.getKanbanStatus(t) === 'overdue'),
-      done: tasks.filter(t => t.completed)
+      done: tasks.filter(t => t.completed || this.getKanbanStatus(t) === 'done')
     };
   },
 
-  // Resolve a task's kanban column.
+  // Resolve a task's kanban column with explicit user drag priority
   getKanbanStatus(task) {
     if (!task) return 'todo';
     if (task.completed) return 'done';
 
-    // Overdue takes precedence if due date has passed
+    // 1. Explicit user status takes priority (from kanban drag or explicit setting)
+    if (task.status === 'in-progress') return 'in-progress';
+    if (task.status === 'todo') return 'todo';
+    if (task.status === 'overdue') return 'overdue';
+    if (task.status === 'done') return 'done';
+
+    // 2. Inferred status from date and subtask progress
     if (Utils.isOverdue(task.dueDate)) {
       return 'overdue';
-    }
-
-    // If explicit status is set (and not stale overdue), use it
-    if (task.status && task.status !== 'overdue') {
-      const allowedStatuses = ['todo', 'in-progress'];
-      if (allowedStatuses.includes(task.status)) {
-        return task.status;
-      }
     }
 
     if (task.subtasks?.length > 0 && task.subtasks.some(st => st.completed) && !task.subtasks.every(st => st.completed)) {
       return 'in-progress';
     }
+
     return 'todo';
   },
 
-  // Move a task between kanban columns and persist the status change.
+  // Move a task between kanban columns and persist the status change cleanly
   async moveTaskToKanbanColumn(taskId, column) {
     const task = this.getTaskById(taskId);
     if (!task) return null;
@@ -511,10 +530,29 @@ const TaskManager = {
       changes.completed = true;
       changes.completedAt = task.completedAt || now;
       changes.status = 'done';
-    } else if (column === 'todo' || column === 'in-progress' || column === 'overdue') {
+    } else if (column === 'todo') {
       changes.completed = false;
       changes.completedAt = null;
-      changes.status = column;
+      changes.status = 'todo';
+      if (Utils.isOverdue(task.dueDate)) {
+        changes.dueDate = Utils.formatDate(new Date());
+      }
+    } else if (column === 'in-progress') {
+      changes.completed = false;
+      changes.completedAt = null;
+      changes.status = 'in-progress';
+      if (Utils.isOverdue(task.dueDate)) {
+        changes.dueDate = Utils.formatDate(new Date());
+      }
+    } else if (column === 'overdue') {
+      changes.completed = false;
+      changes.completedAt = null;
+      changes.status = 'overdue';
+      if (!Utils.isOverdue(task.dueDate)) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        changes.dueDate = Utils.formatDate(yesterday);
+      }
     } else {
       return null;
     }

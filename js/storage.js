@@ -138,10 +138,15 @@ const Storage = {
     return this.saveAll({ settings });
   },
 
-  // Add a single task
+  // Add a single task (deduplicating by ID)
   async addTask(task) {
     const tasks = await this.getTasks();
-    tasks.push(task);
+    const index = tasks.findIndex(t => t.id === task.id);
+    if (index === -1) {
+      tasks.push(task);
+    } else {
+      tasks[index] = task;
+    }
     await this.saveTasks(tasks);
     return task;
   },

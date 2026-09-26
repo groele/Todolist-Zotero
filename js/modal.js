@@ -627,6 +627,8 @@ const Modal = {
 
   // Handle form submission
   async handleSubmit() {
+    if (this._isSubmitting) return;
+
     const repeatSelect = document.getElementById('task-repeat');
     const reminderBefore = document.getElementById('task-reminder-before');
 
@@ -661,6 +663,10 @@ const Modal = {
       return;
     }
 
+    const submitBtn = this.form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+    this._isSubmitting = true;
+
     try {
       if (this.currentTaskId) {
         // Update existing task
@@ -681,6 +687,9 @@ const Modal = {
     } catch (error) {
       console.error('Failed to save task:', error);
       UI.showToast('保存失败，请重试');
+    } finally {
+      this._isSubmitting = false;
+      if (submitBtn) submitBtn.disabled = false;
     }
   },
 

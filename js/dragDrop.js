@@ -120,27 +120,60 @@ const DragDrop = {
     e.preventDefault();
 
     const targetCard = e.target.closest('.task-card');
-    if (!targetCard || !this.draggedTaskId) return;
+    const targetSection = e.target.closest('.task-section') || e.target.closest('.task-section-content');
+    const taskId = this.draggedTaskId;
+    if (!taskId) return;
 
-    const targetTaskId = targetCard.dataset.taskId;
-    if (this.draggedTaskId === targetTaskId) return;
-
-    // Get tasks and reorder
     const tasks = TaskManager.getTasks();
-    const draggedIndex = tasks.findIndex(t => t.id === this.draggedTaskId);
-    const targetIndex = tasks.findIndex(t => t.id === targetTaskId);
+    const draggedTask = tasks.find(t => t.id === taskId);
+    if (!draggedTask) return;
 
-    if (draggedIndex === -1 || targetIndex === -1) return;
+    // Check if dragged across list view sections
+    const targetSectionKey = targetSection?.dataset?.section;
+    if (targetSectionKey) {
+      if (targetSectionKey === 'completed') {
+        draggedTask.completed = true;
+        draggedTask.completedAt = new Date().toISOString();
+        draggedTask.status = 'done';
+      } else {
+        if (draggedTask.completed) {
+          draggedTask.completed = false;
+          draggedTask.completedAt = null;
+        }
+        if (targetSectionKey === 'today') {
+          draggedTask.dueDate = Utils.formatDate(new Date());
+          draggedTask.status = 'todo';
+        } else if (targetSectionKey === 'overdue') {
+          if (!Utils.isOverdue(draggedTask.dueDate)) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            draggedTask.dueDate = Utils.formatDate(yesterday);
+          }
+          draggedTask.status = 'overdue';
+        } else if (targetSectionKey === 'upcoming') {
+          if (!draggedTask.dueDate || Utils.isToday(draggedTask.dueDate) || Utils.isOverdue(draggedTask.dueDate)) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            draggedTask.dueDate = Utils.formatDate(tomorrow);
+          }
+          draggedTask.status = 'todo';
+        }
+      }
+    }
 
-    // Remove dragged task
-    const [draggedTask] = tasks.splice(draggedIndex, 1);
+    if (targetCard && targetCard.dataset.taskId && targetCard.dataset.taskId !== taskId) {
+      const targetTaskId = targetCard.dataset.taskId;
+      const draggedIndex = tasks.findIndex(t => t.id === taskId);
+      const targetIndex = tasks.findIndex(t => t.id === targetTaskId);
 
-    // Insert at new position
-    const rect = targetCard.getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    const insertIndex = e.clientY < midY ? targetIndex : targetIndex + 1;
-
-    tasks.splice(insertIndex, 0, draggedTask);
+      if (draggedIndex !== -1 && targetIndex !== -1) {
+        const [draggedTaskItem] = tasks.splice(draggedIndex, 1);
+        const rect = targetCard.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        const insertIndex = e.clientY < midY ? targetIndex : targetIndex + 1;
+        tasks.splice(insertIndex, 0, draggedTaskItem);
+      }
+    }
 
     // Update order property
     tasks.forEach((task, index) => {
@@ -176,7 +209,8 @@ const DragDrop = {
 
     this.draggedElement = taskCard;
     this.draggedTaskId = taskCard.dataset.taskId;
-    this.lastKanbanColumn = taskCard.closest('.kanban-column')?.dataset.column || null;
+    this.sourceKanbanColumn = taskCard.closest('.kanban-column')?.dataset.column || null;
+    this.lastKanbanColumn = this.sourceKanbanColumn;
     this.kanbanDropHandled = false;
 
     taskCard.classList.add('dragging');
@@ -185,14 +219,10 @@ const DragDrop = {
   },
 
   // Handle kanban drag end
-  async handleKanbanDragEnd(e) {
-    const taskCard = e.target.closest('.kanban-task');
+  handleKanbanDragEnd(e) {
+    const taskCard = e.target.closest('.kanban-task') || this.draggedElement;
     if (taskCard) {
       taskCard.classList.remove('dragging');
-    }
-
-    if (this.draggedTaskId && this.lastKanbanColumn && !this.kanbanDropHandled) {
-      await this.completeKanbanMove(this.lastKanbanColumn);
     }
 
     document.querySelectorAll('.kanban-column-content.drag-over').forEach(el => {
@@ -201,6 +231,7 @@ const DragDrop = {
 
     this.draggedElement = null;
     this.draggedTaskId = null;
+    this.sourceKanbanColumn = null;
     this.lastKanbanColumn = null;
     this.kanbanDropHandled = false;
   },
@@ -217,22 +248,30 @@ const DragDrop = {
 
   // Move task to the dropped kanban column
   async handleKanbanDrop(e) {
-    const { content, column } = this.getKanbanColumnFromEvent(e);
-    if (!column || !this.draggedTaskId) return;
-
     e.preventDefault();
-    this.kanbanDropHandled = true;
-    await this.completeKanbanMove(column);
+    e.stopPropagation();
 
+    const { content, column } = this.getKanbanColumnFromEvent(e);
+    const taskId = this.draggedTaskId;
+    if (!column || !taskId) return;
+
+    this.kanbanDropHandled = true;
     content?.classList.remove('drag-over');
+
+    await this.completeKanbanMove(column, taskId);
   },
 
   // Persist a kanban status change if the task moved to a different column.
-  async completeKanbanMove(column) {
-    const task = TaskManager.getTaskById(this.draggedTaskId);
-    if (!task || TaskManager.getKanbanStatus(task) === column) return null;
+  async completeKanbanMove(column, taskId = this.draggedTaskId) {
+    if (!taskId) return null;
 
-    const updated = await TaskManager.moveTaskToKanbanColumn(this.draggedTaskId, column);
+    const task = TaskManager.getTaskById(taskId);
+    if (!task) return null;
+
+    const currentStatus = TaskManager.getKanbanStatus(task);
+    if (currentStatus === column) return null;
+
+    const updated = await TaskManager.moveTaskToKanbanColumn(taskId, column);
     if (updated) {
       UI.renderKanban();
       UI.updateHeaderProgress();
