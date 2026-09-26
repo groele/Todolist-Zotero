@@ -89,6 +89,88 @@ const UI = {
       this.openSettings();
     });
 
+    // Zotero window mode dropdown
+    const btnWinMode = document.getElementById('btn-zotero-window-mode');
+    btnWinMode?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const existingMenu = document.querySelector('.zotero-mode-dropdown');
+      if (existingMenu) {
+        existingMenu.remove();
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search || '');
+      const curMode = params.get('mode') || window.arguments?.[0]?.options?.currentWindowType || 'tab';
+
+      const menu = document.createElement('div');
+      menu.className = 'zotero-mode-dropdown';
+      menu.innerHTML = `
+        <button class="zotero-mode-item ${curMode === 'tab' ? 'active' : ''}" data-mode="tab">📑 标签页模式 (Tab)</button>
+        <button class="zotero-mode-item ${curMode === 'subwindow' ? 'active' : ''}" data-mode="subwindow">🗗 伴读子窗口 (460×760)</button>
+        <button class="zotero-mode-item ${curMode === 'window' ? 'active' : ''}" data-mode="window">⬚ 独立桌面大窗口 (1120×760)</button>
+      `;
+
+      btnWinMode.parentElement.style.position = 'relative';
+      btnWinMode.parentElement.appendChild(menu);
+
+      menu.querySelectorAll('.zotero-mode-item').forEach((item) => {
+        item.addEventListener('click', (evt) => {
+          evt.stopPropagation();
+          const targetMode = item.dataset.mode;
+          menu.remove();
+          if (typeof ZoteroBridge !== 'undefined') {
+            ZoteroBridge.switchWindowMode(targetMode);
+          }
+        });
+      });
+
+      const closeHandler = () => {
+        menu.remove();
+        document.removeEventListener('click', closeHandler);
+      };
+      setTimeout(() => document.addEventListener('click', closeHandler), 50);
+    });
+
+    // Zotero native preferences
+    document.getElementById('btn-zotero-prefs')?.addEventListener('click', () => {
+      if (typeof ZoteroBridge !== 'undefined') {
+        ZoteroBridge.openPreferences();
+      }
+    });
+
+    // Drag & drop literature from Zotero library pane
+    const viewsContainer = document.querySelector('.views-container');
+    if (viewsContainer) {
+      viewsContainer.addEventListener('dragover', (e) => {
+        if (typeof ZoteroBridge !== 'undefined' && ZoteroBridge.isZotero) {
+          e.preventDefault();
+          viewsContainer.classList.add('drag-over-zotero');
+        }
+      });
+
+      viewsContainer.addEventListener('dragleave', () => {
+        viewsContainer.classList.remove('drag-over-zotero');
+      });
+
+      viewsContainer.addEventListener('drop', async (e) => {
+        viewsContainer.classList.remove('drag-over-zotero');
+        if (typeof ZoteroBridge !== 'undefined' && ZoteroBridge.isZotero) {
+          e.preventDefault();
+          const activeItem = await ZoteroBridge.getActiveItem();
+          if (activeItem) {
+            await TaskManager.createTask({
+              title: `📖 研读：${activeItem.title}`,
+              category: '论文研读',
+              priority: 'medium',
+              literature: activeItem
+            });
+            this.render();
+            this.showToast(`已为《${activeItem.title.slice(0, 20)}...》创建研读待办`);
+          }
+        }
+      });
+    }
+
     // Templates button
     document.getElementById('btn-templates')?.addEventListener('click', () => {
       this.openTemplates();
@@ -481,6 +563,48 @@ const UI = {
     if (e.target.closest('.task-action.timer')) {
       e.stopPropagation();
       await this.handleTimerToggle(taskId);
+      return;
+    }
+
+    // PDF companion reader button click
+    if (e.target.closest('.btn-card-open-pdf')) {
+      e.stopPropagation();
+      const task = TaskManager.getTaskById(taskId);
+      if (typeof ZoteroBridge !== 'undefined' && task?.zoteroItemKey) {
+        let page = null;
+        if (task.zoteroPage) {
+          page = Number(task.zoteroPage);
+        } else if (task.zoteroPdfUri) {
+          const m = String(task.zoteroPdfUri).match(/[?&]page=(\d+)/);
+          if (m) page = Number(m[1]);
+        }
+        ZoteroBridge.openPdf(task.zoteroItemKey, null, page);
+      }
+      return;
+    }
+
+    // Zotero sync note button click
+    if (e.target.closest('.task-action.zotero-sync-note')) {
+      e.stopPropagation();
+      const task = TaskManager.getTaskById(taskId);
+      if (typeof ZoteroBridge !== 'undefined' && task?.zoteroItemKey) {
+        this.showToast('正在同步至文献笔记...');
+        ZoteroBridge.syncChildNote(task.zoteroItemKey).then((res) => {
+          if (res?.success) {
+            this.showToast('已同步至文献笔记');
+          }
+        });
+      }
+      return;
+    }
+
+    // Zotero badge or locate button click
+    if (e.target.closest('.task-action.zotero-locate') || e.target.closest('.task-zotero-badge-main') || e.target.closest('.task-zotero-badge')) {
+      e.stopPropagation();
+      const task = TaskManager.getTaskById(taskId);
+      if (typeof ZoteroBridge !== 'undefined' && task?.zoteroItemKey) {
+        ZoteroBridge.locateItem(task.zoteroItemKey);
+      }
       return;
     }
 
@@ -901,12 +1025,29 @@ const UI = {
       </div>
     ` : '';
 
+    let academicBadge = '';
+    const typeIcons = {
+      literature_reading: '📖',
+      writing: '✍️',
+      experiment: '🔬',
+      submission: '⏰',
+      peer_review: '📑'
+    };
+    if (task.academicType && task.academicType !== 'general') {
+      academicBadge = `<span class="kanban-academic-badge" title="${task.academicType}">${typeIcons[task.academicType] || '🎓'}</span> `;
+    } else if (task.zoteroItemKey) {
+      academicBadge = '<span class="kanban-academic-badge" title="关联文献">📖</span> ';
+    }
+
+    const isAcademic = !!(task.zoteroItemKey || (task.academicType && task.academicType !== 'general'));
+
     return `
-      <div class="kanban-task" data-task-id="${task.id}">
-        <div class="kanban-task-title">${Utils.escapeHtml(task.title)}</div>
+      <div class="kanban-task ${isAcademic ? 'task-academic-kanban' : ''}" data-task-id="${task.id}">
+        <div class="kanban-task-title">${academicBadge}${Utils.escapeHtml(task.title)}</div>
         <div class="kanban-task-meta">
           <span class="kanban-task-priority ${task.priority}"></span>
           ${task.dueDate ? `<span class="kanban-task-date ${Utils.isOverdue(task.dueDate) ? 'overdue' : ''}">${Utils.formatRelativeDate(task.dueDate)}</span>` : ''}
+          ${task.zoteroPage ? `<span class="kanban-task-page" title="PDF 页码">P.${task.zoteroPage}</span>` : ''}
         </div>
         ${progressHtml}
       </div>
@@ -1016,6 +1157,17 @@ const UI = {
       // Close
       document.getElementById('btn-close-settings')?.addEventListener('click', () => {
         dialog.close();
+      });
+      document.getElementById('btn-close-settings-x')?.addEventListener('click', () => {
+        dialog.close();
+      });
+
+      // Zotero native preferences shortcut from modal
+      document.getElementById('btn-open-zotero-prefs')?.addEventListener('click', () => {
+        dialog.close();
+        if (typeof ZoteroBridge !== 'undefined') {
+          ZoteroBridge.openPreferences();
+        }
       });
 
       dialog._wired = true;
@@ -1176,8 +1328,14 @@ const UI = {
   // Create task card element
   createTaskCard(task) {
     const card = document.createElement('div');
-    card.className = `task-card ${task.completed ? 'completed' : ''}`;
+    const isAcademic = !!(task.zoteroItemKey || (task.academicType && task.academicType !== 'general'));
+    card.className = `task-card ${task.completed ? 'completed' : ''} ${isAcademic ? 'task-card-academic' : ''}`;
     card.dataset.taskId = task.id;
+    if (task.academicType) {
+      card.dataset.academicType = task.academicType;
+    } else if (task.zoteroItemKey) {
+      card.dataset.academicType = 'literature_reading';
+    }
 
     // Check if in selection mode
     if (TaskManager.isSelectionMode()) {
@@ -1194,6 +1352,22 @@ const UI = {
 
     // Set priority color
     card.style.setProperty('--priority-color', Utils.getPriorityColor(task.priority));
+
+    // Build Academic Type badge HTML
+    const academicTypeConfig = {
+      literature_reading: { label: '📖 论文研读', className: 'reading' },
+      writing: { label: '✍️ 论文写作', className: 'writing' },
+      experiment: { label: '🔬 实验复现', className: 'experiment' },
+      submission: { label: '⏰ 截稿 DDL', className: 'submission' },
+      peer_review: { label: '📑 同行审稿', className: 'review' },
+      general: { label: '📌 学术待办', className: 'general' }
+    };
+    let academicTypeHtml = '';
+    const activeType = task.academicType || (task.zoteroItemKey ? 'literature_reading' : null);
+    if (activeType && academicTypeConfig[activeType] && activeType !== 'general') {
+      const conf = academicTypeConfig[activeType];
+      academicTypeHtml = `<span class="task-academic-pill ${conf.className}">${conf.label}</span>`;
+    }
 
     // Build due date HTML
     let dueDateHtml = '';
@@ -1276,15 +1450,48 @@ const UI = {
     const timeHtml = TimeTracking.renderTimeStats(task);
     const timerBtn = TimeTracking.renderTimerButton(task.id);
 
+    // Build Zotero literature badge HTML
+    let zoteroBadgeHtml = '';
+    if (task.zoteroItemKey || task.zoteroItemTitle) {
+      const pageChip = task.zoteroPage ? `<span class="zotero-badge-page" title="关联文献 PDF 锚点页码">P.${task.zoteroPage}</span>` : '';
+      const authorYear = [task.zoteroAuthor, task.zoteroYear].filter(Boolean).join(' · ');
+      const authorChip = authorYear ? `<span class="zotero-badge-author-year" title="作者/年份">${this.highlightText(authorYear)}</span>` : '';
+      const pubChip = task.zoteroPublication ? `<span class="zotero-badge-pub" title="发表期刊/会议">${this.highlightText(task.zoteroPublication)}</span>` : '';
+      const openPdfBtn = (task.zoteroPdfUri || task.zoteroItemKey) ? 
+        `<button type="button" class="btn-card-open-pdf" data-item-key="${task.zoteroItemKey || ''}" data-page="${task.zoteroPage || ''}" title="在 Zotero 阅读器中打开 PDF 并跳转至对应页面">📖 伴读</button>` : '';
+
+      const quoteHtml = task.zoteroQuote ? `
+        <blockquote class="task-lit-quote" title="论文关键摘录/观点">
+          <span class="quote-mark">“</span>${this.highlightText(task.zoteroQuote)}<span class="quote-mark">”</span>
+        </blockquote>
+      ` : '';
+
+      zoteroBadgeHtml = `
+        <div class="task-zotero-badge-card" data-item-key="${task.zoteroItemKey || ''}">
+          <div class="task-zotero-badge-main" title="点击在 Zotero 文献库中高亮定位：${task.zoteroItemTitle || ''}">
+            <span class="zotero-badge-icon">📄</span>
+            <span class="zotero-badge-title">${this.highlightText(task.zoteroItemTitle || '关联文献')}</span>
+            ${pageChip}
+            ${authorChip}
+            ${pubChip}
+            ${openPdfBtn}
+          </div>
+          ${quoteHtml}
+        </div>
+      `;
+    }
+
     card.innerHTML = `
       <div class="task-checkbox ${task.completed ? 'checked' : ''}"></div>
       <div class="task-content">
         <div class="task-title">
+          ${academicTypeHtml}
           ${this.highlightText(task.title)}
           ${reminderHtml}
           ${repeatHtml}
         </div>
         ${task.description ? `<div class="task-description">${this.highlightText(task.description)}</div>` : ''}
+        ${zoteroBadgeHtml}
         ${subtaskHtml}
         ${tagsHtml ? `<div class="task-tags">${tagsHtml}</div>` : ''}
         <div class="task-meta">
@@ -1295,6 +1502,14 @@ const UI = {
         </div>
       </div>
       <div class="task-actions">
+        ${task.zoteroItemKey ? `
+          <button class="task-action zotero-sync-note" title="同步待办至 Zotero 文献笔记 (支持云同步)" data-item-key="${task.zoteroItemKey}">
+            📝
+          </button>
+          <button class="task-action zotero-locate" title="在 Zotero 中定位该文献" data-item-key="${task.zoteroItemKey}">
+            📄
+          </button>
+        ` : ''}
         <button class="task-action timer" title="${TimeTracking.isTimerRunning(task.id) ? '停止计时' : '开始计时'}" data-task-id="${task.id}">
           ${TimeTracking.isTimerRunning(task.id) ? '⏸️' : '⏱️'}
         </button>

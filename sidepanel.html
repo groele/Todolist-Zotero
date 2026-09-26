@@ -12,6 +12,11 @@
   <link rel="stylesheet" href="css/charts.css">
   <link rel="stylesheet" href="css/features.css">
   <script src="js/chromeMock.js"></script>
+  <style>
+    .batch-bar {
+      bottom: 58px;
+    }
+  </style>
 </head>
 <body>
   <!-- Loading State -->
@@ -175,7 +180,8 @@
         <button type="button" id="btn-close-modal-x" class="modal-close-btn" title="关闭 (Esc)">×</button>
       </div>
 
-      <input type="hidden" id="task-id">
+      <div class="modal-body">
+        <input type="hidden" id="task-id">
 
       <div class="form-group">
         <label for="task-title">任务标题 *</label>
@@ -341,18 +347,26 @@
       <div class="form-group" id="tags-container">
         <!-- Tags will be rendered here -->
       </div>
+    </div>
 
-      <div class="modal-actions">
-        <button type="button" id="btn-cancel" class="btn-secondary">取消</button>
-        <button type="submit" class="btn-primary">保存任务</button>
+    <div class="modal-actions">
+      <button type="button" id="btn-cancel" class="btn-secondary">取消</button>
+      <button type="submit" class="btn-primary">保存任务</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Settings Modal -->
+<dialog id="settings-modal" class="modal">
+  <div class="modal-form">
+    <div class="modal-header">
+      <div class="modal-header-title">
+        <span class="modal-header-icon">⚙️</span>
+        <h2>设置</h2>
       </div>
-    </form>
-  </dialog>
-
-  <!-- Settings Modal -->
-  <dialog id="settings-modal" class="modal">
-    <div class="modal-form">
-      <h2>设置</h2>
+      <button type="button" id="btn-close-settings-x" class="modal-close-btn" title="关闭 (Esc)">×</button>
+    </div>
+    <div class="modal-body">
       <div class="settings-group">
         <div class="settings-group-title">数据导出</div>
         <div class="data-actions">
@@ -406,9 +420,10 @@
           </button>
         </div>
       </div>
-      <div class="modal-actions">
-        <button type="button" id="btn-close-settings" class="btn-secondary">关闭</button>
-      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="btn-close-settings" class="btn-secondary">关闭</button>
+    </div>
     </div>
   </dialog>
 
@@ -436,6 +451,7 @@
   <script src="js/tags.js"></script>
   <script src="js/timeTracking.js"></script>
   <script src="js/recurring.js"></script>
+  <script src="js/zoteroBridge.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/app.js"></script>
 </body>

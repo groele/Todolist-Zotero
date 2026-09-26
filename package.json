@@ -1,0 +1,20 @@
+{
+  "name": "zotero-todolist",
+  "version": "1.0.0",
+  "description": "Todolist for Zotero: 专为学术科研、文献研读与论文写作打造的高颜值全功能任务看板与日程管理插件",
+  "type": "module",
+  "scripts": {
+    "build:zotero": "node scripts/build-zotero.mjs",
+    "package": "node scripts/build-zotero.mjs"
+  },
+  "keywords": [
+    "zotero",
+    "zotero-plugin",
+    "todolist",
+    "task-manager",
+    "academic",
+    "research"
+  ],
+  "author": "groele",
+  "license": "MIT"
+}

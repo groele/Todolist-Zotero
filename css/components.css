@@ -752,69 +752,114 @@
 
 /* Modal */
 .modal {
-  border: none;
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 0;
-  max-width: 420px;
-  width: calc(100% - var(--space-xl));
-  box-shadow: var(--shadow-xl), 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 520px;
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(740px, calc(100vh - 48px));
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.08);
   background-color: var(--surface);
   overflow: hidden;
+  margin: auto;
 }
 
 .modal::backdrop {
-  background-color: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(6px);
+  background-color: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(3px);
 }
 
 .modal-form {
-  padding: var(--space-xl);
+  padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  height: 100%;
+  max-height: inherit;
+  overflow: hidden;
 }
 
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-xs);
-  padding-bottom: var(--space-sm);
-  border-bottom: 1px solid var(--border-light);
+  padding: 11px 18px;
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .modal-header-title {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: 8px;
 }
 
 .modal-header-icon {
-  font-size: 18px;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .modal-header h2 {
-  font-size: var(--font-size-lg);
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
   margin: 0;
+  letter-spacing: -0.2px;
 }
 
 .modal-close-btn {
   border: none;
-  background: none;
-  font-size: 20px;
+  background: transparent;
+  font-size: 18px;
   line-height: 1;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  transition: color var(--transition-fast), background-color var(--transition-fast);
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color var(--transition-fast, 0.15s), color var(--transition-fast, 0.15s);
 }
 
 .modal-close-btn:hover {
   color: var(--text);
-  background-color: var(--border-light);
+  background-color: var(--border-light, #f1f5f9);
+}
+
+.modal-close-btn:active {
+  background-color: var(--border, #e2e8f0);
+}
+
+.modal-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-muted);
 }
 
 .form-group {
@@ -1107,15 +1152,51 @@
 
 .modal-actions {
   display: flex;
-  gap: var(--space-md);
-  margin-top: var(--space-md);
-  padding-top: var(--space-sm);
-  border-top: 1px solid var(--border-light);
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 11px 18px;
+  background-color: var(--bg);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  margin: 0;
 }
 
-.modal-actions .btn-secondary,
+.modal-actions .btn-secondary {
+  min-width: 72px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background-color: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s);
+}
+
+.modal-actions .btn-secondary:hover {
+  background-color: var(--border-light, #f1f5f9);
+  border-color: #94a3b8;
+}
+
 .modal-actions .btn-primary {
-  flex: 1;
+  min-width: 86px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background-color: var(--primary, #059669);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s);
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
+}
+
+.modal-actions .btn-primary:hover {
+  background-color: var(--primary-dark, #047857);
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35);
 }
 
 /* Calendar View */
@@ -1347,3 +1428,743 @@
     max-width: 100%;
   }
 }
+
+/* Zotero Literature Card Badge & Companion Buttons */
+.task-zotero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--primary-bg, #ecfdf5);
+  border: 1px solid var(--primary-light, #a7f3d0);
+  border-radius: var(--radius-md, 6px);
+  padding: 3px 8px;
+  margin: 4px 0 2px 0;
+  font-size: 11px;
+  color: var(--text-primary, #0f172a);
+  cursor: pointer;
+  max-width: 100%;
+  transition: background-color var(--transition-fast, 0.15s), border-color var(--transition-fast, 0.15s);
+}
+
+.task-zotero-badge:hover {
+  background: #d1fae5;
+  border-color: #34d399;
+}
+
+.zotero-badge-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.zotero-badge-title {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+}
+
+.zotero-badge-year {
+  color: var(--text-secondary, #64748b);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.btn-card-open-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid #10b981;
+  background: #ffffff;
+  color: #059669;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-card-open-pdf:hover {
+  background: #059669;
+  color: #ffffff;
+}
+
+.task-action.zotero-locate {
+  color: #059669;
+  font-size: 13px;
+}
+
+.task-action.zotero-sync-note {
+  color: #0d9488;
+  font-size: 13px;
+}
+
+/* Zotero environment visibility helpers */
+.zotero-only {
+  display: none !important;
+}
+
+.zotero-env .zotero-only {
+  display: inline-flex !important;
+}
+
+.zotero-env div.zotero-only {
+  display: block !important;
+}
+
+/* Companion Subwindow (460x760) Tailored Layout */
+.subwindow-mode .sidebar {
+  display: none !important;
+}
+
+.subwindow-mode .app-container {
+  grid-template-columns: 1fr !important;
+  max-width: 100% !important;
+}
+
+.subwindow-mode .main-content {
+  padding: 8px 12px !important;
+  width: 100% !important;
+}
+
+.subwindow-mode .main-header {
+  padding: 6px 0 !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+}
+
+.subwindow-mode .main-header-right {
+  gap: 4px !important;
+}
+
+.subwindow-mode .filter-select {
+  font-size: 11px !important;
+  padding: 3px 6px !important;
+}
+
+.subwindow-mode .task-card {
+  padding: 8px 10px !important;
+  margin-bottom: 6px !important;
+}
+
+.subwindow-mode .batch-bar {
+  left: 50% !important;
+  transform: translateX(-50%) translateY(calc(100% + 100px)) !important;
+  width: calc(100% - 24px) !important;
+  bottom: 12px !important;
+}
+
+.subwindow-mode .batch-bar.show {
+  transform: translateX(-50%) translateY(0) !important;
+}
+
+/* Window Mode Selector Dropdown Menu */
+.zotero-mode-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 6px;
+  z-index: 9999;
+  min-width: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.zotero-mode-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text, #1e293b);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.15s ease;
+}
+
+.zotero-mode-item:hover {
+  background: var(--fill-quinary, #f1f5f9);
+  color: var(--primary, #059669);
+}
+
+.zotero-mode-item.active {
+  background: rgba(5, 150, 105, 0.1);
+  color: var(--primary, #059669);
+  font-weight: 600;
+}
+
+/* Drag & Drop literature glow */
+.views-container.drag-over-zotero {
+  outline: 2px dashed var(--primary, #059669) !important;
+  outline-offset: -4px;
+  background-color: rgba(5, 150, 105, 0.04) !important;
+}
+
+/* ==========================================================================
+   Academic & Zotero 7 Native UI Enhancements
+   ========================================================================== */
+
+/* Academic Type Segmented Selector in Task Modal */
+.academic-type-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.academic-type-segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  background: var(--bg);
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.academic-seg-btn {
+  padding: 5px 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  transition: all var(--transition-fast, 0.15s);
+}
+
+.academic-seg-btn:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-light);
+}
+
+.academic-seg-btn.active {
+  background: var(--surface);
+  font-weight: 600;
+  border-color: var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.academic-seg-btn[data-type="literature_reading"].active {
+  color: #059669;
+  background: rgba(5, 150, 105, 0.12);
+}
+
+.academic-seg-btn[data-type="writing"].active {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.academic-seg-btn[data-type="experiment"].active {
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.academic-seg-btn[data-type="submission"].active {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.12);
+}
+
+.academic-seg-btn[data-type="peer_review"].active {
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.12);
+}
+
+.academic-seg-btn[data-type="general"].active {
+  color: #475569;
+  background: rgba(100, 116, 139, 0.12);
+}
+
+/* Modal Literature Section & Native Zotero Card */
+.modal-literature-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-lit-card.zotero-native-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 3.5px solid var(--primary, #059669);
+  border-radius: var(--radius-md, 6px);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-lit-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.modal-lit-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-lit-badge {
+  display: inline-block;
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.modal-lit-title {
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.modal-lit-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.modal-lit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+
+.modal-lit-page-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.styled-page-input {
+  width: 64px;
+  padding: 3px 6px;
+  font-size: 11.5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.styled-page-input:focus {
+  outline: none;
+  border-color: var(--primary, #059669);
+}
+
+.styled-lit-quote {
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 8px;
+  font-size: 11.5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  resize: vertical;
+  line-height: 1.4;
+  font-family: inherit;
+}
+
+.styled-lit-quote:focus {
+  outline: none;
+  border-color: var(--primary, #059669);
+}
+
+.modal-lit-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-lit-action {
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s);
+}
+
+.btn-lit-action:hover {
+  background: var(--border-light);
+  color: var(--primary, #059669);
+}
+
+.btn-lit-action.danger:hover {
+  color: var(--danger, #ef4444);
+  background: var(--danger-bg, #fef2f2);
+}
+
+.btn-attach-literature {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 11.5px;
+  font-weight: 500;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md, 6px);
+  background: var(--bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition-fast, 0.15s);
+}
+
+.btn-attach-literature:hover {
+  border-color: var(--primary, #059669);
+  color: var(--primary, #059669);
+  background: var(--primary-bg, #ecfdf5);
+}
+
+#btn-inject-milestones {
+  border: none;
+  background: transparent;
+  color: var(--primary, #059669);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: opacity var(--transition-fast, 0.15s);
+}
+
+#btn-inject-milestones:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+/* Academic Distinctive Styles for Task Cards */
+.task-card.task-card-academic {
+  border-left: 3.5px solid var(--primary, #059669);
+  background: linear-gradient(to right, rgba(5, 150, 105, 0.035), var(--surface) 24%);
+}
+
+.task-card-academic[data-academic-type="literature_reading"] {
+  border-left-color: #059669;
+}
+
+.task-card-academic[data-academic-type="writing"] {
+  border-left-color: #2563eb;
+  background: linear-gradient(to right, rgba(37, 99, 235, 0.035), var(--surface) 24%);
+}
+
+.task-card-academic[data-academic-type="experiment"] {
+  border-left-color: #7c3aed;
+  background: linear-gradient(to right, rgba(124, 58, 237, 0.035), var(--surface) 24%);
+}
+
+.task-card-academic[data-academic-type="submission"] {
+  border-left-color: #dc2626;
+  background: linear-gradient(to right, rgba(220, 38, 38, 0.035), var(--surface) 24%);
+}
+
+.task-card-academic[data-academic-type="peer_review"] {
+  border-left-color: #d97706;
+  background: linear-gradient(to right, rgba(217, 119, 6, 0.035), var(--surface) 24%);
+}
+
+.task-card-academic[data-academic-type="general"] {
+  border-left-color: #64748b;
+}
+
+/* Academic Pill Badges */
+.task-academic-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-right: 5px;
+  flex-shrink: 0;
+  line-height: 1.35;
+  vertical-align: middle;
+}
+
+.task-academic-pill.reading {
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
+  border: 1px solid rgba(5, 150, 105, 0.25);
+}
+
+.task-academic-pill.writing {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.task-academic-pill.experiment {
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
+  border: 1px solid rgba(124, 58, 237, 0.25);
+}
+
+.task-academic-pill.submission {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+.task-academic-pill.review {
+  background: rgba(217, 119, 6, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
+.task-academic-pill.general {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+}
+
+/* Rich Literature Card Badge on Task Card */
+.task-zotero-badge-card {
+  margin: 5px 0 3px 0;
+  background: rgba(5, 150, 105, 0.04);
+  border: 1px solid rgba(5, 150, 105, 0.18);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  max-width: 100%;
+}
+
+.task-zotero-badge-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  cursor: pointer;
+}
+
+.zotero-badge-page {
+  display: inline-block;
+  background: #059669;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 3px;
+  letter-spacing: 0.3px;
+}
+
+.zotero-badge-author-year {
+  color: var(--text-secondary);
+  font-size: 10.5px;
+}
+
+.zotero-badge-pub {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-style: italic;
+}
+
+.task-lit-quote {
+  margin: 4px 0 2px 0;
+  padding: 3px 8px;
+  background: rgba(0, 0, 0, 0.025);
+  border-left: 2.5px solid #059669;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+  border-radius: 0 4px 4px 0;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.quote-mark {
+  color: #059669;
+  font-weight: bold;
+}
+
+/* Kanban Distinctive Styling */
+.kanban-task.task-academic-kanban {
+  border-left: 3px solid #059669;
+}
+
+.kanban-academic-badge {
+  font-size: 12px;
+  margin-right: 2px;
+}
+
+.kanban-task-page {
+  font-size: 9.5px;
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+/* Task Modal Native Polish for Zotero */
+#task-modal,
+#settings-modal {
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 45px -10px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] #task-modal,
+[data-theme="dark"] #settings-modal {
+  border-color: #384252;
+  box-shadow: 0 18px 45px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+#task-modal .form-group input[type="text"],
+#task-modal .form-group textarea,
+#task-modal .form-group select {
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  font-size: 12.5px;
+  background-color: var(--surface);
+  color: var(--text);
+  transition: border-color var(--transition-fast, 0.15s), box-shadow var(--transition-fast, 0.15s);
+}
+
+#task-modal .form-group input[type="text"]:hover,
+#task-modal .form-group textarea:hover,
+#task-modal .form-group select:hover {
+  border-color: #94a3b8;
+}
+
+#task-modal .form-group input[type="text"]:focus,
+#task-modal .form-group textarea:focus,
+#task-modal .form-group select:focus {
+  outline: none;
+  border-color: var(--primary, #059669);
+  box-shadow: 0 0 0 2.5px rgba(5, 150, 105, 0.18);
+}
+
+/* Subtasks in Modal */
+#task-modal .subtask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#task-modal .subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+#task-modal .subtask-checkbox {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+
+#task-modal .subtask-checkbox.checked {
+  background: var(--primary, #059669);
+  border-color: var(--primary, #059669);
+}
+
+#task-modal .subtask-checkbox.checked::after {
+  content: '';
+  width: 4px;
+  height: 7px;
+  border: solid white;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+  margin-bottom: 2px;
+}
+
+#task-modal .subtask-input-group {
+  display: flex;
+  margin-top: 4px;
+}
+
+#task-modal .subtask-input-group input {
+  flex: 1;
+  padding: 5px 8px !important;
+  font-size: 12px !important;
+  border-radius: 4px 0 0 4px !important;
+  border-right: none !important;
+}
+
+#task-modal .subtask-add-btn {
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 0 4px 4px 0;
+  background: var(--surface);
+  color: var(--primary, #059669);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s);
+  white-space: nowrap;
+}
+
+#task-modal .subtask-add-btn:hover {
+  background: var(--primary, #059669);
+  color: #ffffff;
+  border-color: var(--primary, #059669);
+}
+
+/* Subwindow Mode Responsive Bounds */
+.subwindow-mode #task-modal,
+.subwindow-mode #settings-modal {
+  width: calc(100% - 16px) !important;
+  max-height: calc(100% - 16px) !important;
+  border-radius: 6px !important;
+  margin: 8px auto !important;
+}
+
+.subwindow-mode .modal-body {
+  padding: 12px 14px !important;
+  gap: 10px !important;
+}
+
+.subwindow-mode .modal-header {
+  padding: 10px 14px !important;
+}
+
+.subwindow-mode .modal-actions {
+  padding: 8px 14px !important;
+}
+
+
+

@@ -8,6 +8,19 @@ const TaskManager = {
   _undoTimeout: null,
   _selectedTasks: new Set(),
   _selectionMode: false,
+  _literatureFilter: null,
+
+  setLiteratureFilter(key) {
+    this._literatureFilter = key;
+  },
+
+  getLiteratureFilter() {
+    return this._literatureFilter;
+  },
+
+  clearLiteratureFilter() {
+    this._literatureFilter = null;
+  },
 
   // Load tasks from storage
   async loadTasks() {
@@ -37,7 +50,14 @@ const TaskManager = {
       reminder: taskData.reminder || { enabled: false, before: 15, notified: false },
       order: this._tasks.length,
       tags: taskData.tags || [],
-      repeat: taskData.repeat || null
+      repeat: taskData.repeat || null,
+      zoteroItemKey: taskData.zoteroItemKey || null,
+      zoteroItemTitle: taskData.zoteroItemTitle || null,
+      zoteroAuthors: taskData.zoteroAuthors || null,
+      zoteroYear: taskData.zoteroYear || null,
+      zoteroUri: taskData.zoteroUri || null,
+      zoteroPdfUri: taskData.zoteroPdfUri || null,
+      academicType: taskData.academicType || null
     };
 
     await Storage.addTask(task);
@@ -320,6 +340,21 @@ const TaskManager = {
     // Filter by category
     if (filters.category) {
       filtered = filtered.filter(t => t.category === filters.category);
+    }
+
+    // Filter by literature
+    const litKey = filters.literatureKey || this._literatureFilter;
+    if (litKey) {
+      if (litKey === '__has_literature__') {
+        filtered = filtered.filter(t => Boolean(t.zoteroItemKey));
+      } else {
+        filtered = filtered.filter(t => t.zoteroItemKey === litKey);
+      }
+    }
+
+    // Filter by academic type
+    if (filters.academicType && filters.academicType !== 'all') {
+      filtered = filtered.filter(t => t.academicType === filters.academicType);
     }
 
     // Filter by status

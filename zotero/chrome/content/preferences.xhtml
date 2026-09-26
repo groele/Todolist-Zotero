@@ -1,0 +1,69 @@
+<vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      id="todolist-preferences-pane" class="todolist-prefs-container"
+      onload="Todolist_Preferences.init(window)">
+  <html:header class="todolist-pref-header">
+    <html:div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+      <html:h1 style="margin: 0; font-size: 16px; font-weight: 700;">Todolist 学术日程与研读待办首选项</html:h1>
+      <html:div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <html:button id="todolist-btn-open-workspace" type="button" title="在 Zotero 内部选项卡中打开">📑 内部选项卡</html:button>
+        <html:button id="todolist-btn-open-subwindow" type="button" title="打开 460×760 紧凑伴读子窗口，适合边读 PDF 边核对待办" style="background:#ecfdf5; border-color:#059669; color:#065f46; font-weight: 600;">🗗 伴读子窗口</html:button>
+        <html:button id="todolist-btn-open-window" type="button" title="打开 1120×760 独立桌面全屏大窗口">⬚ 独立大窗口</html:button>
+      </html:div>
+    </html:div>
+  </html:header>
+  <html:p id="todolist-pref-status" class="todolist-pref-status" role="status" aria-live="polite">正在加载设置项…</html:p>
+  
+  <groupbox id="todolist-group-window" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">1. 窗口模式与多窗协同 (支持独立窗口与伴读子窗口)</html:h2>
+    <html:div id="todolist-pref-window" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-view" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">2. 界面显示与默认视图</html:h2>
+    <html:div id="todolist-pref-view" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-literature" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">3. 文献侧边详情栏 (ItemPane) 与双向联动</html:h2>
+    <html:div id="todolist-pref-literature" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-sync" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">4. 文献子笔记云同步 (原生支持 iPad / Mac / PC 多端云协同)</html:h2>
+    <html:div id="todolist-pref-sync" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-tags" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">5. 文献研读状态自动打标</html:h2>
+    <html:div id="todolist-pref-tags" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-academic" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">6. 学术场景预设与阅读器自动化</html:h2>
+    <html:div id="todolist-pref-academic" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-focus" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">7. 番茄钟专注冲刺与声音提醒</html:h2>
+    <html:div id="todolist-pref-focus" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-backup" class="todolist-pref-group todolist-pref-group-last">
+    <html:h2 class="todolist-group-title">8. 数据管理、维护与全局快捷键</html:h2>
+    <html:div class="todolist-pref-content">
+      <html:div id="todolist-pref-maintenance" style="margin-bottom: 12px;" />
+      <html:p class="todolist-pref-desc">
+        <strong>全局快捷键支持：</strong><html:br/>
+        • <html:code>Ctrl+Alt+T</html:code> (Mac: <html:code>Cmd+Alt+T</html:code>)：随时唤起 Todolist 学术任务看板（依默认窗口设置）。<html:br/>
+        • <html:code>Ctrl+Shift+T</html:code> (Mac: <html:code>Cmd+Shift+T</html:code>)：在 PDF 阅读器中将选中文本与当前页码一键建立带锚点链接的研读待办。<html:br/>
+      </html:p>
+      <html:div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+        <html:button id="todolist-btn-export-json" type="button">导出完整 JSON 备份</html:button>
+        <html:button id="todolist-btn-export-markdown" type="button">导出全部任务为 Markdown</html:button>
+        <html:button id="todolist-btn-reset-defaults" type="button" style="background: #fef2f2; border-color: #ef4444; color: #b91c1c;">恢复默认偏好设置</html:button>
+      </html:div>
+      <html:p class="todolist-pref-desc" style="margin-top: 6px; font-size: 11px; color: #94a3b8;">注：恢复默认偏好设置仅重置上述开关与选项，不会清空任何任务、文献关联或笔记数据。</html:p>
+    </html:div>
+  </groupbox>
+</vbox>
