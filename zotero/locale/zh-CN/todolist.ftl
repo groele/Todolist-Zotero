@@ -1,8 +1,5 @@
 todolist-menu-open = Todolist 学术待办看板
-todolist-item-menu-create = 为选中文献添加研读待办
-todolist-item-menu-milestones = 为选中文献批量生成精读清单
-todolist-item-menu-filter = 查看此文献的所有关联待办
-todolist-item-menu-sync-note = 同步研读清单至文献子笔记
+todolist-item-menu-create = 添加为待办
 todolist-collection-menu-create = 为此分类创建专题研读规划
 todolist-collection-menu-plan = 为此分类所有文献批量生成研读清单
 todolist-toolbar-tooltip = 打开 Todolist 学术任务看板 (Ctrl+Alt+T)

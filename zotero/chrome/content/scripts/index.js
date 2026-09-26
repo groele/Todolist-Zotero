@@ -1428,12 +1428,12 @@
         itemMenu.appendChild(separator);
         windowElements.push(separator);
 
-        // A. Add reading task for selected paper
+        // Add reading task for selected paper (仅保留添加为待办)
         const createFromItem = doc.createXULElement
           ? doc.createXULElement('menuitem')
           : doc.createElement('menuitem');
         createFromItem.id = 'todolist-itemmenu-create';
-        createFromItem.setAttribute('label', '为选中文献添加研读待办');
+        createFromItem.setAttribute('label', '添加为待办');
         createFromItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
         createFromItem.setAttribute('class', 'menuitem-iconic');
         createFromItem.addEventListener('command', () => {
@@ -1444,74 +1444,6 @@
         });
         itemMenu.appendChild(createFromItem);
         windowElements.push(createFromItem);
-
-        // B. Generate structured reading milestones
-        const milestonesItem = doc.createXULElement
-          ? doc.createXULElement('menuitem')
-          : doc.createElement('menuitem');
-        milestonesItem.id = 'todolist-itemmenu-milestones';
-        milestonesItem.setAttribute('label', '⚡ 为选中文献批量生成精读清单');
-        milestonesItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
-        milestonesItem.setAttribute('class', 'menuitem-iconic');
-        milestonesItem.addEventListener('command', () => {
-          const selected = this.getSelectedRegularItems(window);
-          if (selected.length > 0) {
-            this.createReadingMilestones(selected[0], window);
-          }
-        });
-        itemMenu.appendChild(milestonesItem);
-        windowElements.push(milestonesItem);
-
-        // C. Open companion subwindow for this paper
-        const subwinItem = doc.createXULElement
-          ? doc.createXULElement('menuitem')
-          : doc.createElement('menuitem');
-        subwinItem.id = 'todolist-itemmenu-subwindow';
-        subwinItem.setAttribute('label', '🗗 在伴读子窗口中打开此文献待办');
-        subwinItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
-        subwinItem.setAttribute('class', 'menuitem-iconic');
-        subwinItem.addEventListener('command', () => {
-          const selected = this.getSelectedRegularItems(window);
-          if (selected.length > 0) {
-            this.openStandaloneWindow({ mode: 'filter_item', itemKey: selected[0].key }, window, 'subwindow');
-          }
-        });
-        itemMenu.appendChild(subwinItem);
-        windowElements.push(subwinItem);
-
-        // D. Sync tasks to child note
-        const syncNoteItem = doc.createXULElement
-          ? doc.createXULElement('menuitem')
-          : doc.createElement('menuitem');
-        syncNoteItem.id = 'todolist-itemmenu-sync-note';
-        syncNoteItem.setAttribute('label', '📝 同步研读清单至文献子笔记 (云端)');
-        syncNoteItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
-        syncNoteItem.setAttribute('class', 'menuitem-iconic');
-        syncNoteItem.addEventListener('command', () => {
-          const selected = this.getSelectedRegularItems(window);
-          if (selected.length > 0) {
-            this.syncTasksToChildNote(selected[0]);
-          }
-        });
-        itemMenu.appendChild(syncNoteItem);
-        windowElements.push(syncNoteItem);
-
-        // E. View associated tasks for this item
-        const filterItem = doc.createXULElement
-          ? doc.createXULElement('menuitem')
-          : doc.createElement('menuitem');
-        filterItem.id = 'todolist-itemmenu-filter';
-        filterItem.setAttribute('label', '查看此文献的关联待办');
-        filterItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
-        filterItem.setAttribute('class', 'menuitem-iconic');
-        filterItem.addEventListener('command', () => {
-          const selected = this.getSelectedRegularItems(window);
-          if (selected.length > 0) {
-            this.openTodolist({ mode: 'filter_item', itemKey: selected[0].key }, window);
-          }
-        });
-        itemMenu.appendChild(filterItem);
-        windowElements.push(filterItem);
       }
 
       // 3. Add to Collection Context Menu (分类目录右键菜单)
