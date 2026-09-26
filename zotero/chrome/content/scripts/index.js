@@ -912,13 +912,39 @@
     },
 
     switchWindowMode(mode, window = null) {
-      const win = window || (Zotero.getMainWindow ? Zotero.getMainWindow() : null);
-      if (mode === 'subwindow') {
-        this.openStandaloneWindow({}, win, 'subwindow');
-      } else if (mode === 'window') {
-        this.openStandaloneWindow({}, win, 'window');
+      try {
+        if (Zotero.Prefs) {
+          Zotero.Prefs.set('extensions.todolist.windowMode', mode, true);
+        }
+      } catch (_) {}
+
+      const mainWin = (window && window.Zotero_Tabs)
+        ? window
+        : (Zotero.getMainWindow ? Zotero.getMainWindow() : Services.wm.getMostRecentWindow('navigator:browser'));
+
+      if (mode === 'subwindow' || mode === 'window') {
+        // Close internal Todolist tab if open in main window to make mode switch clean
+        if (mainWin?.Zotero_Tabs?._tabs) {
+          try {
+            const existingTab = mainWin.Zotero_Tabs._tabs.find((t) => t && t.type === 'todolist');
+            if (existingTab) {
+              mainWin.Zotero_Tabs.close(existingTab.id);
+            }
+          } catch (_) {}
+        }
+        this.openStandaloneWindow({}, mainWin, mode);
       } else if (mode === 'tab') {
-        this.openTodolist({ targetMode: 'tab' }, win);
+        // Close standalone windows if open
+        try {
+          const windows = Services.wm.getEnumerator(null);
+          while (windows.hasMoreElements()) {
+            const w = windows.getNext();
+            if (w && (w.name === 'Todolist_SubWindow' || w.name === 'Todolist_Window')) {
+              try { w.close(); } catch (_) {}
+            }
+          }
+        } catch (_) {}
+        this.openTodolist({ targetMode: 'tab' }, mainWin);
       }
     },
 
@@ -2058,7 +2084,10 @@
 
     openTodolist(options = {}, targetWindow = null) {
       try {
-        const win = targetWindow || (Zotero.getMainWindow ? Zotero.getMainWindow() : null);
+        const mainWin = (targetWindow && targetWindow.Zotero_Tabs)
+          ? targetWindow
+          : (Zotero.getMainWindow ? Zotero.getMainWindow() : Services.wm.getMostRecentWindow('navigator:browser'));
+
         let preferredWindowMode = 'tab';
         try {
           if (Zotero.Prefs) {
@@ -2068,23 +2097,23 @@
 
         const effectiveMode = options.targetMode || preferredWindowMode;
         if (effectiveMode === 'window') {
-          this.openStandaloneWindow(options, win, 'window');
+          this.openStandaloneWindow(options, mainWin, 'window');
           return;
         } else if (effectiveMode === 'subwindow') {
-          this.openStandaloneWindow(options, win, 'subwindow');
+          this.openStandaloneWindow(options, mainWin, 'subwindow');
           return;
         }
 
-        const tabs = win?.Zotero_Tabs || (Zotero.getMainWindow && Zotero.getMainWindow().Zotero_Tabs);
+        const tabs = mainWin?.Zotero_Tabs || (Zotero.getMainWindow && Zotero.getMainWindow().Zotero_Tabs);
         if (tabs && typeof tabs.add === 'function') {
           // Check if Todolist tab is already open
           if (Array.isArray(tabs._tabs)) {
             const existingTab = tabs._tabs.find((t) => t && t.type === 'todolist');
             if (existingTab) {
               tabs.select(existingTab.id);
-              if (win && win.focus) win.focus();
+              if (mainWin && mainWin.focus) mainWin.focus();
 
-              const iframe = win.document.getElementById('todolist-tab-iframe') ||
+              const iframe = mainWin.document.getElementById('todolist-tab-iframe') ||
                 (existingTab.container && existingTab.container.querySelector('iframe'));
               if (iframe && iframe.contentWindow && iframe._todolistReady) {
                 iframe.contentWindow.postMessage({ type: 'TODOLIST_NAVIGATE', options }, '*');
@@ -2109,7 +2138,7 @@
             (tabs.getTab && tabs.getTab(tabResult?.id)?.container);
 
           if (container) {
-            const doc = container.ownerDocument || win.document;
+            const doc = container.ownerDocument || mainWin.document;
             const iframe = doc.createElement('iframe');
             iframe.id = 'todolist-tab-iframe';
             iframe.setAttribute('src', `${CHROME_ROOT}index.html`);
@@ -2135,7 +2164,7 @@
             container.appendChild(iframe);
           }
 
-          if (win && win.focus) win.focus();
+          if (mainWin && mainWin.focus) mainWin.focus();
           return;
         }
       } catch (e) {
@@ -2162,8 +2191,24 @@
           windowName = 'Todolist_Window';
         }
 
+        // Close the other standalone window type if open (switching between subwindow and window)
+        const otherWindowName = windowType === 'subwindow' ? 'Todolist_Window' : 'Todolist_SubWindow';
+        try {
+          const windows = Services.wm.getEnumerator(null);
+          while (windows.hasMoreElements()) {
+            const w = windows.getNext();
+            if (w && w.name === otherWindowName) {
+              try { w.close(); } catch (_) {}
+            }
+          }
+        } catch (_) {}
+
+        const mainWin = (targetWindow && targetWindow.Zotero_Tabs)
+          ? targetWindow
+          : (Zotero.getMainWindow ? Zotero.getMainWindow() : Services.wm.getMostRecentWindow('navigator:browser'));
+
         const win = ww.openWindow(
-          targetWindow || (Zotero.getMainWindow ? Zotero.getMainWindow() : null),
+          mainWin,
           url,
           windowName,
           features,

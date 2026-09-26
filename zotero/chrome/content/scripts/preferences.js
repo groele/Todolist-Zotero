@@ -197,6 +197,34 @@ window.Todolist_Preferences = (() => {
     }
   }
 
+  function updateHeaderModeButtons(doc, activeMode) {
+    if (!doc) return;
+    const mode = activeMode || getPref('windowMode') || 'tab';
+    const buttonMap = [
+      { mode: 'tab', id: 'todolist-btn-open-workspace' },
+      { mode: 'subwindow', id: 'todolist-btn-open-subwindow' },
+      { mode: 'window', id: 'todolist-btn-open-window' }
+    ];
+
+    buttonMap.forEach(({ mode: m, id }) => {
+      const btn = doc.getElementById(id);
+      if (!btn) return;
+      btn.removeAttribute('style');
+      if (m === mode) {
+        btn.classList.add('todolist-pref-btn-primary');
+        btn.setAttribute('aria-pressed', 'true');
+      } else {
+        btn.classList.remove('todolist-pref-btn-primary');
+        btn.setAttribute('aria-pressed', 'false');
+      }
+    });
+
+    const select = doc.getElementById('pref-windowMode');
+    if (select && select.value !== mode) {
+      select.value = mode;
+    }
+  }
+
   function renderGroup(doc, containerId, items) {
     const container = doc.getElementById(containerId);
     if (!container) return;
@@ -234,6 +262,7 @@ window.Todolist_Preferences = (() => {
 
         const select = doc.createElementNS(HTML, 'select');
         select.className = 'todolist-control';
+        select.id = `pref-${key}`;
 
         for (const [optVal, optLabel] of (options || [])) {
           const option = doc.createElementNS(HTML, 'option');
@@ -248,6 +277,9 @@ window.Todolist_Preferences = (() => {
         select.addEventListener('change', () => {
           const typedVal = typeof DEFAULTS[key] === 'number' ? Number(select.value) : select.value;
           setPref(key, typedVal);
+          if (key === 'windowMode') {
+            updateHeaderModeButtons(doc, select.value);
+          }
         });
 
         row.appendChild(label);
@@ -399,11 +431,23 @@ window.Todolist_Preferences = (() => {
           }
         });
 
+        const handleSwitchMode = (targetMode) => {
+          setPref('windowMode', targetMode);
+          updateHeaderModeButtons(doc, targetMode);
+          const zot = win?.Zotero || window.Zotero || (typeof Zotero !== 'undefined' ? Zotero : null);
+          const mainWin = zot?.getMainWindow?.() || (typeof Services !== 'undefined' ? Services.wm?.getMostRecentWindow('navigator:browser') : null);
+          if (zot?.Todolist?.switchWindowMode) {
+            zot.Todolist.switchWindowMode(targetMode, mainWin);
+          } else if (zot?.Todolist?.openTodolist) {
+            zot.Todolist.openTodolist({ targetMode }, mainWin);
+          }
+        };
+
         // Open Internal Tab
         const openTabBtn = doc.getElementById('todolist-btn-open-workspace');
         if (openTabBtn) {
           openTabBtn.addEventListener('click', () => {
-            Zotero?.Todolist?.openTodolist?.({ targetMode: 'tab' }, win);
+            handleSwitchMode('tab');
           });
         }
 
@@ -411,7 +455,7 @@ window.Todolist_Preferences = (() => {
         const openSubBtn = doc.getElementById('todolist-btn-open-subwindow');
         if (openSubBtn) {
           openSubBtn.addEventListener('click', () => {
-            Zotero?.Todolist?.openTodolist?.({ targetMode: 'subwindow' }, win);
+            handleSwitchMode('subwindow');
           });
         }
 
@@ -419,9 +463,12 @@ window.Todolist_Preferences = (() => {
         const openWinBtn = doc.getElementById('todolist-btn-open-window');
         if (openWinBtn) {
           openWinBtn.addEventListener('click', () => {
-            Zotero?.Todolist?.openTodolist?.({ targetMode: 'window' }, win);
+            handleSwitchMode('window');
           });
         }
+
+        // Initialize active mode button highlight
+        updateHeaderModeButtons(doc, getPref('windowMode') || 'tab');
 
         // Export JSON
         doc.getElementById('todolist-btn-export-json')?.addEventListener('click', () => {

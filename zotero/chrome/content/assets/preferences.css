@@ -207,7 +207,8 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: all 0.15s ease;
+  user-select: none;
 }
 
 .todolist-pref-btn:hover {
@@ -215,15 +216,21 @@
   border-color: #94a3b8;
 }
 
+.todolist-pref-btn:active {
+  transform: translateY(1px);
+}
+
 .todolist-pref-btn-primary {
   background-color: #ecfdf5 !important;
   border-color: #059669 !important;
   color: #065f46 !important;
-  font-weight: 600;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.2);
 }
 
 .todolist-pref-btn-primary:hover {
   background-color: #d1fae5 !important;
+  border-color: #047857 !important;
 }
 
 .todolist-pref-btn-danger {
@@ -240,4 +247,26 @@
 .todolist-export-grid button {
   text-align: left;
   padding: 7px 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .todolist-pref-btn {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
+  }
+  .todolist-pref-btn:hover {
+    background-color: #334155;
+    border-color: #475569;
+  }
+  .todolist-pref-btn-primary {
+    background-color: #064e3b !important;
+    border-color: #10b981 !important;
+    color: #a7f3d0 !important;
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.25);
+  }
+  .todolist-pref-btn-primary:hover {
+    background-color: #047857 !important;
+    border-color: #34d399 !important;
+  }
 }

@@ -94,6 +94,15 @@ const UI = {
 
     // Zotero window mode dropdown
     const btnWinMode = document.getElementById('btn-zotero-window-mode');
+    const modeIcons = { tab: '📑', subwindow: '🗗', window: '⬚' };
+    const getActiveWinMode = () => {
+      const p = new URLSearchParams(window.location.search || '');
+      return p.get('mode') || window.arguments?.[0]?.options?.currentWindowType || 'tab';
+    };
+    if (btnWinMode) {
+      btnWinMode.textContent = modeIcons[getActiveWinMode()] || '🗗';
+    }
+
     btnWinMode?.addEventListener('click', (e) => {
       e.stopPropagation();
       const existingMenu = document.querySelector('.zotero-mode-dropdown');
@@ -102,8 +111,7 @@ const UI = {
         return;
       }
 
-      const params = new URLSearchParams(window.location.search || '');
-      const curMode = params.get('mode') || window.arguments?.[0]?.options?.currentWindowType || 'tab';
+      const curMode = getActiveWinMode();
 
       const menu = document.createElement('div');
       menu.className = 'zotero-mode-dropdown';
@@ -121,6 +129,7 @@ const UI = {
           evt.stopPropagation();
           const targetMode = item.dataset.mode;
           menu.remove();
+          if (btnWinMode) btnWinMode.textContent = modeIcons[targetMode] || '🗗';
           if (typeof ZoteroBridge !== 'undefined') {
             ZoteroBridge.switchWindowMode(targetMode);
           }

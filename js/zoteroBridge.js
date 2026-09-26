@@ -86,8 +86,64 @@ const ZoteroBridge = {
     try {
       if (window.parent && window.parent !== window) {
         window.parent.postMessage(msg, '*');
-      } else if (window.opener) {
+        return;
+      }
+      if (window.opener) {
         window.opener.postMessage(msg, '*');
+        return;
+      }
+      if (window.Zotero && window.Zotero.Todolist) {
+        const todolist = window.Zotero.Todolist;
+        const mainWin = window.Zotero.getMainWindow ? window.Zotero.getMainWindow() : null;
+        switch (msg.type) {
+          case 'TODOLIST_SWITCH_WINDOW_MODE':
+            todolist.switchWindowMode?.(msg.mode, window);
+            break;
+          case 'TODOLIST_OPEN_PREFERENCES':
+            todolist.openPreferencesPane?.(mainWin || window);
+            break;
+          case 'TODOLIST_LOCATE_ITEM': {
+            const item = todolist.resolveItemReference?.(msg.key, msg.libraryID);
+            if (item) {
+              const pane = mainWin?.ZoteroPane || window.Zotero.getActiveZoteroPane?.();
+              pane?.selectItem?.(item.id);
+            }
+            break;
+          }
+          case 'TODOLIST_OPEN_PDF': {
+            const item = todolist.resolveItemReference?.(msg.key, msg.libraryID);
+            if (item) todolist.openPdfAttachment?.(item, msg.page);
+            break;
+          }
+          case 'TODOLIST_EXPORT_DATA':
+            todolist.exportData?.(msg.format || 'json');
+            break;
+          case 'TODOLIST_IMPORT_DATA':
+            todolist.importDataFile?.(msg.mode || 'merge', mainWin || window);
+            break;
+          case 'TODOLIST_CLEAR_DATA':
+            todolist.clearAllData?.(mainWin || window);
+            break;
+          case 'TODOLIST_COPY_SUMMARY':
+            todolist.copyTasksSummary?.(mainWin || window);
+            break;
+          case 'TODOLIST_PRINT':
+            todolist.printTasks?.(mainWin || window);
+            break;
+          case 'TODOLIST_SYNC_NOTE': {
+            const item = todolist.resolveItemReference?.(msg.key, msg.libraryID);
+            if (item) {
+              todolist.syncTasksToChildNote?.(item).then((note) => {
+                if (msg.requestId && this._requestCallbacks.has(msg.requestId)) {
+                  const cb = this._requestCallbacks.get(msg.requestId);
+                  this._requestCallbacks.delete(msg.requestId);
+                  cb({ success: Boolean(note), noteKey: note?.key });
+                }
+              });
+            }
+            break;
+          }
+        }
       }
     } catch (e) {
       console.warn('[ZoteroBridge] sendToHost failed:', e);
