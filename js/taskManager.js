@@ -518,8 +518,8 @@ const TaskManager = {
     return 'todo';
   },
 
-  // Move a task between kanban columns and persist the status change cleanly
-  async moveTaskToKanbanColumn(taskId, column) {
+  // Move a task between kanban columns and persist the status change cleanly, with precise reordering
+  async moveTaskToKanbanColumn(taskId, column, targetTaskId = null) {
     const task = this.getTaskById(taskId);
     if (!task) return null;
 
@@ -557,7 +557,30 @@ const TaskManager = {
       return null;
     }
 
-    return this.updateTask(taskId, changes);
+    Object.assign(task, changes);
+    task.updatedAt = now;
+
+    // Handle position reordering if targetTaskId is specified
+    if (targetTaskId && targetTaskId !== taskId) {
+      const draggedIdx = this._tasks.findIndex(t => t.id === taskId);
+      if (draggedIdx !== -1) {
+        const [draggedItem] = this._tasks.splice(draggedIdx, 1);
+        const targetIdx = this._tasks.findIndex(t => t.id === targetTaskId);
+        if (targetIdx !== -1) {
+          this._tasks.splice(targetIdx, 0, draggedItem);
+        } else {
+          this._tasks.push(draggedItem);
+        }
+      }
+    }
+
+    // Keep order property sequential
+    this._tasks.forEach((t, idx) => {
+      t.order = idx;
+    });
+
+    await Storage.saveTasks(this._tasks);
+    return task;
   },
 
   // Get task counts

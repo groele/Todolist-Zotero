@@ -13,6 +13,7 @@
     } else {
       const filterNames = {
         all: '全部任务',
+        literature: '文献研读',
         today: '今天任务',
         upcoming: '即将到来',
         overdue: '逾期任务',

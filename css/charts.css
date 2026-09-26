@@ -254,10 +254,10 @@
 
 .drag-placeholder {
   background-color: var(--primary-bg);
-  border: 2px dashed var(--primary);
+  border: 1.5px solid var(--primary-light);
   border-radius: var(--radius-md);
   margin: var(--space-xs) 0;
-  opacity: 0.5;
+  box-sizing: border-box;
 }
 
 /* Subtask Styles */

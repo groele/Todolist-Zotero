@@ -219,18 +219,18 @@
 .quick-add input {
   width: 100%;
   padding: var(--space-md) var(--space-lg);
-  border: 2px dashed var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background-color: var(--surface);
   font-size: var(--font-size-md);
   color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   transition: all var(--transition-fast);
 }
 
 .quick-add input:focus {
   outline: none;
   border-color: var(--primary);
-  border-style: solid;
   box-shadow: 0 0 0 3px var(--primary-bg);
 }
 
@@ -630,20 +630,19 @@
 
 .card-add-subtask-input {
   width: 100%;
-  padding: 3px 8px;
+  padding: 4px 8px;
   font-size: 11px;
-  border: 1px dashed var(--border);
+  border: 1px solid var(--border-light, #e2e8f0);
   border-radius: var(--radius-sm);
-  background-color: transparent;
+  background-color: var(--surface, #ffffff);
   color: var(--text);
-  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .card-add-subtask-input:focus {
   outline: none;
-  border-style: solid;
   border-color: var(--primary);
-  background-color: var(--surface);
+  box-shadow: 0 0 0 2px var(--primary-bg);
 }
 
 /* Task Actions */
@@ -922,8 +921,8 @@
 }
 
 .time-field-section {
-  padding-top: var(--space-xs);
-  border-top: 1px dashed var(--border);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-light);
 }
 
 .date-input-row {
@@ -968,10 +967,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   font-size: 12px;
   font-weight: 500;
-  border: 1px dashed var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-full);
   background: var(--surface);
   color: var(--text-secondary);
@@ -1606,11 +1605,33 @@
   font-weight: 600;
 }
 
-/* Drag & Drop literature glow */
+/* Drag & Drop literature subtle highlight - Native Zotero 7/10 styling (No dashed borders) */
 .views-container.drag-over-zotero {
-  outline: 2px dashed var(--primary, #059669) !important;
-  outline-offset: -4px;
-  background-color: rgba(5, 150, 105, 0.04) !important;
+  position: relative;
+  box-shadow: inset 0 0 0 2px var(--primary-light, #818cf8) !important;
+  background-color: var(--primary-bg, rgba(99, 102, 241, 0.04)) !important;
+  transition: box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.zotero-drag-overlay-cue {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: var(--surface, #ffffff);
+  color: var(--primary, #6366f1);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--primary-light, #818cf8);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  z-index: 9999;
+  animation: fadeInDown 0.2s ease;
 }
 
 /* ==========================================================================
@@ -1752,9 +1773,9 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 4px;
-  padding-top: 6px;
-  border-top: 1px dashed var(--border);
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light);
 }
 
 .modal-lit-page-field {
@@ -1828,12 +1849,12 @@
 
 .btn-attach-literature {
   width: 100%;
-  padding: 8px 12px;
-  font-size: 11.5px;
+  padding: 9px 14px;
+  font-size: 12px;
   font-weight: 500;
-  border: 1px dashed var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text-secondary);
   cursor: pointer;
   text-align: center;
@@ -2164,6 +2185,30 @@
 
 .subwindow-mode .modal-actions {
   padding: 8px 14px !important;
+}
+
+/* Sidebar Real-time Filter Count Badges */
+.sidebar-filter-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--border-light, #f1f5f9);
+  color: var(--text-secondary, #64748b);
+  line-height: 1.35;
+  transition: all var(--transition-fast, 0.15s);
+}
+
+.sidebar-menu-btn.active .sidebar-filter-count {
+  background: var(--surface, #ffffff);
+  color: var(--primary, #6366f1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.sidebar-filter-count.has-overdue {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger, #ef4444);
 }
 
 

@@ -1073,7 +1073,7 @@
             // Empty state card
             if (total === 0) {
               const emptyCard = doc.createElementNS(html, 'div');
-              emptyCard.setAttribute('style', 'display:flex;flex-direction:column;align-items:center;text-align:center;padding:12px 8px;gap:8px;background:var(--fill-quinary,#f8fafc);border-radius:6px;border:1px dashed var(--border-color,#cbd5e1);margin:2px 0;');
+              emptyCard.setAttribute('style', 'display:flex;flex-direction:column;align-items:center;text-align:center;padding:12px 8px;gap:8px;background:var(--fill-quinary,#f8fafc);border-radius:6px;border:1px solid var(--border-color,rgba(0,0,0,0.08));margin:2px 0;');
 
               const emptyText = doc.createElementNS(html, 'div');
               emptyText.setAttribute('style', 'font-size:12px;color:var(--text-secondary,#64748b);font-weight:500;');

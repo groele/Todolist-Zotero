@@ -90,37 +90,105 @@
   min-height: 100px;
 }
 
+/* Kanban Column Content Drop Area */
 .kanban-column-content.drag-over {
   background-color: var(--primary-bg);
   border-radius: var(--radius-md);
 }
 
+/* Kanban Drag Placeholder */
+.kanban-drag-placeholder {
+  background-color: var(--primary-bg, rgba(99, 102, 241, 0.08));
+  border: 1.5px solid var(--primary-light, #818cf8);
+  border-radius: var(--radius-md);
+  margin: var(--space-xs) 0;
+  box-sizing: border-box;
+  min-height: 52px;
+  transition: all 0.15s ease;
+}
+
 /* Kanban Task Card */
 .kanban-task {
+  position: relative;
   background-color: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--space-md);
   border: 1px solid var(--border);
-  cursor: pointer;
+  cursor: grab;
+  user-select: none;
   transition: transform var(--transition-fast),
-              box-shadow var(--transition-fast);
+              box-shadow var(--transition-fast),
+              border-color var(--transition-fast);
+}
+
+.kanban-task:active {
+  cursor: grabbing;
 }
 
 .kanban-task:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-color: var(--primary-light, #818cf8);
 }
 
 .kanban-task.dragging {
-  opacity: 0.5;
-  transform: rotate(2deg);
+  opacity: 0.45;
+  transform: scale(0.98);
+}
+
+.kanban-task-header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.kanban-task-checkbox {
+  width: 15px;
+  height: 15px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: all var(--transition-fast);
+}
+
+.kanban-task-checkbox:hover {
+  border-color: var(--success);
+  background-color: var(--success-bg);
+}
+
+.kanban-task-checkbox.checked {
+  background-color: var(--success);
+  border-color: var(--success);
+}
+
+.kanban-task-checkbox.checked::after {
+  content: '';
+  width: 3.5px;
+  height: 6.5px;
+  border: solid white;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+  margin-bottom: 2px;
 }
 
 .kanban-task-title {
   font-size: var(--font-size-md);
   font-weight: 500;
-  margin-bottom: var(--space-xs);
   word-break: break-word;
+  flex: 1;
+  line-height: 1.35;
+}
+
+.kanban-task.completed .kanban-task-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
 }
 
 .kanban-task-meta {
@@ -128,6 +196,7 @@
   align-items: center;
   gap: var(--space-xs);
   flex-wrap: wrap;
+  padding-left: 23px;
 }
 
 .kanban-task-priority {
@@ -159,15 +228,72 @@
   font-weight: 600;
 }
 
-/* Kanban Empty State */
-.kanban-empty {
+.kanban-task-page {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  background: var(--primary-bg);
+  color: var(--primary);
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.kanban-task-page:hover {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+/* Kanban Column Footer & Quick Add Button */
+.kanban-column-footer {
+  padding: 0 var(--space-sm) var(--space-sm);
+}
+
+.kanban-quick-add-btn {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2xl);
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-  text-align: center;
-  border: 2px dashed var(--border);
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.kanban-quick-add-btn:hover {
+  background: var(--surface);
+  border-color: var(--border-light);
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Kanban Empty State - Clean Native Zotero 7/10 styling (No dashed borders) */
+.kanban-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-md);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  text-align: center;
+  border: 1px solid var(--border-light, #f1f5f9);
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  gap: 6px;
+  min-height: 72px;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all var(--transition-fast, 0.15s);
+}
+
+.kanban-empty-icon {
+  font-size: 18px;
+  opacity: 0.55;
 }

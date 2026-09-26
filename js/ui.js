@@ -150,22 +150,76 @@ const UI = {
       }
     });
 
-    // Drag & drop literature from Zotero library pane
+    // Drag & drop literature from Zotero library pane (with internal drag protection & clean cleanup)
     const viewsContainer = document.querySelector('.views-container');
     if (viewsContainer) {
-      viewsContainer.addEventListener('dragover', (e) => {
+      let dragCounter = 0;
+      let dropCueEl = null;
+
+      const showDropCue = () => {
+        if (!dropCueEl) {
+          dropCueEl = document.createElement('div');
+          dropCueEl.className = 'zotero-drag-overlay-cue';
+          dropCueEl.innerHTML = '<span>📥 释放以关联文献并创建研读待办</span>';
+          document.body.appendChild(dropCueEl);
+        }
+      };
+
+      const removeDropCue = () => {
+        if (dropCueEl && dropCueEl.parentNode) {
+          dropCueEl.parentNode.removeChild(dropCueEl);
+        }
+        dropCueEl = null;
+      };
+
+      const clearDragHighlight = () => {
+        dragCounter = 0;
+        viewsContainer.classList.remove('drag-over-zotero');
+        removeDropCue();
+      };
+
+      viewsContainer.addEventListener('dragenter', (e) => {
+        if (typeof DragDrop !== 'undefined' && (DragDrop.draggedTaskId || DragDrop.draggedElement)) {
+          return;
+        }
         if (typeof ZoteroBridge !== 'undefined' && ZoteroBridge.isZotero) {
-          e.preventDefault();
-          viewsContainer.classList.add('drag-over-zotero');
+          dragCounter++;
+          if (dragCounter === 1) {
+            viewsContainer.classList.add('drag-over-zotero');
+            showDropCue();
+          }
         }
       });
 
-      viewsContainer.addEventListener('dragleave', () => {
-        viewsContainer.classList.remove('drag-over-zotero');
+      viewsContainer.addEventListener('dragover', (e) => {
+        if (typeof DragDrop !== 'undefined' && (DragDrop.draggedTaskId || DragDrop.draggedElement)) {
+          return;
+        }
+        if (typeof ZoteroBridge !== 'undefined' && ZoteroBridge.isZotero) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+          if (!viewsContainer.classList.contains('drag-over-zotero')) {
+            viewsContainer.classList.add('drag-over-zotero');
+            showDropCue();
+          }
+        }
+      });
+
+      viewsContainer.addEventListener('dragleave', (e) => {
+        if (typeof DragDrop !== 'undefined' && (DragDrop.draggedTaskId || DragDrop.draggedElement)) {
+          return;
+        }
+        dragCounter--;
+        if (dragCounter <= 0) {
+          clearDragHighlight();
+        }
       });
 
       viewsContainer.addEventListener('drop', async (e) => {
-        viewsContainer.classList.remove('drag-over-zotero');
+        clearDragHighlight();
+        if (typeof DragDrop !== 'undefined' && (DragDrop.draggedTaskId || DragDrop.draggedElement)) {
+          return;
+        }
         if (typeof ZoteroBridge !== 'undefined' && ZoteroBridge.isZotero) {
           e.preventDefault();
           const activeItem = await ZoteroBridge.getActiveItem();
@@ -174,13 +228,22 @@ const UI = {
               title: `📖 研读：${activeItem.title}`,
               category: '论文研读',
               priority: 'medium',
-              literature: activeItem
+              academicType: 'literature_reading',
+              zoteroItemKey: activeItem.key,
+              zoteroItemTitle: activeItem.title,
+              zoteroAuthors: activeItem.authors || '',
+              zoteroYear: activeItem.year || null,
+              zoteroPublication: activeItem.publication || '',
+              zoteroPdfUri: activeItem.pdfUri || ''
             });
             this.render();
             this.showToast(`已为《${activeItem.title.slice(0, 20)}...》创建研读待办`);
           }
         }
       });
+
+      window.addEventListener('dragend', clearDragHighlight);
+      window.addEventListener('drop', clearDragHighlight);
     }
 
     // Templates button
@@ -659,8 +722,65 @@ const UI = {
     this.render();
   },
 
-  // Handle kanban clicks
+  // Handle kanban clicks with quick-actions, PDF direct jump, and modal editing
   async handleKanbanClick(e) {
+    // 1. Column footer quick add button
+    const quickAddBtn = e.target.closest('.kanban-quick-add-btn');
+    if (quickAddBtn) {
+      e.stopPropagation();
+      const colKey = quickAddBtn.dataset.column;
+      const prefill = {};
+      if (colKey === 'done') {
+        prefill.completed = true;
+      } else if (colKey === 'overdue') {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        prefill.dueDate = Utils.formatDate(yesterday);
+      } else if (colKey === 'todo' || colKey === 'in-progress') {
+        prefill.dueDate = Utils.formatDate(new Date());
+      }
+      Modal.openAdd(prefill);
+      return;
+    }
+
+    // 2. Quick toggle complete checkbox
+    const checkbox = e.target.closest('.kanban-task-checkbox');
+    if (checkbox) {
+      e.stopPropagation();
+      const taskId = checkbox.dataset.taskId;
+      const card = checkbox.closest('.kanban-task');
+      await this.handleToggleComplete(taskId, card);
+      return;
+    }
+
+    // 3. Quick PDF jump
+    const pageChip = e.target.closest('.kanban-task-page');
+    if (pageChip) {
+      e.stopPropagation();
+      const taskId = pageChip.dataset.taskId;
+      const task = TaskManager.getTaskById(taskId);
+      if (typeof ZoteroBridge !== 'undefined' && task?.zoteroItemKey) {
+        let page = null;
+        if (task.zoteroPage) page = Number(task.zoteroPage);
+        ZoteroBridge.openPdf(task.zoteroItemKey, null, page);
+      }
+      return;
+    }
+
+    // 4. Quick locate item from academic badge
+    const badge = e.target.closest('.kanban-academic-badge');
+    if (badge) {
+      e.stopPropagation();
+      const taskCard = badge.closest('.kanban-task');
+      const taskId = taskCard?.dataset.taskId;
+      const task = TaskManager.getTaskById(taskId);
+      if (typeof ZoteroBridge !== 'undefined' && task?.zoteroItemKey) {
+        ZoteroBridge.locateItem(task.zoteroItemKey);
+      }
+      return;
+    }
+
+    // 5. Open Edit Modal on card click
     const kanbanTask = e.target.closest('.kanban-task');
     if (kanbanTask) {
       const taskId = kanbanTask.dataset.taskId;
@@ -916,6 +1036,7 @@ const UI = {
   // Render the task list
   render() {
     this.updateHeaderProgress();
+    this.updateSidebarFilterCounts();
     this.updateCategorySelect();
 
     if (this.currentView === 'kanban') {
@@ -1053,7 +1174,12 @@ const UI = {
           </div>
           <div class="kanban-column-content" data-column="${col.key}">
             ${colTasks.map(task => this.createKanbanTask(task)).join('')}
-            ${colTasks.length === 0 ? '<div class="kanban-empty">暂无任务</div>' : ''}
+            ${colTasks.length === 0 ? `<div class="kanban-empty"><span class="kanban-empty-icon">${col.icon}</span><span>暂无${col.title}任务</span></div>` : ''}
+          </div>
+          <div class="kanban-column-footer">
+            <button type="button" class="kanban-quick-add-btn" data-column="${col.key}">
+              <span>＋ 添加任务</span>
+            </button>
           </div>
         </div>
       `;
@@ -1093,12 +1219,15 @@ const UI = {
     const isAcademic = !!(task.zoteroItemKey || (task.academicType && task.academicType !== 'general'));
 
     return `
-      <div class="kanban-task ${isAcademic ? 'task-academic-kanban' : ''}" data-task-id="${task.id}">
-        <div class="kanban-task-title">${academicBadge}${Utils.escapeHtml(task.title)}</div>
+      <div class="kanban-task ${task.completed ? 'completed' : ''} ${isAcademic ? 'task-academic-kanban' : ''}" data-task-id="${task.id}">
+        <div class="kanban-task-header-row">
+          <div class="kanban-task-checkbox ${task.completed ? 'checked' : ''}" data-task-id="${task.id}" title="${task.completed ? '标记为未完成' : '标记为已完成'}"></div>
+          <div class="kanban-task-title">${academicBadge}${Utils.escapeHtml(task.title)}</div>
+        </div>
         <div class="kanban-task-meta">
-          <span class="kanban-task-priority ${task.priority}"></span>
-          ${task.dueDate ? `<span class="kanban-task-date ${Utils.isOverdue(task.dueDate) ? 'overdue' : ''}">${Utils.formatRelativeDate(task.dueDate)}</span>` : ''}
-          ${task.zoteroPage ? `<span class="kanban-task-page" title="PDF 页码">P.${task.zoteroPage}</span>` : ''}
+          <span class="kanban-task-priority ${task.priority}" title="优先级: ${task.priority}"></span>
+          ${task.dueDate ? `<span class="kanban-task-date ${Utils.isOverdue(task.dueDate) && !task.completed ? 'overdue' : ''}">${Utils.formatRelativeDate(task.dueDate)}</span>` : ''}
+          ${task.zoteroPage ? `<span class="kanban-task-page" data-task-id="${task.id}" title="点击直接打开关联 PDF 并跳转至第 ${task.zoteroPage} 页">📖 P.${task.zoteroPage}</span>` : ''}
         </div>
         ${progressHtml}
       </div>
@@ -1475,10 +1604,43 @@ const UI = {
     return card;
   },
 
-  // Update active tab
+  // Update active tab and sidebar filter counts
   updateActiveTab() {
     document.querySelectorAll('.filter-tabs .tab').forEach(tab => {
       tab.classList.toggle('active', tab.dataset.filter === this.currentFilter);
+    });
+    this.updateSidebarFilterCounts();
+  },
+
+  // Update sidebar filter item counts in real-time
+  updateSidebarFilterCounts() {
+    if (typeof TaskManager === 'undefined' || !TaskManager.getTasks) return;
+    const tasks = TaskManager.getTasks();
+    const counts = {
+      all: tasks.filter(t => !t.completed).length,
+      literature: tasks.filter(t => !t.completed && (t.zoteroItemKey || (t.academicType && t.academicType !== 'general'))).length,
+      today: tasks.filter(t => !t.completed && Utils.isToday(t.dueDate)).length,
+      upcoming: tasks.filter(t => !t.completed && t.dueDate && !Utils.isToday(t.dueDate) && !Utils.isOverdue(t.dueDate)).length,
+      overdue: tasks.filter(t => !t.completed && Utils.isOverdue(t.dueDate)).length,
+      completed: tasks.filter(t => t.completed).length
+    };
+
+    document.querySelectorAll('.filter-tabs .tab').forEach(tab => {
+      const filter = tab.dataset.filter;
+      if (filter && counts[filter] !== undefined) {
+        let countEl = tab.querySelector('.sidebar-filter-count');
+        if (!countEl) {
+          countEl = document.createElement('span');
+          countEl.className = 'sidebar-filter-count';
+          tab.appendChild(countEl);
+        }
+        countEl.textContent = counts[filter];
+        if (filter === 'overdue' && counts[filter] > 0) {
+          countEl.classList.add('has-overdue');
+        } else {
+          countEl.classList.remove('has-overdue');
+        }
+      }
     });
   },
 

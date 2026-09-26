@@ -76,7 +76,7 @@ const DragDrop = {
 
   // Handle drag end
   handleDragEnd(e) {
-    const taskCard = e.target.closest('.task-card');
+    const taskCard = e.target.closest('.task-card') || this.draggedElement;
     if (taskCard) {
       taskCard.classList.remove('dragging');
     }
@@ -90,6 +90,8 @@ const DragDrop = {
     document.querySelectorAll('.drag-over').forEach(el => {
       el.classList.remove('drag-over');
     });
+
+    document.querySelector('.views-container')?.classList.remove('drag-over-zotero');
 
     this.draggedElement = null;
     this.draggedTaskId = null;
@@ -213,6 +215,11 @@ const DragDrop = {
     this.lastKanbanColumn = this.sourceKanbanColumn;
     this.kanbanDropHandled = false;
 
+    // Create responsive placeholder
+    this.kanbanPlaceholder = document.createElement('div');
+    this.kanbanPlaceholder.className = 'kanban-drag-placeholder';
+    this.kanbanPlaceholder.style.height = `${taskCard.offsetHeight || 60}px`;
+
     taskCard.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', this.draggedTaskId);
@@ -225,9 +232,17 @@ const DragDrop = {
       taskCard.classList.remove('dragging');
     }
 
+    if (this.kanbanPlaceholder && this.kanbanPlaceholder.parentNode) {
+      this.kanbanPlaceholder.parentNode.removeChild(this.kanbanPlaceholder);
+    }
+    this.kanbanPlaceholder = null;
+
     document.querySelectorAll('.kanban-column-content.drag-over').forEach(el => {
       el.classList.remove('drag-over');
     });
+
+    // Ensure viewsContainer drag-over-zotero is never lingering
+    document.querySelector('.views-container')?.classList.remove('drag-over-zotero');
 
     this.draggedElement = null;
     this.draggedTaskId = null;
@@ -236,17 +251,33 @@ const DragDrop = {
     this.kanbanDropHandled = false;
   },
 
-  // Allow dropping on kanban columns
+  // Allow dropping on kanban columns with dynamic placeholder repositioning
   handleKanbanDragOver(e) {
-    const { column } = this.getKanbanColumnFromEvent(e);
-    if (!column || !this.draggedTaskId) return;
+    const { content, column } = this.getKanbanColumnFromEvent(e);
+    if (!column || !this.draggedTaskId || !content) return;
 
     this.lastKanbanColumn = column;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+
+    // Position placeholder precisely before or after hovered card
+    const hoveredCard = e.target.closest('.kanban-task');
+    if (this.kanbanPlaceholder) {
+      if (hoveredCard && hoveredCard !== this.draggedElement) {
+        const rect = hoveredCard.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (e.clientY < midY) {
+          content.insertBefore(this.kanbanPlaceholder, hoveredCard);
+        } else {
+          content.insertBefore(this.kanbanPlaceholder, hoveredCard.nextSibling);
+        }
+      } else if (!hoveredCard && !content.contains(this.kanbanPlaceholder)) {
+        content.appendChild(this.kanbanPlaceholder);
+      }
+    }
   },
 
-  // Move task to the dropped kanban column
+  // Move task to the dropped kanban column and order position
   async handleKanbanDrop(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -258,25 +289,39 @@ const DragDrop = {
     this.kanbanDropHandled = true;
     content?.classList.remove('drag-over');
 
-    await this.completeKanbanMove(column, taskId);
+    // Extract target task ID before removing placeholder
+    let targetTaskId = null;
+    if (this.kanbanPlaceholder && this.kanbanPlaceholder.parentNode) {
+      const nextCard = this.kanbanPlaceholder.nextElementSibling;
+      if (nextCard && nextCard.classList.contains('kanban-task') && nextCard.dataset.taskId !== taskId) {
+        targetTaskId = nextCard.dataset.taskId;
+      }
+      this.kanbanPlaceholder.parentNode.removeChild(this.kanbanPlaceholder);
+    }
+    this.kanbanPlaceholder = null;
+
+    await this.completeKanbanMove(column, taskId, targetTaskId);
   },
 
-  // Persist a kanban status change if the task moved to a different column.
-  async completeKanbanMove(column, taskId = this.draggedTaskId) {
+  // Persist a kanban status change and/or position reorder cleanly.
+  async completeKanbanMove(column, taskId = this.draggedTaskId, targetTaskId = null) {
     if (!taskId) return null;
 
     const task = TaskManager.getTaskById(taskId);
     if (!task) return null;
 
     const currentStatus = TaskManager.getKanbanStatus(task);
-    if (currentStatus === column) return null;
+    // If same column and no target position changed, nothing to do
+    if (currentStatus === column && !targetTaskId) {
+      return null;
+    }
 
-    const updated = await TaskManager.moveTaskToKanbanColumn(taskId, column);
+    const updated = await TaskManager.moveTaskToKanbanColumn(taskId, column, targetTaskId);
     if (updated) {
       UI.renderKanban();
       UI.updateHeaderProgress();
       UI.notifyServiceWorker();
-      UI.showToast('任务状态已更新');
+      UI.showToast(currentStatus !== column ? '任务状态已更新' : '任务顺序已更新');
     }
 
     return updated;
