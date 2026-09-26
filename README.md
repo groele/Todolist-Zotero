@@ -1,129 +1,162 @@
-# Todolist - 高颜值任务看板与学术研读待办
+# Todolist for Zotero 📚✨
 
-> 专为日常时间规划、学术文献精读与科研论文写作打造的高颜值任务看板。包含 **Zotero 7+ 学术插件** 与 **Chrome 浏览器扩展** 双版本。
->
-> 📖 **Zotero 插件版本完整使用与开发指南**：请阅读 [Zotero 插件指南](docs/ZOTERO_GUIDE.md)。
-> 📦 **最新版下载**：访问 [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases) 下载 `.xpi` 插件安装包。
+<p align="center">
+  <img src="images/icon128.png" width="96" height="96" alt="Todolist Logo" />
+</p>
 
-## 🎓 Zotero 7+ 学术插件版本核心特性
+<p align="center">
+  <strong>专为学术科研、文献研读与论文写作打造的高颜值全功能任务看板与日程管理插件</strong>
+</p>
 
-- 📄 **文献双向联动与定位**：任务直接绑定文献条目与元数据，一键在文献库高亮定位；
-- 📖 **一键 PDF 伴读与页码直达**：卡片直接显示 `[📖 伴读]` 按钮，秒级切入 Zotero 原生阅读器并精确定位页码；
-- 📝 **文献子笔记跨端云同步**：一键将文献研读清单同步为条目子笔记（`📝 [Todolist] 研读清单与进度`），支持 Zotero 官方云同步跨设备多端查看；
-- ⚡ **精读里程碑清单生成**：一键生成 5 大标准精读步骤（泛读、方法推导、消融对比、代码测试、笔记总结）；
-- 📋 **条目详情侧栏小部件 (ItemPane)**：在 Zotero 右侧检视栏展示文献待办，配备可视化进度条、子任务交互式核对清单与回车极速添加；
-- 🖥️ **三大无缝窗口模式**：Zotero 原生选项卡 (Tab)、460×760 伴读紧凑子窗口 (Subwindow)、1120×760 独立桌面大窗口 (Window)，顶部工具栏一键任意切换；
-- ⚙️ **原生首选项全配置**：在 Zotero 原生偏好设置中提供 7 大配置模块（窗口模式、侧边栏选项、云端子笔记同步、自动打标规则、快捷键与数据备份）；
-- 📑 **六大学术研读预设**：论文研读、论文写作、实验复现、截稿 DDL、同行审稿、通用待办；
-- 🏷️ **自动化文献标签**：创建待办时自动标注 `待研读`，全部完成自动标注 `精读已完成`；
-- 💾 **无配额限制 IOUtils 持久化**：直接在 Zotero 数据目录安全保存 `todolist-data.json`；
-- ⌨️ **全局快捷键**：按下 `Ctrl + Alt + T` 随时唤起待办工作台，`Ctrl + Shift + T` 在 PDF 阅读器中直接提取选中文字创建待办；
-- 🎨 **全新统一矢量 SVG 图标体系**：20 套标准 24×24 像素对齐矢量 SVG 图标，侧边栏视图与过滤器统一间距、字号与图标列完美对齐；
-- 📦 **一键打包构建**：运行 `npm run build:zotero` 即可打包生成标准 `dist-zip/todolist-zotero-2.0.0.xpi`。
+<p align="center">
+  <a href="https://github.com/groele/Todolist-Zotero/releases/latest"><img src="https://img.shields.io/github/v/release/groele/Todolist-Zotero?style=flat-square&color=6366f1" alt="Release" /></a>
+  <img src="https://img.shields.io/badge/Zotero-10%20%7C%207%2B-059669?style=flat-square" alt="Zotero Compatibility" />
+  <img src="https://img.shields.io/badge/Platform-Win%20%7C%20macOS%20%7C%20Linux-blue?style=flat-square" alt="Platform" />
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License" />
+</p>
 
-## 💡 全局看板与通用任务特性
+<p align="center">
+  <a href="README_en.md"><strong>English</strong></a> | <strong>简体中文</strong>
+</p>
 
-- ✅ **全能任务看板**：列表清单、看板分栏、月度日历、统计分析四大视图自由切换；
-- ⏰ **时间与提醒管理**：支持全天候 24 小时选定、情景时间胶囊（`09:00` / `12:00` / `14:00` / `18:00` / `20:00`）及定时声音提醒；
-- 🔄 **父子任务联动**：支持卡片行内极速增删子任务、双击行内重命名标题、子任务完成度自动驱动主任务状态；
-- 🎨 **主题与精致动效**：浅色/深色主题自适应、流体微交互动画、完成粒子烟花特效、番茄钟计时器；
-- 💾 **全量数据导入导出**：支持完整 JSON 备份/恢复、以及 CSV、Markdown、TXT 格式报表导出。
+---
+
+## 🌟 为什么选择 Todolist for Zotero？
+
+在学术科研与论文撰写过程中，传统待办管理软件（如 Todoist、TickTick 等）往往脱离了文献研读的真实上下文：
+- ❌ **阅读进度断层**：文献存在 Zotero 里，待办记在外部软件中，无法随时调取论文；
+- ❌ **无法直达关键页**：记录了任务却不知道当时看到哪一页，寻找关键公式与图表耗时费力；
+- ❌ **多端同步壁垒**：平板或移动端查看文献时，无法同步查看文献对应的精读核对清单；
+- ❌ **科研流程无专属支撑**：缺乏对泛读、方法推导、对比实验、消融分析与审稿 DDL 的专属工作流抽象。
+
+**Todolist for Zotero** 是首款深度融入 Zotero 原生生态的科研待办与看板系统。它不仅提供了四大多维看板、内置番茄钟与流体动画，更实现了与 Zotero 文献库、PDF 阅读器、云端条目笔记和检视栏（ItemPane）的**双向无缝联动**！
+
+---
+
+## 🚀 v2.0.0 重大更新亮点
+
+- 🎨 **全新 20 套标准矢量 SVG 图标库**：彻底替换原有 Emoji 表情，基于 24×24 标准网格绘制，无论亮色暗色皆纯净高清；
+- 📐 **侧边栏像素级排版重构**：修复继承底栏内边距导致的对齐偏差，移除残留边框细线，视图与过滤器统一在严格的垂直基准线上；
+- 📑 **全站矢量交互优化**：卡片学术动作（复制引用、同步笔记、在库中高亮定位、专注计时）与多视窗切换器全面矢量化；
+- ⚡ **无缝支持 Zotero 10 与 7+**：经由 Gecko 运行环境静态合规检查与严格 SHA-256 校验打包。
+
+---
+
+## 🎓 核心功能特性
+
+### 1. Zotero 学术文献深度联动
+- 🎯 **双向定位与条目关联**：待办直接绑定文献条目与元数据（标题、作者、年份、期刊），点击卡片一键在文献库中高亮定位；
+- 📖 **PDF 原生伴读与精准页码跳转**：卡片智能提取页码锚点，点击 `[📖 伴读 P.xx]` 秒级切入 Zotero 原生阅读器并精确定位对应页码；
+- 📝 **文献子笔记跨端云同步**：一键将研读任务及子清单同步为文献条目的富文本子笔记（`📝 [Todolist] 研读清单与进度`），支持 Zotero 官方云同步，可在 iPad/手机端随时复习；
+- ⚡ **学术精读里程碑自动生成**：一键生成 5 大标准精读步骤（泛读摘要与结论、精读核心方法与公式推导、梳理对比与消融实验、复现代码或验证数据、总结创新点与学术笔记）；
+- 📋 **条目检视栏专属侧栏部件 (ItemPane)**：在 Zotero 右侧详情栏直接展示文献的待办列表、进度条与子任务勾选框，支持回车极速创建；
+- 🏷️ **自动化文献状态标签**：添加待办自动标注 `待研读`，全部步骤完成自动打上 `精读已完成` 标签；
+- 📋 **一键学术引用生成**：卡片快捷复制文献的标准引用格式（APA / IEEE / GB-T 7714）。
+
+### 2. 三大无缝窗口形态 (Window Modes)
+通过顶部工具栏一键任意切换：
+- 📑 **选项卡模式 (Tab)**：内嵌在 Zotero 主标签页中，沉浸式大屏科研工作台；
+- 🗗 **伴读子窗口 (Subwindow 460×760)**：专为双屏或分屏伴读设计，置于 PDF 阅读器旁，小巧精悍；
+- ⬚ **独立桌面大窗口 (Window 1120×760)**：独立操作系统桌面窗口，适合多显示器多任务全景协同。
+
+### 3. 四大多维看板视图 (Views)
+- 📋 **列表清单 (List View)**：支持按逾期、今天、近期、学术分类与优先级智能分组，折叠展开；
+- 📊 **看板分栏 (Kanban View)**：三栏流动式设计（待处理 / 进行中 / 已完成），支持跨列与列内平滑拖拽排序；
+- 📅 **月度日历 (Calendar View)**：直观查看整月科研计划与投稿截稿日期分布；
+- 📈 **统计分析 (Stats View)**：完成率趋势环形图、研读时长分布与学术类别占比报表。
+
+### 4. 精细化时间与专注管理
+- ⏱️ **内置番茄钟与时长统计**：记录单篇论文的精读时间，统计分析科研时间投入；
+- ⏰ **时间胶囊快捷选择**：支持全天候 24 小时选定与常用时段胶囊（`09:00` / `12:00` / `14:00` / `18:00` / `20:00`）；
+- 🔔 **桌面与声音提醒**：到达截止期前自动发出柔和提示音与系统通知。
+
+### 5. 数据安全与跨平台支持
+- 💾 **本地原生 IOUtils 持久化**：数据安全存储在 Zotero 数据目录下的 `todolist-data.json`，无云端配额限制；
+- 📤 **全量备份与多格式报表导出**：支持完整 JSON 备份恢复，以及 CSV、Markdown、TXT 格式导出；
+- 🌐 **双版本生态支持**：除了 Zotero 插件版外，亦可作为 Chrome 浏览器侧边栏扩展独立使用。
+
+---
 
 ## 📥 安装指南
 
-### 1. Zotero 7+ 插件安装
-1. 从 [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases) 下载最新的 `todolist-zotero-2.0.0.xpi` 安装包；
-2. 打开 Zotero 客户端，点击顶部菜单栏：`工具 (Tools)` -> `附加组件 (Plugins)`；
-3. 点击齿轮图标选择 `Install Add-on From File...` 或将下载的 `.xpi` 文件直接拖拽入附加组件窗口即可完成安装；
-4. 重启 Zotero 后，即可在顶部工具栏或右下角看到 Todolist 图标。
+### 方式一：直接安装 XPI 安装包 (推荐)
+1. 从 [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest) 下载最新的 `todolist-zotero-2.0.0.xpi` 安装包；
+2. 打开 Zotero 7+ 或 10 客户端，点击菜单栏：**“工具 (Tools)” → “插件 (Plugins / Add-ons)”**；
+3. 点击插件管理窗口右上角的齿轮 ⚙️ 图标，选择 **“Install Add-on From File... (从文件安装扩展)”**；
+4. 选中下载的 `todolist-zotero-2.0.0.xpi` 文件确认安装；
+5. 重启 Zotero 后，即可在顶部工具栏或右下角看到 Todolist 图标。
 
-### 2. Chrome 浏览器扩展安装
-1. 克隆或下载本项目至本地；
-2. 打开 Chrome 浏览器，访问 `chrome://extensions/`；
-3. 开启右上角「开发者模式」；
-4. 点击「加载已解压的扩展程序」，选择本项目根目录即可。
+### 方式二：开发者调试模式 (无需打包)
+1. 运行 `npm run build:zotero` 生成 `dist-zotero/` 目录；
+2. 进入 Zotero 个人配置文件目录下的 `extensions/` 文件夹：
+   - **Windows**: `%APPDATA%\Zotero\Zotero\Profiles\<profile>\extensions\`
+   - **macOS**: `~/Library/Application Support/Zotero/Profiles/<profile>/extensions/`
+   - **Linux**: `~/.zotero/zotero/<profile>/extensions/`
+3. 新建名为 `todolist@groele.org` 的纯文本文件（无后缀名）；
+4. 文件内填入当前项目 `dist-zotero` 文件夹的**绝对路径**；
+5. 重启 Zotero 即可实时调试最新代码。
 
-## 💡 全功能特性一览
+---
 
-- ✅ **任务管理** - 添加、编辑、删除、复制、完成任务
-- 📅 **日历视图** - 月度日历查看任务分布与缩略
-- 🎯 **优先级标记** - 高/中/低三级优先级
-- 🏷️ **分类与标签** - 支持自定义分类与动态彩色标签
-- 🔍 **搜索筛选** - 快速查找任务与历史搜索建议
-- 📊 **智能分组** - 按状态自动分组（逾期、今天、即将到来、已完成）
-- 💾 **全量数据备份** - 支持完整 JSON 导入导出、CSV、Markdown、TXT 导出
-- 🔄 **撤销删除** - 删除后可防覆盖撤销
-- 📱 **侧边栏与全屏模式** - 浏览网页时保持侧边栏打开，也可在大屏查看看板分栏
+## ⌨️ 全局快捷键
 
-## 使用方法
+| 快捷键 | 功能说明 | 适用场景 |
+| :--- | :--- | :--- |
+| `Ctrl + Alt + T` / `Cmd + Alt + T` | 快速打开 / 唤起 Todolist 主工作台 | 全局任意界面 |
+| `Ctrl + Shift + T` / `Cmd + Shift + T` | 选中文本快速提取并创建研读待办 | Zotero 内置 PDF 阅读器 |
+| `Esc` | 关闭当前弹窗或退出全屏模式 | 弹窗 / 编辑态 |
+| `Enter` | 快速保存子任务 / 添加快速待办 | 输入框内 |
 
-### 打开扩展
-- 点击浏览器工具栏中的扩展图标
-- 侧边栏将自动打开
+---
 
-### 添加任务
-1. 点击右上角的 `+` 按钮
-2. 填写任务信息：
-   - 标题（必填）
-   - 描述（可选）
-   - 截止日期（可选）
-   - 优先级（默认中等）
-   - 分类（可选）
-3. 点击「保存」
+## 🛠️ 构建与开发说明
 
-### 管理任务
-- **完成任务**：点击任务左侧的圆形复选框
-- **编辑任务**：点击任务卡片
-- **删除任务**：悬停任务卡片，点击删除按钮（可撤销）
+本项目构建工具链依赖 **Node.js (>= 18)** 与 **PowerShell 7 (pwsh)**。
 
-### 视图切换
-- **列表视图**：默认视图，按状态分组显示
-- **日历视图**：点击右上角日历图标切换
+```bash
+# 1. 克隆代码仓库
+git clone https://github.com/groele/Todolist-Zotero.git
+cd Todolist-Zotero
 
-### 筛选和搜索
-- **搜索**：在搜索框输入关键词
-- **优先级筛选**：使用下拉菜单选择
-- **状态筛选**：使用底部标签页切换（全部/今天/即将到来/已完成）
-
-## 项目结构
-
-```
-Todolist/
-├── manifest.json          # Chrome 扩展配置
-├── service-worker.js      # 后台服务
-├── sidepanel.html         # 主界面 HTML
-├── css/
-│   ├── variables.css      # CSS 变量
-│   ├── base.css           # 基础样式
-│   ├── components.css     # 组件样式
-│   └── animations.css     # 动画效果
-├── js/
-│   ├── app.js             # 入口文件
-│   ├── storage.js         # 存储层
-│   ├── taskManager.js     # 任务管理
-│   ├── ui.js              # UI 渲染
-│   ├── modal.js           # 弹窗模块
-│   ├── calendar.js        # 日历模块
-│   └── utils.js           # 工具函数
-└── images/                # 图标资源
+# 2. 执行完整打包流水线（语法安全校验、资源组装与 XPI 归档）
+npm run build:zotero
 ```
 
-## 技术栈
+构建流水线会自动完成：
+- 🧹 清理与构建标准的 Gecko Add-on 暂存目录 `dist-zotero/`；
+- 🔍 调用 `node --check` 针对所有核心 JS 进行语法安全合规检测；
+- 📦 自动化压缩并计算 SHA-256 校验码，产出 `dist-zip/todolist-zotero-2.0.0.xpi`。
 
-- Chrome Extension Manifest V3
-- Side Panel API
-- Chrome Storage API
-- 原生 HTML/CSS/JavaScript
-- 无外部依赖
+---
 
-## 开发说明
+## 📂 项目架构
 
-如需修改或扩展功能：
+```
+Todolist-Zotero/
+├── zotero/                           # Zotero 原生扩展核心层
+│   ├── manifest.json                 # 扩展清单与版本声明
+│   ├── bootstrap.js                  # Gecko 插件生命周期与资源映射
+│   ├── chrome.manifest               # 协议资源注册
+│   ├── update.json                   # 自动更新配置文件
+│   ├── locale/                       # 多语言国际化 (zh-CN, en-US)
+│   └── chrome/content/
+│       ├── preferences.xhtml         # 原生偏好设置面板
+│       └── scripts/index.js          # 宿主进程核心脚本 (右键菜单/检视栏/IPC通信/IO存储)
+├── js/                               # 前端业务逻辑与渲染引擎
+│   ├── zoteroBridge.js               # 前端与 Zotero 宿主进程通信桥梁
+│   ├── storage.js                    # 多端存储层 (IOUtils / Chrome / LocalStorage)
+│   ├── taskManager.js                # 任务状态机与过滤引擎
+│   ├── ui.js                         # 核心界面渲染与交互管理
+│   ├── modal.js                      # 任务编辑与文献关联弹窗
+│   └── timeTracking.js               # 番茄钟专注计时器
+├── css/                              # 现代化设计系统与动效样式
+├── index.html                        # 宽屏桌面端与选项卡主视图
+├── sidepanel.html                    # 浏览器与伴读紧凑视图
+└── dist-zip/                         # 发布安装包产物 (todolist-zotero-2.0.0.xpi)
+```
 
-1. 编辑相应文件
-2. 在 `chrome://extensions/` 页面点击扩展的刷新按钮
-3. 重新打开侧边栏查看更改
+---
 
-## 许可证
+## 📜 开源协议
 
-MIT License
+本项目基于 [MIT License](LICENSE) 开源发布。欢迎提交 Issue 与 Pull Request 共同完善学术科研生产力工具！
