@@ -18,7 +18,8 @@
 - 🏷️ **自动化文献标签**：创建待办时自动标注 `待研读`，全部完成自动标注 `精读已完成`；
 - 💾 **无配额限制 IOUtils 持久化**：直接在 Zotero 数据目录安全保存 `todolist-data.json`；
 - ⌨️ **全局快捷键**：按下 `Ctrl + Alt + T` 随时唤起待办工作台，`Ctrl + Shift + T` 在 PDF 阅读器中直接提取选中文字创建待办；
-- 📦 **一键打包构建**：运行 `npm run build:zotero` 即可打包生成标准 `dist-zip/todolist-zotero-1.1.0.xpi`。
+- 🎨 **全新统一矢量 SVG 图标体系**：20 套标准 24×24 像素对齐矢量 SVG 图标，侧边栏视图与过滤器统一间距、字号与图标列完美对齐；
+- 📦 **一键打包构建**：运行 `npm run build:zotero` 即可打包生成标准 `dist-zip/todolist-zotero-2.0.0.xpi`。
 
 ## 💡 全局看板与通用任务特性
 
@@ -31,7 +32,7 @@
 ## 📥 安装指南
 
 ### 1. Zotero 7+ 插件安装
-1. 从 [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases) 下载最新的 `todolist-zotero-1.1.0.xpi` 安装包；
+1. 从 [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases) 下载最新的 `todolist-zotero-2.0.0.xpi` 安装包；
 2. 打开 Zotero 客户端，点击顶部菜单栏：`工具 (Tools)` -> `附加组件 (Plugins)`；
 3. 点击齿轮图标选择 `Install Add-on From File...` 或将下载的 `.xpi` 文件直接拖拽入附加组件窗口即可完成安装；
 4. 重启 Zotero 后，即可在顶部工具栏或右下角看到 Todolist 图标。

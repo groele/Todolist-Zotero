@@ -152,10 +152,13 @@ const TimeTracking = {
   renderTimerButton(taskId) {
     const isRunning = this.isTimerRunning(taskId);
     const elapsed = this.getElapsedTime(taskId);
+    const icon = isRunning
+      ? `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`
+      : `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>`;
 
     return `
       <button class="timer-btn ${isRunning ? 'running' : ''}" data-task-id="${taskId}" title="${isRunning ? '停止计时' : '开始计时'}">
-        ${isRunning ? '⏸️' : '⏱️'}
+        ${icon}
         ${isRunning ? `<span class="timer-display">${this.formatDurationShort(elapsed)}</span>` : ''}
       </button>
     `;
@@ -170,7 +173,11 @@ const TimeTracking = {
 
     return `
       <div class="time-stats">
-        <span class="time-stats-icon">⏱️</span>
+        <span class="time-stats-icon">
+          <svg viewBox="0 0 24 24" width="12" height="12">
+            <path fill="currentColor" d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+          </svg>
+        </span>
         <span class="time-stats-value">${this.formatDurationShort(totalTime)}</span>
       </div>
     `;

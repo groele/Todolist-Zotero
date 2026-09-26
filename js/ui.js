@@ -94,13 +94,17 @@ const UI = {
 
     // Zotero window mode dropdown
     const btnWinMode = document.getElementById('btn-zotero-window-mode');
-    const modeIcons = { tab: '📑', subwindow: '🗗', window: '⬚' };
+    const modeSvgs = {
+      tab: `<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h10v4h8v10z"/></svg>`,
+      subwindow: `<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2zm0 14H5V8h14v10z"/></svg>`,
+      window: `<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/></svg>`
+    };
     const getActiveWinMode = () => {
       const p = new URLSearchParams(window.location.search || '');
       return p.get('mode') || window.arguments?.[0]?.options?.currentWindowType || 'tab';
     };
     if (btnWinMode) {
-      btnWinMode.textContent = modeIcons[getActiveWinMode()] || '🗗';
+      btnWinMode.innerHTML = modeSvgs[getActiveWinMode()] || modeSvgs.subwindow;
     }
 
     btnWinMode?.addEventListener('click', (e) => {
@@ -116,9 +120,18 @@ const UI = {
       const menu = document.createElement('div');
       menu.className = 'zotero-mode-dropdown';
       menu.innerHTML = `
-        <button class="zotero-mode-item ${curMode === 'tab' ? 'active' : ''}" data-mode="tab">📑 标签页模式 (Tab)</button>
-        <button class="zotero-mode-item ${curMode === 'subwindow' ? 'active' : ''}" data-mode="subwindow">🗗 伴读子窗口 (460×760)</button>
-        <button class="zotero-mode-item ${curMode === 'window' ? 'active' : ''}" data-mode="window">⬚ 独立桌面大窗口 (1120×760)</button>
+        <button class="zotero-mode-item ${curMode === 'tab' ? 'active' : ''}" data-mode="tab">
+          <span class="zotero-mode-icon">${modeSvgs.tab}</span>
+          <span>标签页模式 (Tab)</span>
+        </button>
+        <button class="zotero-mode-item ${curMode === 'subwindow' ? 'active' : ''}" data-mode="subwindow">
+          <span class="zotero-mode-icon">${modeSvgs.subwindow}</span>
+          <span>伴读子窗口 (460×760)</span>
+        </button>
+        <button class="zotero-mode-item ${curMode === 'window' ? 'active' : ''}" data-mode="window">
+          <span class="zotero-mode-icon">${modeSvgs.window}</span>
+          <span>独立桌面大窗口 (1120×760)</span>
+        </button>
       `;
 
       btnWinMode.parentElement.style.position = 'relative';
@@ -129,7 +142,7 @@ const UI = {
           evt.stopPropagation();
           const targetMode = item.dataset.mode;
           menu.remove();
-          if (btnWinMode) btnWinMode.textContent = modeIcons[targetMode] || '🗗';
+          if (btnWinMode) btnWinMode.innerHTML = modeSvgs[targetMode] || modeSvgs.subwindow;
           if (typeof ZoteroBridge !== 'undefined') {
             ZoteroBridge.switchWindowMode(targetMode);
           }
@@ -970,16 +983,16 @@ const UI = {
     document.documentElement.setAttribute('data-theme', theme);
 
     // Update theme button icon
-    const btn = document.getElementById('btn-theme');
-    if (btn) {
-      const icons = {
-        light: '☀️',
-        dark: '🌙',
-        auto: '🔄'
-      };
-      btn.textContent = icons[theme] || '☀️';
+    const btns = document.querySelectorAll('#btn-theme');
+    const svgIcons = {
+      light: `<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96a.996.996 0 000-1.41.996.996 0 00-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36a.996.996 0 000-1.41.996.996 0 000 1.41l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>`,
+      dark: `<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12.3 2a10 10 0 00-1.9 19.8 9.9 9.9 0 007.8-2.6c.4-.4.1-1.1-.4-1.1a8.1 8.1 0 01-6.4-6.4c-.1-.5-.7-.8-1.1-.4A10 10 0 0012.3 2z"/></svg>`,
+      auto: `<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>`
+    };
+    btns.forEach(btn => {
+      btn.innerHTML = svgIcons[theme] || svgIcons.light;
       btn.title = `当前主题：${theme === 'light' ? '浅色' : theme === 'dark' ? '深色' : '跟随系统'}`;
-    }
+    });
   },
 
   // Update header progress widget
@@ -1571,17 +1584,31 @@ const UI = {
       <div class="task-actions">
         ${task.zoteroItemKey ? `
           <button class="task-action zotero-copy-citation" title="复制文献学术引用" data-item-key="${task.zoteroItemKey}">
-            📋
+            <svg viewBox="0 0 24 24" width="15" height="15">
+              <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+            </svg>
           </button>
           <button class="task-action zotero-sync-note" title="同步待办至 Zotero 文献笔记 (支持云同步)" data-item-key="${task.zoteroItemKey}">
-            📝
+            <svg viewBox="0 0 24 24" width="15" height="15">
+              <path fill="currentColor" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+            </svg>
           </button>
           <button class="task-action zotero-locate" title="在 Zotero 中定位该文献" data-item-key="${task.zoteroItemKey}">
-            📄
+            <svg viewBox="0 0 24 24" width="15" height="15">
+              <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
           </button>
         ` : ''}
         <button class="task-action timer" title="${TimeTracking.isTimerRunning(task.id) ? '停止计时' : '开始计时'}" data-task-id="${task.id}">
-          ${TimeTracking.isTimerRunning(task.id) ? '⏸️' : '⏱️'}
+          ${TimeTracking.isTimerRunning(task.id) ? `
+            <svg viewBox="0 0 24 24" width="15" height="15">
+              <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+            </svg>
+          ` : `
+            <svg viewBox="0 0 24 24" width="15" height="15">
+              <path fill="currentColor" d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+            </svg>
+          `}
         </button>
         <button class="task-action duplicate" title="复制">
           <svg viewBox="0 0 24 24" width="16" height="16">
