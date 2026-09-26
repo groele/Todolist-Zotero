@@ -1,55 +1,40 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-  <defs>
-    <!-- Crisp drop shadow for clipboard elevation -->
-    <filter id="td-shadow" x="-20%" y="-15%" width="140%" height="135%">
-      <feDropShadow dx="0" dy="1" stdDeviation="0.9" flood-color="#0f172a" flood-opacity="0.16" />
-    </filter>
-    <!-- Clipboard gradient -->
-    <linearGradient id="td-card-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" />
-      <stop offset="100%" stop-color="#f8fafc" />
-    </linearGradient>
-    <!-- Vibrant emerald gradient for the hero checkmark -->
-    <linearGradient id="td-check-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981" />
-      <stop offset="100%" stop-color="#047857" />
-    </linearGradient>
-  </defs>
+  <style>
+    .td-card { fill: #ffffff; stroke: #059669; }
+    .td-check { stroke: #059669; }
+    .td-line-done { stroke: #94a3b8; }
+    .td-box { stroke: #059669; }
+    .td-line-active { stroke: #1e293b; }
+    @media (prefers-color-scheme: dark) {
+      .td-card { fill: #1e293b; stroke: #10b981; }
+      .td-check { stroke: #10b981; }
+      .td-line-done { stroke: #64748b; }
+      .td-box { stroke: #10b981; }
+      .td-line-active { stroke: #f1f5f9; }
+    }
+  </style>
 
-  <!-- 1. Academic Task Board / Clipboard Body -->
-  <rect x="3.5" y="3.2" width="17" height="18.2" rx="2.8" ry="2.8"
-        fill="url(#td-card-grad)"
-        stroke="#059669"
-        stroke-width="1.6"
-        filter="url(#td-shadow)" />
+  <!-- 1. Sleek Academic Sheet / Card (Clean rounded corners, generous margins) -->
+  <rect class="td-card" x="2.5" y="2.5" width="19" height="19" rx="4.2" stroke-width="1.8" />
 
   <!-- 2. Academic Literature Bookmark Ribbon (Top-Right Accent) -->
-  <path d="M15.2 3.2V9.2L17.2 7.7L19.2 9.2V3.2H15.2Z" fill="#f59e0b" />
+  <path d="M15 2.5V8.2L17 7L19 8.2V2.5H15Z" fill="#f59e0b" />
 
-  <!-- 3. Clipboard Top Binder Clamp -->
-  <rect x="8.2" y="1.6" width="7.6" height="3.2" rx="1.2" fill="#047857" />
-  <circle cx="12" cy="3.2" r="0.75" fill="#ffffff" opacity="0.95" />
-
-  <!-- 4. Task 1: Completed Task with Bold Emerald Checkmark (Core Todolist Attribute) -->
-  <path d="M6.2 8.8L8.6 11.2L13.6 6.0"
+  <!-- 3. Completed Milestone (Bold Emerald Checkmark + Clean Task Line) -->
+  <path class="td-check" d="M6 10L8.5 12.5L13.2 7.2"
         fill="none"
-        stroke="url(#td-check-grad)"
-        stroke-width="2.3"
+        stroke-width="2.4"
         stroke-linecap="round"
         stroke-linejoin="round" />
-  <line x1="14.8" y1="8.6" x2="18.2" y2="8.6" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" />
+  <line class="td-line-done" x1="14.5" y1="10" x2="18.2" y2="10"
+        stroke-width="2"
+        stroke-linecap="round" />
 
-  <!-- 5. Task 2: Active / In-Progress Task (Checkbox + Task Title Line) -->
-  <rect x="6.4" y="12.5" width="3.2" height="3.2" rx="0.8"
+  <!-- 4. Active Reading Task (Clear Rounded Checkbox + Title Line) -->
+  <rect class="td-box" x="6.2" y="14.5" width="3.6" height="3.6" rx="1"
         fill="none"
-        stroke="#059669"
-        stroke-width="1.5" />
-  <line x1="11.6" y1="14.1" x2="18.2" y2="14.1" stroke="#334155" stroke-width="1.8" stroke-linecap="round" />
-
-  <!-- 6. Task 3: Milestone / Pending Task (Checkbox + Subtask Line) -->
-  <rect x="6.4" y="17.2" width="3.2" height="3.2" rx="0.8"
-        fill="none"
-        stroke="#94a3b8"
-        stroke-width="1.3" />
-  <line x1="11.6" y1="18.8" x2="16.2" y2="18.8" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" />
+        stroke-width="1.6" />
+  <line class="td-line-active" x1="12" y1="16.3" x2="18.2" y2="16.3"
+        stroke-width="2"
+        stroke-linecap="round" />
 </svg>
