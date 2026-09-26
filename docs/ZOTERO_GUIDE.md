@@ -82,10 +82,10 @@
 ## 🚀 安装步骤
 
 ### 方式一：直接安装 XPI 安装包 (推荐)
-1. 在项目根目录的 `dist-zip/` 文件夹中找到生成的 `todolist-zotero-1.0.0.xpi`。
+1. 在项目根目录的 `dist-zip/` 文件夹中找到生成的 `todolist-zotero-1.1.0.xpi`。
 2. 打开 Zotero 7+，点击顶部菜单栏 **“工具 (Tools)” → “插件 (Plugins / Add-ons)”**。
 3. 点击插件管理窗口右上角的齿轮 ⚙️ 图标，选择 **“Install Add-on From File... (从文件安装扩展)”**。
-4. 选择 `todolist-zotero-1.0.0.xpi` 并确认安装。
+4. 选择 `todolist-zotero-1.1.0.xpi` 并确认安装。
 5. 安装成功后按提示重启 Zotero 即可。
 
 ### 方式二：开发者调试模式 (无需打包)
@@ -115,7 +115,7 @@ npm run build:zotero
 1. **清理与重构暂存区**：准备标准的 Gecko Add-on 目录结构 `dist-zotero/`
 2. **复制与注入资源**：整合 `zotero/` 宿主脚本、`css/`、`js/`、`index.html` 以及多语言文件
 3. **语法安全静态检查**：调用 `node --check` 对所有关键 JavaScript 进行语法合规验证
-4. **生成 .xpi 压缩包**：压缩并计算 SHA-256 校验码，输出到 `dist-zip/todolist-zotero-1.0.0.xpi`
+4. **生成 .xpi 压缩包**：压缩并计算 SHA-256 校验码，输出到 `dist-zip/todolist-zotero-1.1.0.xpi`
 
 ---
 
@@ -153,7 +153,7 @@ Todolist/
 ├── css/                              # 样式系统
 ├── index.html                        # 宽屏看板主界面 (选项卡与桌面视图)
 ├── sidepanel.html                    # 紧凑视图
-└── dist-zip/                         # 打包产物 (todolist-zotero-1.0.0.xpi)
+└── dist-zip/                         # 打包产物 (todolist-zotero-1.1.0.xpi)
 ```
 
 ---

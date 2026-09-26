@@ -1,6 +1,6 @@
 {
   "name": "zotero-todolist",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Todolist for Zotero: 专为学术科研、文献研读与论文写作打造的高颜值全功能任务看板与日程管理插件",
   "type": "module",
   "scripts": {
