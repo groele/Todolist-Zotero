@@ -15,6 +15,12 @@ const ZoteroBridge = {
       this.sendToHost({ type: 'TODOLIST_READY' });
       console.log('[Todolist] Running in Zotero environment');
     }
+
+    // Process initial options from window.arguments or window._todolistPending
+    const initialOptions = window.arguments?.[0]?.options || window._todolistPending;
+    if (initialOptions && initialOptions.mode && initialOptions.mode !== 'open') {
+      this.handleHostNavigation(initialOptions);
+    }
   },
 
   detectEnvironment() {
@@ -96,6 +102,16 @@ const ZoteroBridge = {
         const todolist = window.Zotero.Todolist;
         const mainWin = window.Zotero.getMainWindow ? window.Zotero.getMainWindow() : null;
         switch (msg.type) {
+          case 'TODOLIST_READY': {
+            todolist.loadData?.().then((storedData) => {
+              window.postMessage({
+                type: 'TODOLIST_INIT_DATA',
+                data: storedData,
+                pending: window.arguments?.[0]?.options || window._todolistPending || null
+              }, '*');
+            });
+            break;
+          }
           case 'TODOLIST_SWITCH_WINDOW_MODE':
             todolist.switchWindowMode?.(msg.mode, window);
             break;
@@ -143,10 +159,53 @@ const ZoteroBridge = {
             }
             break;
           }
+          case 'TODOLIST_GET_COLLECTIONS': {
+            const collections = todolist.getZoteroCollections?.(msg.libraryID) || [];
+            if (msg.requestId && this._requestCallbacks.has(msg.requestId)) {
+              const cb = this._requestCallbacks.get(msg.requestId);
+              this._requestCallbacks.delete(msg.requestId);
+              cb({ collections });
+            }
+            break;
+          }
+          case 'TODOLIST_GET_ACTIVE_ITEM': {
+            const activeItem = todolist.getCurrentActiveItem?.(mainWin || window);
+            if (msg.requestId && this._requestCallbacks.has(msg.requestId)) {
+              const cb = this._requestCallbacks.get(msg.requestId);
+              this._requestCallbacks.delete(msg.requestId);
+              cb({ item: activeItem ? serializeLiteratureItem(activeItem) : null });
+            }
+            break;
+          }
         }
       }
     } catch (e) {
       console.warn('[ZoteroBridge] sendToHost failed:', e);
+    }
+  },
+
+  executeWhenReady(fn) {
+    const tryRun = (attempt = 0) => {
+      const hasModal = typeof Modal !== 'undefined';
+      const hasDialog = hasModal && (Modal.dialog || document.getElementById('task-modal'));
+      if (document.readyState !== 'loading' && hasModal && hasDialog) {
+        try {
+          if (!Modal.dialog) {
+            Modal.ensureInitialized?.();
+          }
+          fn();
+        } catch (err) {
+          console.error('[ZoteroBridge] Navigation action execution error:', err);
+        }
+      } else if (attempt < 40) {
+        setTimeout(() => tryRun(attempt + 1), 80);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => tryRun(0), { once: true });
+    } else {
+      tryRun(0);
     }
   },
 
@@ -155,56 +214,51 @@ const ZoteroBridge = {
 
     if (options.mode === 'create_from_item' && options.item) {
       const item = options.item;
-      setTimeout(() => {
-        if (typeof Modal !== 'undefined' && Modal.openAdd) {
-          Modal.openAdd({
-            title: `研读：${item.title}`,
-            category: '论文研读',
-            tags: item.tags || [],
-            zoteroItemKey: item.key,
-            zoteroItemTitle: item.title,
-            zoteroAuthors: item.authors,
-            zoteroYear: item.year,
-            zoteroUri: item.zoteroUri,
-            zoteroPdfUri: item.pdfUri,
-            academicType: 'literature_reading'
-          });
-        }
-      }, 300);
+      this.executeWhenReady(() => {
+        Modal.openAdd({
+          title: `研读：${item.title}`,
+          category: '论文研读',
+          tags: item.tags || [],
+          zoteroItemKey: item.key,
+          zoteroItemTitle: item.title,
+          zoteroAuthors: item.authors,
+          zoteroYear: item.year,
+          zoteroPublication: item.publication || '',
+          zoteroUri: item.zoteroUri,
+          zoteroPdfUri: item.pdfUri,
+          academicType: 'literature_reading'
+        });
+      });
     } else if (options.mode === 'create_from_collection' && options.collectionName) {
-      setTimeout(() => {
-        if (typeof Modal !== 'undefined' && Modal.openAdd) {
-          Modal.openAdd({
-            title: `专题研读：${options.collectionName}`,
-            category: '论文研读',
-            tags: [options.collectionName]
-          });
-        }
-      }, 300);
+      this.executeWhenReady(() => {
+        Modal.openAdd({
+          title: `专题研读：${options.collectionName}`,
+          category: '论文研读',
+          tags: [options.collectionName]
+        });
+      });
     } else if (options.mode === 'filter_item' && options.itemKey) {
-      setTimeout(() => {
+      this.executeWhenReady(() => {
         if (typeof TaskManager !== 'undefined') {
           TaskManager.setLiteratureFilter(options.itemKey);
           if (typeof UI !== 'undefined' && UI.render) {
             UI.render();
           }
         }
-      }, 300);
+      });
     } else if (options.mode === 'open_modal_prefill' && options.prefill) {
-      setTimeout(() => {
-        if (typeof Modal !== 'undefined' && Modal.openAdd) {
-          Modal.openAdd(options.prefill);
-        }
-      }, 300);
+      this.executeWhenReady(() => {
+        Modal.openAdd(options.prefill);
+      });
     } else if (options.mode === 'view_task' && options.taskId) {
-      setTimeout(() => {
+      this.executeWhenReady(() => {
         const card = document.querySelector(`.task-card[data-task-id="${options.taskId}"]`);
         if (card) {
           card.scrollIntoView({ behavior: 'smooth', block: 'center' });
           card.style.outline = '2px solid var(--primary, #059669)';
           setTimeout(() => { card.style.outline = ''; }, 2500);
         }
-      }, 400);
+      });
     }
   },
 

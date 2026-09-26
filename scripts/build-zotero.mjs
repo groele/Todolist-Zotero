@@ -71,8 +71,13 @@ async function main() {
     window.process = window.process || { env: { NODE_ENV: 'production' } };
     window.global = window.global || window;
     try {
-      if (window.arguments && window.arguments[0] && window.arguments[0].Zotero) {
-        window.Zotero = window.arguments[0].Zotero;
+      if (window.arguments && window.arguments[0]) {
+        if (window.arguments[0].Zotero) {
+          window.Zotero = window.arguments[0].Zotero;
+        }
+        if (window.arguments[0].options) {
+          window._todolistPending = window.arguments[0].options;
+        }
       }
     } catch (_) {}
   </script>

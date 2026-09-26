@@ -8,19 +8,30 @@ const Modal = {
   currentSubtasks: [],
   currentTags: [],
   currentZoteroLiterature: null,
+  _listenersBound: false,
 
   // Initialize modal
   async init() {
-    this.dialog = document.getElementById('task-modal');
-    this.form = document.getElementById('task-form');
-    this.titleElement = document.getElementById('modal-title');
-
-    this.setupEventListeners();
+    this.ensureInitialized();
     await this.loadCategories();
+  },
+
+  // Ensure modal elements are bound even if openAdd is called before init()
+  ensureInitialized() {
+    if (!this.dialog) {
+      this.dialog = document.getElementById('task-modal');
+      this.form = document.getElementById('task-form');
+      this.titleElement = document.getElementById('modal-title');
+      this.setupEventListeners();
+    }
   },
 
   // Setup event listeners
   setupEventListeners() {
+    if (this._listenersBound) return;
+    this._listenersBound = true;
+    if (!this.form) return;
+
     // Form submission
     this.form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -287,6 +298,12 @@ const Modal = {
 
   // Open add modal
   openAdd(prefill = null) {
+    this.ensureInitialized();
+    if (!this.dialog || !this.form) {
+      console.warn('[Modal] Cannot openAdd: modal elements not ready in DOM');
+      return;
+    }
+
     this.currentTaskId = null;
     this.currentSubtasks = [];
     this.currentTags = [];
@@ -306,7 +323,7 @@ const Modal = {
       quote: prefill.zoteroQuote || '',
       academicType: activeType
     } : null;
-    this.titleElement.textContent = '添加学术任务';
+    if (this.titleElement) this.titleElement.textContent = '添加学术任务';
     const iconEl = this.dialog.querySelector('.modal-header-icon');
     if (iconEl) iconEl.textContent = '✨';
 
@@ -345,12 +362,20 @@ const Modal = {
     this.renderTags();
     this.renderLiteratureSection();
 
-    this.dialog.showModal();
-    document.getElementById('task-title').focus();
+    if (!this.dialog.open) {
+      this.dialog.showModal();
+    }
+    document.getElementById('task-title')?.focus();
   },
 
   // Open edit modal
   async openEdit(taskId) {
+    this.ensureInitialized();
+    if (!this.dialog || !this.form) {
+      console.warn('[Modal] Cannot openEdit: modal elements not ready in DOM');
+      return;
+    }
+
     const task = await Storage.getTaskById(taskId);
     if (!task) return;
 
@@ -416,8 +441,10 @@ const Modal = {
     this.renderTags();
     this.renderLiteratureSection();
 
-    this.dialog.showModal();
-    document.getElementById('task-title').focus();
+    if (!this.dialog.open) {
+      this.dialog.showModal();
+    }
+    document.getElementById('task-title')?.focus();
   },
 
   // Render subtasks list
@@ -695,8 +722,12 @@ const Modal = {
 
   // Close modal
   close() {
-    this.dialog.close();
-    this.form.reset();
+    if (this.dialog && this.dialog.open) {
+      this.dialog.close();
+    }
+    if (this.form) {
+      this.form.reset();
+    }
     this.currentTaskId = null;
     this.currentSubtasks = [];
     this.currentTags = [];

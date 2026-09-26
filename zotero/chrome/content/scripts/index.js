@@ -36,12 +36,26 @@
   const getLiteratureItem = (item) => {
     if (!item) return null;
     let target = item;
-    if (typeof target.isAttachment === 'function' && target.isAttachment() && target.parentItemID) {
-      target = Zotero.Items.get(target.parentItemID) || target;
+    try {
+      if (target.topLevelItem && typeof target.topLevelItem.isRegularItem === 'function' && target.topLevelItem.isRegularItem()) {
+        return target.topLevelItem;
+      }
+    } catch (_) {}
+    if (typeof target.isAttachment === 'function' && target.isAttachment()) {
+      if (target.parentItemID) {
+        target = Zotero.Items.get(target.parentItemID) || target;
+      }
     }
-    if (typeof target.isNote === 'function' && target.isNote() && target.parentItemID) {
-      target = Zotero.Items.get(target.parentItemID) || target;
+    if (typeof target.isNote === 'function' && target.isNote()) {
+      if (target.parentItemID) {
+        target = Zotero.Items.get(target.parentItemID) || target;
+      }
     }
+    try {
+      if (target.topLevelItem && typeof target.topLevelItem.isRegularItem === 'function' && target.topLevelItem.isRegularItem()) {
+        return target.topLevelItem;
+      }
+    } catch (_) {}
     return target && typeof target.isRegularItem === 'function' && target.isRegularItem() ? target : null;
   };
 
@@ -82,7 +96,7 @@
         const attIds = target.getAttachments();
         for (const attId of attIds) {
           const att = Zotero.Items.get(attId);
-          if (att && att.isPDFAttachment && att.isPDFAttachment()) {
+          if (att && ((typeof att.isPDFAttachment === 'function' && att.isPDFAttachment()) || att.contentType === 'application/pdf')) {
             const groupID = Zotero.Libraries?.get?.(att.libraryID)?.groupID;
             pdfUri = groupID
               ? `zotero://open-pdf/groups/${groupID}/items/${att.key}`
@@ -1436,12 +1450,20 @@
         createFromItem.setAttribute('label', '添加为待办');
         createFromItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
         createFromItem.setAttribute('class', 'menuitem-iconic');
-        createFromItem.addEventListener('command', () => {
-          const selected = this.getSelectedRegularItems(window);
-          if (selected.length > 0) {
-            this.openTodolist({ mode: 'create_from_item', item: serializeLiteratureItem(selected[0]) }, window);
+
+        let lastTriggerTime = 0;
+        const triggerCreate = (e) => {
+          const now = Date.now();
+          if (now - lastTriggerTime < 400) return;
+          lastTriggerTime = now;
+          if (e) {
+            e.stopPropagation?.();
           }
-        });
+          this.createTaskFromSelection(window, doc, itemMenu);
+        };
+
+        createFromItem.addEventListener('command', triggerCreate);
+        createFromItem.addEventListener('click', triggerCreate);
         itemMenu.appendChild(createFromItem);
         windowElements.push(createFromItem);
       }
@@ -1540,24 +1562,41 @@
         remove: () => window.removeEventListener('keydown', handleGlobalKeyDown, true),
       });
 
-      // 6. Host-level listener for Todolist iframe postMessages
+      // 6. Host-level listener for Todolist iframe and window postMessages
       const handleHostMessage = (event) => {
         try {
-          const iframe = window.document.getElementById('todolist-tab-iframe');
-          if (!iframe?.contentWindow || event.source !== iframe.contentWindow) return;
           const data = event.data;
           if (!data || typeof data !== 'object') return;
+          if (typeof data.type !== 'string' || !data.type.startsWith('TODOLIST_')) return;
+
+          const sourceWin = event.source;
+          const iframe = window.document.getElementById('todolist-tab-iframe');
+
+          if (iframe && (event.source === iframe.contentWindow || !sourceWin)) {
+            iframe._todolistReady = true;
+          }
+
+          const replyResult = (msgObj) => {
+            try {
+              if (sourceWin && typeof sourceWin.postMessage === 'function') {
+                sourceWin.postMessage(msgObj, '*');
+              } else if (iframe?.contentWindow) {
+                iframe.contentWindow.postMessage(msgObj, '*');
+              }
+            } catch (_) {}
+          };
 
           // A. Handshake Ready
           if (data.type === 'TODOLIST_READY') {
-            iframe._todolistReady = true;
+            if (iframe) iframe._todolistReady = true;
             this.loadData().then((storedData) => {
-              iframe.contentWindow.postMessage({
+              const pendingNav = iframe?._todolistPending || null;
+              if (iframe) iframe._todolistPending = null;
+              replyResult({
                 type: 'TODOLIST_INIT_DATA',
                 data: storedData,
-                pending: iframe._todolistPending
-              }, '*');
-              iframe._todolistPending = null;
+                pending: pendingNav
+              });
             });
             return;
           }
@@ -1566,11 +1605,11 @@
           if (data.type === 'TODOLIST_STORAGE_SET' && data.payload) {
             this.saveData(data.payload).then(() => {
               if (data.requestId) {
-                iframe.contentWindow.postMessage({
+                replyResult({
                   type: 'TODOLIST_STORAGE_SET_RESULT',
                   requestId: data.requestId,
                   success: true
-                }, '*');
+                });
               }
             });
             return;
@@ -1613,11 +1652,11 @@
           // F. Request active item from library or reader
           if (data.type === 'TODOLIST_GET_ACTIVE_ITEM') {
             const activeItem = this.getCurrentActiveItem(window);
-            iframe.contentWindow.postMessage({
+            replyResult({
               type: 'TODOLIST_GET_ACTIVE_ITEM_RESULT',
               requestId: data.requestId,
               item: activeItem ? serializeLiteratureItem(activeItem) : null
-            }, '*');
+            });
             return;
           }
 
@@ -1626,13 +1665,13 @@
             const item = resolveItemReference(data.key, data.libraryID);
             if (item) {
               this.syncTasksToChildNote(item).then((note) => {
-                if (data.requestId && iframe?.contentWindow) {
-                  iframe.contentWindow.postMessage({
+                if (data.requestId) {
+                  replyResult({
                     type: 'TODOLIST_SYNC_NOTE_RESULT',
                     requestId: data.requestId,
                     success: Boolean(note),
                     noteId: note?.id
-                  }, '*');
+                  });
                 }
               });
             }
@@ -1642,12 +1681,12 @@
           // H. Get Zotero Collections
           if (data.type === 'TODOLIST_GET_COLLECTIONS') {
             const collections = this.getZoteroCollections(data.libraryID);
-            if (data.requestId && iframe?.contentWindow) {
-              iframe.contentWindow.postMessage({
+            if (data.requestId) {
+              replyResult({
                 type: 'TODOLIST_GET_COLLECTIONS_RESULT',
                 requestId: data.requestId,
                 collections
-              }, '*');
+              });
             }
             return;
           }
@@ -1930,7 +1969,17 @@
         window?.ZoteroPane ||
         (Zotero.getActiveZoteroPane ? Zotero.getActiveZoteroPane() : null) ||
         (Zotero.getMainWindow ? Zotero.getMainWindow().ZoteroPane : null);
-      const rawSelection = pane && typeof pane.getSelectedItems === 'function' ? pane.getSelectedItems() : [];
+      let rawSelection = [];
+      if (pane && typeof pane.getSelectedItems === 'function') {
+        try {
+          rawSelection = pane.getSelectedItems() || [];
+        } catch (_) {}
+      }
+      if ((!rawSelection || rawSelection.length === 0) && pane?.itemsView?.getSelectedItems) {
+        try {
+          rawSelection = pane.itemsView.getSelectedItems() || [];
+        } catch (_) {}
+      }
       const result = [];
       const seen = new Set();
       for (const item of rawSelection) {
@@ -1955,6 +2004,47 @@
       }
       const selected = this.getSelectedRegularItems(window);
       return selected[0] || null;
+    },
+
+    createTaskFromSelection(window = null, doc = null, itemMenu = null) {
+      const win = window || (Zotero.getMainWindow ? Zotero.getMainWindow() : null);
+      let targetItem = null;
+
+      // 1. Try getSelectedRegularItems
+      const selected = this.getSelectedRegularItems(win);
+      if (selected.length > 0) {
+        targetItem = selected[0];
+      }
+
+      // 2. Fallback to triggerNode / popupNode from context menu
+      if (!targetItem) {
+        const documentObj = doc || win?.document;
+        const trigger = (itemMenu && itemMenu.triggerNode) || (documentObj && documentObj.popupNode);
+        const pane = win?.ZoteroPane || (Zotero.getActiveZoteroPane ? Zotero.getActiveZoteroPane() : null);
+        if (trigger && pane && typeof pane.getRowForNode === 'function') {
+          try {
+            const row = pane.getRowForNode(trigger);
+            if (row && row.ref) {
+              const rawItem = Zotero.Items.get(row.ref.id || row.ref);
+              targetItem = getLiteratureItem(rawItem);
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 3. Fallback to getCurrentActiveItem (e.g. reader or active tab)
+      if (!targetItem) {
+        targetItem = this.getCurrentActiveItem(win);
+      }
+
+      if (targetItem) {
+        const serialized = serializeLiteratureItem(targetItem);
+        this.showNotice('已选取文献', `正在为《${serialized.title.slice(0, 22)}...》创建研读待办`);
+        this.openTodolist({ mode: 'create_from_item', item: serialized }, win);
+      } else {
+        this.showNotice('创建待办', '正在打开任务面板...');
+        this.openTodolist({ mode: 'open_modal_prefill', prefill: { category: '论文研读' } }, win);
+      }
     },
 
     async createReadingMilestones(item, window = null) {
@@ -2047,8 +2137,18 @@
 
               const iframe = mainWin.document.getElementById('todolist-tab-iframe') ||
                 (existingTab.container && existingTab.container.querySelector('iframe'));
-              if (iframe && iframe.contentWindow && iframe._todolistReady) {
-                iframe.contentWindow.postMessage({ type: 'TODOLIST_NAVIGATE', options }, '*');
+              if (iframe) {
+                iframe._todolistPending = options;
+                try {
+                  if (iframe.contentWindow?.ZoteroBridge?.handleHostNavigation) {
+                    iframe.contentWindow.ZoteroBridge.handleHostNavigation(options);
+                  }
+                } catch (_) {}
+                try {
+                  if (iframe.contentWindow?.postMessage) {
+                    iframe.contentWindow.postMessage({ type: 'TODOLIST_NAVIGATE', options }, '*');
+                  }
+                } catch (_) {}
               }
               return;
             }
@@ -2089,6 +2189,10 @@
               try {
                 if (iframe.contentWindow) {
                   iframe.contentWindow.Zotero = Zotero;
+                  iframe.contentWindow._todolistPending = options;
+                  if (iframe.contentWindow.ZoteroBridge?.handleHostNavigation) {
+                    iframe.contentWindow.ZoteroBridge.handleHostNavigation(options);
+                  }
                 }
               } catch (_) {}
             });
@@ -2147,6 +2251,24 @@
           { Zotero, options: { ...options, currentWindowType: windowType } }
         );
         if (win && win.focus) win.focus();
+
+        if (options && options.mode && options.mode !== 'open') {
+          const tryDeliver = (attempts = 0) => {
+            try {
+              if (win && !win.closed) {
+                if (win.ZoteroBridge?.handleHostNavigation) {
+                  win.ZoteroBridge.handleHostNavigation(options);
+                  return;
+                }
+                win.postMessage?.({ type: 'TODOLIST_NAVIGATE', options }, '*');
+              }
+            } catch (_) {}
+            if (attempts < 10) {
+              mainWin.setTimeout(() => tryDeliver(attempts + 1), 200);
+            }
+          };
+          mainWin.setTimeout(() => tryDeliver(0), 300);
+        }
       } catch (err) {
         Zotero.logError?.('[Todolist] openStandaloneWindow error: ' + err);
       }
