@@ -1752,18 +1752,7 @@
       if (!window || !window.document) return;
       const doc = window.document;
 
-      if (doc.getElementById('todolist-toolbar-button')) return;
-
-      const anchor =
-        doc.getElementById('zotero-tb-attachment') ||
-        doc.getElementById('zotero-tb-note') ||
-        doc.getElementById('zotero-tb-lookup') ||
-        doc.getElementById('zotero-tb-add') ||
-        doc.querySelector('#zotero-item-toolbar toolbarbutton:last-of-type') ||
-        doc.querySelector('#zotero-items-toolbar toolbarbutton:last-of-type');
-
       const toolbar =
-        (anchor && anchor.parentNode) ||
         doc.getElementById('zotero-item-toolbar') ||
         doc.getElementById('zotero-items-toolbar') ||
         doc.getElementById('zotero-tb') ||
@@ -1781,35 +1770,169 @@
         return;
       }
 
-      const btn = doc.createXULElement
-        ? doc.createXULElement('toolbarbutton')
-        : doc.createElement('toolbarbutton');
+      const isTodolistButton = (button) =>
+        button.id === 'todolist-toolbar-button' ||
+        (button.getAttribute('label') === 'Todolist' &&
+          String(button.getAttribute('image') || '').includes('/icons/todolist.svg'));
 
-      btn.id = 'todolist-toolbar-button';
-      btn.setAttribute('label', 'Todolist');
-      btn.setAttribute('tooltiptext', '打开 Todolist 学术任务看板 (Ctrl+Alt+T)');
-      btn.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
-      btn.setAttribute('class', 'zotero-tb-button toolbarbutton-1 chromeclass-toolbar-additional');
-      btn.setAttribute(
-        'style',
-        'cursor: pointer; margin: 0 3px; display: inline-flex; align-items: center; justify-content: center;'
-      );
-
-      btn.addEventListener('command', (e) => {
-        if (e) {
-          e.preventDefault?.();
-          e.stopPropagation?.();
+      // Clean up any stale or misplaced duplicate buttons
+      const existingButtons = Array.from(doc.querySelectorAll('toolbarbutton')).filter(isTodolistButton);
+      let btn = existingButtons[0] || null;
+      if (existingButtons.length > 1) {
+        for (let i = 1; i < existingButtons.length; i++) {
+          try { existingButtons[i].remove(); } catch (_) {}
         }
-        this.triggerTodolistOpen(window);
-      });
-
-      if (anchor && anchor.nextSibling) {
-        toolbar.insertBefore(btn, anchor.nextSibling);
-      } else {
-        toolbar.appendChild(btn);
       }
 
-      windowElements.push(btn);
+      if (!btn) {
+        btn = doc.createXULElement
+          ? doc.createXULElement('toolbarbutton')
+          : doc.createElement('toolbarbutton');
+
+        btn.id = 'todolist-toolbar-button';
+        btn.setAttribute('label', 'Todolist');
+        btn.setAttribute('tooltiptext', '打开 Todolist 学术任务看板 (Ctrl+Alt+T)');
+        btn.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
+        btn.setAttribute('class', 'zotero-tb-button toolbarbutton-1 chromeclass-toolbar-additional');
+        btn.setAttribute(
+          'style',
+          'cursor: pointer; margin: 0 3px; display: inline-flex; align-items: center; justify-content: center;'
+        );
+
+        const trigger = (e) => {
+          if (e) {
+            e.preventDefault?.();
+            e.stopPropagation?.();
+          }
+          this.triggerTodolistOpen(window);
+        };
+
+        btn.addEventListener('command', trigger);
+        btn.addEventListener('click', trigger);
+      }
+
+      // Find the proper anchor: the LAST action button in the toolbar before the search box spacer
+      const toolbarChildren = Array.from(toolbar.children || []);
+      const flexibleSpacerIndex = toolbarChildren.findIndex((child) => {
+        const tag = String(child.localName || child.tagName || '').toLowerCase();
+        return tag === 'toolbarspring' ||
+          (tag === 'spacer' && Number(child.getAttribute('flex') || 0) > 0) ||
+          child.id === 'zotero-tb-search' ||
+          child.id === 'zotero-tb-search-textbox' ||
+          child.classList?.contains('zotero-search-box') ||
+          child.classList?.contains('search-box');
+      });
+
+      const leadingActionItems = flexibleSpacerIndex >= 0
+        ? toolbarChildren.slice(0, flexibleSpacerIndex)
+        : toolbarChildren;
+
+      const toolbarButtons = leadingActionItems.filter((child) =>
+        String(child.localName || child.tagName || '').toLowerCase() === 'toolbarbutton' &&
+        !isTodolistButton(child) &&
+        !child.hidden &&
+        child.getAttribute('hidden') !== 'true' &&
+        child.getAttribute('collapsed') !== 'true'
+      );
+
+      // Find the last visible button in the action group (places Todolist at the end of the plugin row)
+      const anchor = toolbarButtons.reverse().find((child) => {
+        try {
+          const style = window.getComputedStyle(child);
+          return style.display !== 'none' && style.visibility !== 'collapse';
+        } catch (_error) {
+          return true;
+        }
+      }) || null;
+
+      if (anchor && anchor.parentNode === toolbar) {
+        if (anchor.nextSibling !== btn) {
+          anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+        }
+      } else {
+        const searchBox =
+          doc.getElementById('zotero-tb-search-textbox') ||
+          doc.getElementById('zotero-tb-search') ||
+          toolbar.querySelector('input') ||
+          toolbar.querySelector('.zotero-search-box') ||
+          (flexibleSpacerIndex >= 0 ? toolbarChildren[flexibleSpacerIndex] : null);
+        if (searchBox && searchBox.parentNode === toolbar) {
+          toolbar.insertBefore(btn, searchBox);
+        } else {
+          toolbar.appendChild(btn);
+        }
+      }
+
+      if (!windowElements.includes(btn)) {
+        windowElements.push(btn);
+      }
+
+      // Re-position safeguard after other extensions finish initializing
+      if (retryCount === 0) {
+        const delays = [400, 1200, 2500];
+        delays.forEach((d) => {
+          const timer = window.setTimeout(() => {
+            retryState.timers.delete(timer);
+            if (!retryState.cancelled) {
+              this.repositionToolbarButton(window);
+            }
+          }, d);
+          retryState.timers.add(timer);
+        });
+      }
+    },
+
+    repositionToolbarButton(window) {
+      if (!window || !window.document) return;
+      const doc = window.document;
+      const btn = doc.getElementById('todolist-toolbar-button');
+      if (!btn) return;
+
+      const toolbar =
+        btn.parentNode ||
+        doc.getElementById('zotero-item-toolbar') ||
+        doc.getElementById('zotero-items-toolbar') ||
+        doc.getElementById('zotero-tb') ||
+        doc.querySelector('toolbar');
+      if (!toolbar) return;
+
+      const isTodolistButton = (b) => b.id === 'todolist-toolbar-button';
+      const toolbarChildren = Array.from(toolbar.children || []);
+      const flexibleSpacerIndex = toolbarChildren.findIndex((child) => {
+        const tag = String(child.localName || child.tagName || '').toLowerCase();
+        return tag === 'toolbarspring' ||
+          (tag === 'spacer' && Number(child.getAttribute('flex') || 0) > 0) ||
+          child.id === 'zotero-tb-search' ||
+          child.id === 'zotero-tb-search-textbox' ||
+          child.classList?.contains('zotero-search-box');
+      });
+
+      const leadingActionItems = flexibleSpacerIndex >= 0
+        ? toolbarChildren.slice(0, flexibleSpacerIndex)
+        : toolbarChildren;
+
+      const toolbarButtons = leadingActionItems.filter((child) =>
+        String(child.localName || child.tagName || '').toLowerCase() === 'toolbarbutton' &&
+        !isTodolistButton(child) &&
+        !child.hidden &&
+        child.getAttribute('hidden') !== 'true' &&
+        child.getAttribute('collapsed') !== 'true'
+      );
+
+      const anchor = toolbarButtons.reverse().find((child) => {
+        try {
+          const style = window.getComputedStyle(child);
+          return style.display !== 'none' && style.visibility !== 'collapse';
+        } catch (_error) {
+          return true;
+        }
+      });
+
+      if (anchor && anchor.parentNode === toolbar) {
+        if (anchor.nextSibling !== btn) {
+          anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+        }
+      }
     },
 
     removeFromWindow(window) {
