@@ -371,7 +371,12 @@ window.Todolist_Preferences = (() => {
 
   return {
     init(win) {
-      const doc = win.document;
+      const doc = win?.document || window.document;
+      const pane = doc.getElementById('todolist-preferences-pane');
+      if (pane) {
+        if (pane._todolistInited) return;
+        pane._todolistInited = true;
+      }
       const statusEl = doc.getElementById('todolist-pref-status');
 
       try {
@@ -556,3 +561,16 @@ window.Todolist_Preferences = (() => {
     }
   };
 })();
+
+// Auto-init fallback if onload already fired in modern Gecko / Zotero 10+
+if (typeof window !== 'undefined' && window.document) {
+  if (window.document.readyState === 'complete' || window.document.readyState === 'interactive') {
+    setTimeout(() => {
+      const pane = window.document.getElementById('todolist-preferences-pane');
+      if (pane && !pane._todolistInited) {
+        window.Todolist_Preferences?.init?.(window);
+      }
+    }, 50);
+  }
+}
+
