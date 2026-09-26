@@ -33,8 +33,10 @@
 
 ---
 
-## 🚀 v2.0.0 重大更新亮点
+## 🚀 v3.0.0 重大更新亮点
 
+- 🎯 **右键菜单极致纯净化**：严格精简右键上下文，文献列表中仅保留“添加为待办”核心研读入口，清理一切非必要冗余条目；
+- 🛡️ **重构 Gecko 菜单底层通信与事件架构**：完美支持 Zotero 8 原生 `Zotero.MenuManager` 与 Zotero 7/10 XUL 深度适配，杜绝右键菜单被阻断的问题；
 - 🎨 **全新 20 套标准矢量 SVG 图标库**：彻底替换原有 Emoji 表情，基于 24×24 标准网格绘制，无论亮色暗色皆纯净高清；
 - 📐 **侧边栏像素级排版重构**：修复继承底栏内边距导致的对齐偏差，移除残留边框细线，视图与过滤器统一在严格的垂直基准线上；
 - 📑 **全站矢量交互优化**：卡片学术动作（复制引用、同步笔记、在库中高亮定位、专注计时）与多视窗切换器全面矢量化；
@@ -80,10 +82,10 @@
 ## 📥 安装指南
 
 ### 方式一：直接安装 XPI 安装包 (推荐)
-1. 从 [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest) 下载最新的 `todolist-zotero-2.0.0.xpi` 安装包；
+1. 从 [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest) 下载最新的 `todolist-zotero-3.0.0.xpi` 安装包；
 2. 打开 Zotero 7+ 或 10 客户端，点击菜单栏：**“工具 (Tools)” → “插件 (Plugins / Add-ons)”**；
 3. 点击插件管理窗口右上角的齿轮 ⚙️ 图标，选择 **“Install Add-on From File... (从文件安装扩展)”**；
-4. 选中下载的 `todolist-zotero-2.0.0.xpi` 文件确认安装；
+4. 选中下载的 `todolist-zotero-3.0.0.xpi` 文件确认安装；
 5. 重启 Zotero 后，即可在顶部工具栏或右下角看到 Todolist 图标。
 
 ### 方式二：开发者调试模式 (无需打包)
@@ -125,7 +127,7 @@ npm run build:zotero
 构建流水线会自动完成：
 - 🧹 清理与构建标准的 Gecko Add-on 暂存目录 `dist-zotero/`；
 - 🔍 调用 `node --check` 针对所有核心 JS 进行语法安全合规检测；
-- 📦 自动化压缩并计算 SHA-256 校验码，产出 `dist-zip/todolist-zotero-2.0.0.xpi`。
+- 📦 自动化压缩并计算 SHA-256 校验码，产出 `dist-zip/todolist-zotero-3.0.0.xpi`。
 
 ---
 
@@ -152,7 +154,7 @@ Todolist-Zotero/
 ├── css/                              # 现代化设计系统与动效样式
 ├── index.html                        # 宽屏桌面端与选项卡主视图
 ├── sidepanel.html                    # 浏览器与伴读紧凑视图
-└── dist-zip/                         # 发布安装包产物 (todolist-zotero-2.0.0.xpi)
+└── dist-zip/                         # 发布安装包产物 (todolist-zotero-3.0.0.xpi)
 ```
 
 ---

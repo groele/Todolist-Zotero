@@ -33,8 +33,10 @@ In academic research, general-purpose productivity tools (such as Todoist, TickT
 
 ---
 
-## 🚀 What's New in v2.0.0
+## 🚀 What's New in v3.0.0
 
+- 🎯 **Purified Context Menu**: Streamlined the right-click menu to exclusively feature "Add to Todolist" on literature items, completely eliminating extraneous plugin entries.
+- 🛡️ **Robust Gecko Menu Architecture**: Full dual-compatibility with Zotero 8's native `Zotero.MenuManager` and reliable XUL fallback for Zotero 7/10, eliminating popup suppression risks.
 - 🎨 **Unified 20-Icon Vector SVG System**: Completely replaced all raw platform-dependent emojis with crisp, cohesive 24×24 pixel-aligned vector SVGs for light and dark themes.
 - 📐 **Pixel-Perfect Sidebar Alignment**: Resolved legacy bottom-bar padding inheritance, eliminated orphaned border lines, and established strict horizontal and vertical baseline alignment.
 - 📑 **Comprehensive Vector Interactive Actions**: Fully vectorized task card action buttons (citation copy, note sync, library locate, Pomodoro timer) and window mode dropdown.
@@ -80,10 +82,10 @@ Switch between three versatile form factors from the top toolbar:
 ## 📥 Installation
 
 ### Method 1: Install XPI Package (Recommended)
-1. Download the latest `todolist-zotero-2.0.0.xpi` from [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest);
+1. Download the latest `todolist-zotero-3.0.0.xpi` from [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest);
 2. In Zotero 7+ or 10, navigate to: **Tools → Plugins (or Add-ons)**;
 3. Click the gear icon ⚙️ in the top-right corner and select **"Install Add-on From File..."**;
-4. Select the downloaded `todolist-zotero-2.0.0.xpi` file and confirm installation;
+4. Select the downloaded `todolist-zotero-3.0.0.xpi` file and confirm installation;
 5. Restart Zotero when prompted. The Todolist icon will appear in your toolbar.
 
 ### Method 2: Developer Debugging Mode (No Packaging Needed)
@@ -125,7 +127,7 @@ npm run build:zotero
 The pipeline automatically handles:
 - 🧹 Cleaning and assembling the standard Gecko Add-on structure `dist-zotero/`;
 - 🔍 Performing `node --check` syntax validation across all runtime scripts;
-- 📦 Archiving and computing SHA-256 checksums to output `dist-zip/todolist-zotero-2.0.0.xpi`.
+- 📦 Archiving and computing SHA-256 checksums to output `dist-zip/todolist-zotero-3.0.0.xpi`.
 
 ---
 
@@ -152,7 +154,7 @@ Todolist-Zotero/
 ├── css/                              # Modern design system & animations
 ├── index.html                        # Widescreen desktop & tab interface
 ├── sidepanel.html                    # Compact browser & subwindow interface
-└── dist-zip/                         # Release package archive (todolist-zotero-2.0.0.xpi)
+└── dist-zip/                         # Release package archive (todolist-zotero-3.0.0.xpi)
 ```
 
 ---
