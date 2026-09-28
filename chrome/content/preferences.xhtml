@@ -1,0 +1,120 @@
+<vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      id="todolist-preferences-pane" class="todolist-prefs-container"
+      onload="Todolist_Preferences.init(window)">
+  <html:header class="todolist-pref-header">
+    <html:div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+      <html:h1 style="margin: 0; font-size: 16px; font-weight: 700;">Todolist 学术日程与研读待办首选项</html:h1>
+      <html:div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <html:button id="todolist-btn-open-workspace" class="todolist-pref-btn" type="button" title="在 Zotero 内部选项卡中打开">📑 内部选项卡</html:button>
+        <html:button id="todolist-btn-open-subwindow" class="todolist-pref-btn" type="button" title="打开 460×760 紧凑伴读子窗口，适合边读 PDF 边核对待办">🗗 伴读子窗口</html:button>
+        <html:button id="todolist-btn-open-window" class="todolist-pref-btn" type="button" title="打开 1120×760 独立桌面全屏大窗口">⬚ 独立大窗口</html:button>
+      </html:div>
+    </html:div>
+  </html:header>
+  <html:p id="todolist-pref-status" class="todolist-pref-status" role="status" aria-live="polite">正在加载设置项…</html:p>
+  
+  <groupbox id="todolist-group-window" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">1. 窗口模式与多窗协同 (支持独立窗口与伴读子窗口)</html:h2>
+    <html:div id="todolist-pref-window" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-view" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">2. 界面显示与默认视图</html:h2>
+    <html:div id="todolist-pref-view" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-literature" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">3. 文献侧边详情栏 (ItemPane) 与双向联动</html:h2>
+    <html:div id="todolist-pref-literature" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-sync" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">4. 文献子笔记云同步 (原生支持 iPad / Mac / PC 多端云协同)</html:h2>
+    <html:div id="todolist-pref-sync" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-tags" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">5. 文献研读状态自动打标</html:h2>
+    <html:div id="todolist-pref-tags" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-academic" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">6. 学术场景预设与阅读器自动化</html:h2>
+    <html:div id="todolist-pref-academic" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-focus" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">7. 番茄钟专注冲刺与声音提醒</html:h2>
+    <html:div id="todolist-pref-focus" class="todolist-pref-content" />
+  </groupbox>
+
+  <groupbox id="todolist-group-custom-tags" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">8. 自定义学术研读标签管理</html:h2>
+    <html:div class="todolist-pref-content">
+      <html:p class="todolist-pref-desc">在此添加与管理专属学术研读标签，并在任务编辑中即时调用：</html:p>
+      <html:div id="todolist-pref-tags-list" class="todolist-pref-tags-container"></html:div>
+      <html:div class="todolist-tag-creator-bar" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+        <html:input type="text" id="todolist-new-tag-name" class="todolist-control" style="max-width: 220px;" placeholder="标签名，如：导师审阅 / 顶会投稿" />
+        <html:div id="todolist-tag-color-palette" style="display: flex; gap: 6px; align-items: center;">
+          <html:span class="todolist-pref-color-dot active" data-color="#ef4444" style="background:#ef4444;" title="红色"></html:span>
+          <html:span class="todolist-pref-color-dot" data-color="#f97316" style="background:#f97316;" title="橙色"></html:span>
+          <html:span class="todolist-pref-color-dot" data-color="#eab308" style="background:#eab308;" title="黄色"></html:span>
+          <html:span class="todolist-pref-color-dot" data-color="#22c55e" style="background:#22c55e;" title="绿色"></html:span>
+          <html:span class="todolist-pref-color-dot" data-color="#3b82f6" style="background:#3b82f6;" title="蓝色"></html:span>
+          <html:span class="todolist-pref-color-dot" data-color="#a855f7" style="background:#a855f7;" title="紫色"></html:span>
+          <html:span class="todolist-pref-color-dot" data-color="#ec4899" style="background:#ec4899;" title="粉色"></html:span>
+          <html:span class="todolist-pref-color-dot" data-color="#64748b" style="background:#64748b;" title="灰色"></html:span>
+        </html:div>
+        <html:button id="todolist-btn-add-tag" type="button" class="todolist-pref-btn todolist-pref-btn-primary">➕ 添加标签</html:button>
+      </html:div>
+    </html:div>
+  </groupbox>
+
+  <groupbox id="todolist-group-export" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">9. 数据全量备份与跨格式导出</html:h2>
+    <html:div class="todolist-pref-content">
+      <html:p class="todolist-pref-desc">支持将待办、文献关联、研读笔记与子任务一键导出为各类通用格式：</html:p>
+      <html:div class="todolist-export-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-top: 6px;">
+        <html:button id="todolist-btn-export-json" type="button" class="todolist-pref-btn">📑 导出 JSON 全量备份</html:button>
+        <html:button id="todolist-btn-export-csv" type="button" class="todolist-pref-btn">📊 导出 CSV 表格 (Excel 兼容)</html:button>
+        <html:button id="todolist-btn-export-markdown" type="button" class="todolist-pref-btn">📝 导出 Markdown 清单 (Obsidian/Notion)</html:button>
+        <html:button id="todolist-btn-export-txt" type="button" class="todolist-pref-btn">📄 导出 TXT 纯文本</html:button>
+      </html:div>
+    </html:div>
+  </groupbox>
+
+  <groupbox id="todolist-group-import" class="todolist-pref-group">
+    <html:h2 class="todolist-group-title">10. 数据导入与灾备恢复</html:h2>
+    <html:div class="todolist-pref-content">
+      <html:p class="todolist-pref-desc">从 JSON 备份文件中导入恢复待办任务与自定义标签：</html:p>
+      <html:div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
+        <html:select id="todolist-import-mode" class="todolist-control" style="max-width: 220px;">
+          <html:option value="merge">智能合并 (保留现有并补充导入)</html:option>
+          <html:option value="overwrite">完全覆盖 (清空现有并替换为备份)</html:option>
+        </html:select>
+        <html:button id="todolist-btn-import-file" type="button" class="todolist-pref-btn todolist-pref-btn-primary">📂 选择 JSON 文件导入</html:button>
+      </html:div>
+      <html:p id="todolist-import-status" class="todolist-pref-desc" style="margin-top: 6px; font-size: 12px; color: #059669; font-weight: 500;"></html:p>
+    </html:div>
+  </groupbox>
+
+  <groupbox id="todolist-group-backup" class="todolist-pref-group todolist-pref-group-last">
+    <html:h2 class="todolist-group-title">11. 数据维护、学术打印与全局快捷键</html:h2>
+    <html:div class="todolist-pref-content">
+      <html:div id="todolist-pref-maintenance" style="margin-bottom: 8px;" />
+      <html:p class="todolist-pref-desc">
+        <strong>全局快捷键支持：</strong><html:br/>
+        • <html:code>Ctrl+Alt+T</html:code> (Mac: <html:code>Cmd+Alt+T</html:code>)：随时唤起 Todolist 学术任务看板（依默认窗口设置）。<html:br/>
+        • <html:code>Ctrl+Shift+T</html:code> (Mac: <html:code>Cmd+Shift+T</html:code>)：在 PDF 阅读器中将选中文本与当前页码一键建立带锚点链接的研读待办。<html:br/>
+      </html:p>
+      <html:div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+        <html:button id="todolist-btn-print" type="button" class="todolist-pref-btn">🖨️ 打印学术清单</html:button>
+        <html:button id="todolist-btn-copy-summary" type="button" class="todolist-pref-btn">📋 复制研读概览 (Markdown 组会汇报)</html:button>
+        <html:button id="todolist-btn-clear-all" type="button" class="todolist-pref-btn todolist-pref-btn-danger">🗑️ 清空所有任务数据</html:button>
+        <html:button id="todolist-btn-reset-defaults" type="button" class="todolist-pref-btn" style="background: #fef2f2; border-color: #ef4444; color: #b91c1c;">🔄 恢复默认偏好设置</html:button>
+      </html:div>
+      <html:p class="todolist-pref-desc" style="margin-top: 8px; font-size: 11px; color: #94a3b8;">注：恢复默认偏好设置仅重置开关与选项，不会清空任何任务或文献数据；清空所有任务数据不可撤销，请谨慎操作。</html:p>
+    </html:div>
+  </groupbox>
+</vbox>

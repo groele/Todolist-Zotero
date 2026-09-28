@@ -1,0 +1,3 @@
+content todolist chrome/content/
+locale todolist zh-CN locale/zh-CN/
+locale todolist en-US locale/en-US/

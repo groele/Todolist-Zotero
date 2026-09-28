@@ -1,0 +1,268 @@
+/* Animations and Transitions */
+
+/* Task Card Enter Animation */
+@keyframes taskEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Task Card Exit Animation */
+@keyframes taskExit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+/* Checkbox Animation */
+@keyframes checkboxPop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Fade In */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Sparkle Particle Animation */
+.sparkle-particle {
+  position: fixed;
+  width: 6px;
+  height: 6px;
+  background-color: var(--primary);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  animation: sparkleBurst 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes sparkleBurst {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(0.2);
+  }
+}
+
+/* Fade Out */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Slide Up */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide Down */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale In */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Modal Backdrop Animation */
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Apply Animations */
+.task-card {
+  animation: taskEnter var(--transition-normal) ease-out;
+}
+
+.task-card.removing {
+  animation: taskExit var(--transition-fast) ease-in forwards;
+}
+
+/* Overdue cards get pulse only after enter animation completes */
+.task-card.overdue {
+  animation: taskEnter var(--transition-normal) ease-out;
+}
+
+.task-card.overdue:not(.removing) {
+  animation: taskEnter var(--transition-normal) ease-out,
+             pulse 2s ease-in-infinite 0.2s;
+}
+
+.task-card.overdue.removing {
+  animation: taskExit var(--transition-fast) ease-in forwards;
+}
+
+.task-checkbox.just-checked {
+  animation: checkboxPop var(--transition-normal) ease-out;
+}
+
+.modal[open] {
+  animation: scaleIn var(--transition-normal) ease-out;
+}
+
+.modal[open]::backdrop {
+  animation: backdropFadeIn var(--transition-normal) ease-out;
+}
+
+.toast.show {
+  animation: toastSlideUp var(--transition-slow) ease-out;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Hover Effects - use specific properties instead of 'all' */
+.task-card {
+  transition: transform var(--transition-fast),
+              border-color var(--transition-fast),
+              box-shadow var(--transition-fast);
+}
+
+.task-checkbox {
+  transition: background-color var(--transition-fast),
+              border-color var(--transition-fast),
+              transform var(--transition-fast);
+}
+
+/* Loading State */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.loading {
+  background: linear-gradient(
+    90deg,
+    var(--bg) 0px,
+    var(--border-light) 40px,
+    var(--bg) 80px
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Pulse for overdue tasks */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Calendar Day Hover */
+.calendar-day {
+  transition: background-color var(--transition-fast),
+              transform var(--transition-fast);
+}
+
+.calendar-day:hover {
+  transform: scale(1.05);
+}
+
+/* Button Press Effect - combine with hover transform */
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* Focus Ring Animation */
+@keyframes focusRing {
+  0% {
+    box-shadow: 0 0 0 0 var(--primary-bg);
+  }
+  100% {
+    box-shadow: 0 0 0 3px var(--primary-bg);
+  }
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  animation: focusRing var(--transition-fast) ease-out;
+}
+
+/* Toast Slide Up */
+@keyframes toastSlideUp {
+  from {
+    transform: translateX(-50%) translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
