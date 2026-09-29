@@ -1413,31 +1413,7 @@
     },
 
     registerMenus() {
-      if (Zotero.MenuManager && typeof Zotero.MenuManager.registerMenu === 'function') {
-        try {
-          this._menuManagerId = Zotero.MenuManager.registerMenu({
-            menuID: 'todolist-itemmenu-create',
-            pluginID: ADDON_ID,
-            target: 'main/library/item',
-            menus: [
-              {
-                menuType: 'menuitem',
-                label: '添加为待办',
-                icon: `${CHROME_ROOT}icons/todolist.svg`,
-                onCommand: () => {
-                  try {
-                    this.createTaskFromSelection();
-                  } catch (err) {
-                    Zotero.logError?.('[Todolist] Failed to create task: ' + err);
-                  }
-                },
-              },
-            ],
-          });
-        } catch (err) {
-          Zotero.logError?.('[Todolist] MenuManager.registerMenu failed: ' + err);
-        }
-      }
+      // Context menu registration disabled — plugin entries are not shown in right-click menus
     },
 
     init() {
@@ -1983,34 +1959,7 @@
       }
 
       // 2. Add to Item Context Menu (文献右键菜单 - 仅保留“添加为待办”)
-      // If MenuManager already registered natively (Zotero 8+), do not manually inject into #zotero-itemmenu
-      if (!this._menuManagerId) {
-        const itemMenu = doc.getElementById('zotero-itemmenu');
-        if (itemMenu) {
-          const separator = this.createXULElement(doc, 'menuseparator');
-          separator.id = 'todolist-itemmenu-separator';
-          itemMenu.appendChild(separator);
-          windowElements.push(separator);
-
-          const createFromItem = this.createXULElement(doc, 'menuitem');
-          createFromItem.id = 'todolist-itemmenu-create';
-          createFromItem.setAttribute('label', '添加为待办');
-          createFromItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
-          createFromItem.setAttribute('class', 'menuitem-iconic');
-
-          // ONLY use 'command' event! Never attach 'click' or 'mousedown', which conflicts with Gecko popup manager!
-          createFromItem.addEventListener('command', (e) => {
-            try {
-              this.createTaskFromSelection(window, doc, itemMenu);
-            } catch (err) {
-              Zotero.logError?.('[Todolist] Failed to create task from item context menu: ' + err);
-            }
-          });
-
-          itemMenu.appendChild(createFromItem);
-          windowElements.push(createFromItem);
-        }
-      }
+      // Context menu injection disabled
 
       // 3. Inject Tab Icon Style
       try {
