@@ -12,7 +12,7 @@
 
   window.addEventListener('unhandledrejection', function(event) {
     console.error('Unhandled promise rejection:', event.reason);
-    if (typeof UI !== 'undefined') UI.showToast('操作失败，数据未能保存，请重试');
+    if (typeof UI !== 'undefined') UI.showToast('部分操作未完成，错误详情已记录到控制台');
   });
 
   if (document.readyState === 'loading') {
