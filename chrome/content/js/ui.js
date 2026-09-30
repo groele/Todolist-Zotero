@@ -1308,9 +1308,9 @@ const UI = {
       const content = dialog.querySelector('.templates-grid');
       if (content) {
         content.innerHTML = Templates.getAllTemplates().map(t => `
-          <div class="template-card" data-template-id="${t.id}">
-            <div class="template-icon">${t.icon}</div>
-            <div class="template-name">${t.name}</div>
+          <div class="template-card" data-template-id="${Utils.escapeHtml(t.id)}">
+            <div class="template-icon">${Utils.escapeHtml(t.icon || '📋')}</div>
+            <div class="template-name">${Utils.escapeHtml(t.name || '')}</div>
             <div class="template-desc">${t.task.subtasks.length} 个子任务</div>
           </div>
         `).join('');

@@ -184,13 +184,15 @@ window.Todolist_Preferences = (() => {
     if (typeof Zotero === 'undefined' || !Zotero.Prefs) return;
     try {
       Zotero.Prefs.set(PREFIX + key, val, true);
-      // Synchronize with Todolist runtime if available
-      if (Zotero.Todolist) {
-        Zotero.Todolist.loadData().then((data) => {
-          if (!data.settings) data.settings = {};
-          data.settings[key] = val;
-          Zotero.Todolist.saveData({ settings: data.settings });
-        });
+      // Persist only this key. Reading and writing the complete settings object
+      // here could overwrite a different preference changed by another window.
+      const saveSettings = Zotero.Todolist?.saveData;
+      if (typeof saveSettings === 'function') {
+        Promise.resolve()
+          .then(() => saveSettings.call(Zotero.Todolist, { settings: { [key]: val } }))
+          .catch((error) => {
+            Zotero.logError?.(`[Todolist] Failed to persist preference ${key}: ${error}`);
+          });
       }
     } catch (e) {
       Zotero.logError?.('[Todolist] Failed to set preference ' + key + ': ' + e);
@@ -573,4 +575,3 @@ if (typeof window !== 'undefined' && window.document) {
     }, 50);
   }
 }
-

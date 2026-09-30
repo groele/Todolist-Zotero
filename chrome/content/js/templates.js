@@ -251,8 +251,10 @@ const Templates = {
 
   // Add custom template from current task
   async addCustomTemplate(name, task) {
+    name = String(name || '').trim();
+    if (!name) throw new Error('模板名称不能为空');
     const template = {
-      id: 'custom_' + Date.now(),
+      id: 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       name: name,
       icon: '⭐',
       task: {
@@ -264,15 +266,27 @@ const Templates = {
       }
     };
 
-    this.customTemplates.push(template);
-    await this.saveCustomTemplates();
+    const previous = this.customTemplates;
+    this.customTemplates = [...previous, template];
+    try {
+      await this.saveCustomTemplates();
+    } catch (error) {
+      this.customTemplates = previous;
+      throw error;
+    }
     return template;
   },
 
   // Delete custom template
   async deleteCustomTemplate(templateId) {
-    this.customTemplates = this.customTemplates.filter(t => t.id !== templateId);
-    await this.saveCustomTemplates();
+    const previous = this.customTemplates;
+    this.customTemplates = previous.filter(t => t.id !== templateId);
+    try {
+      await this.saveCustomTemplates();
+    } catch (error) {
+      this.customTemplates = previous;
+      throw error;
+    }
   },
 
   // Apply template (create task from template)
@@ -310,9 +324,9 @@ const Templates = {
         </div>
         <div class="templates-grid">
           ${templates.map(t => `
-            <div class="template-card" data-template-id="${t.id}">
-              <div class="template-icon">${t.icon}</div>
-              <div class="template-name">${t.name}</div>
+            <div class="template-card" data-template-id="${Utils.escapeHtml(t.id)}">
+              <div class="template-icon">${Utils.escapeHtml(t.icon || '📋')}</div>
+              <div class="template-name">${Utils.escapeHtml(t.name || '')}</div>
               <div class="template-desc">${t.task.subtasks.length} 个子任务</div>
             </div>
           `).join('')}

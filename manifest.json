@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Todolist - 学术日程与研读待办",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Todolist for Zotero: 专为学术科研、文献研读与论文写作打造的高颜值全功能任务看板与日程管理插件 (完美支持 Zotero 10 & 7+)",
   "homepage_url": "https://github.com/groele/Todolist-Zotero",
   "author": "groele",
@@ -10,7 +10,7 @@
       "id": "todolist@groele.org",
       "strict_min_version": "6.999",
       "strict_max_version": "15.*",
-      "update_url": "https://raw.githubusercontent.com/groele/Todolist-Zotero/main/update.json"
+      "update_url": "https://raw.githubusercontent.com/groele/Todolist-Zotero/zotero/update.json"
     }
   },
   "browser_specific_settings": {
@@ -18,7 +18,7 @@
       "id": "todolist@groele.org",
       "strict_min_version": "6.999",
       "strict_max_version": "15.*",
-      "update_url": "https://raw.githubusercontent.com/groele/Todolist-Zotero/main/update.json"
+      "update_url": "https://raw.githubusercontent.com/groele/Todolist-Zotero/zotero/update.json"
     }
   }
 }

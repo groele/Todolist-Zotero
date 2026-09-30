@@ -1430,9 +1430,9 @@
         tasks.forEach((t) => {
           html += `<div class="task-row ${t.completed ? 'done' : ''}">
             <span class="box"></span>
-            <span class="title">${t.title}</span>
-            ${t.zoteroItemTitle ? `<span class="lit">📖 ${t.zoteroItemTitle}</span>` : ''}
-            ${t.dueDate ? `<span class="date">📅 ${t.dueDate}</span>` : ''}
+            <span class="title">${escapeHtml(t.title || '')}</span>
+            ${t.zoteroItemTitle ? `<span class="lit">📖 ${escapeHtml(t.zoteroItemTitle)}</span>` : ''}
+            ${t.dueDate ? `<span class="date">📅 ${escapeHtml(t.dueDate)}</span>` : ''}
           </div>`;
         });
 

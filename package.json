@@ -1,0 +1,12 @@
+{
+  "name": "todolist-zotero",
+  "version": "1.0.3",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "build": "python scripts/build-package.py"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

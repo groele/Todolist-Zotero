@@ -7,7 +7,7 @@ const DataManager = {
     const extraData = data;
 
     const exportData = {
-      version: '1.0.1',
+      version: '1.0.3',
       exportDate: new Date().toISOString(),
       tasks: data.tasks,
       settings: data.settings,
@@ -272,7 +272,7 @@ const DataManager = {
           <div class="distribution-bars">
             ${Object.entries(stats.categories).map(([cat, count]) => `
               <div class="dist-item">
-                <span class="dist-label">${cat}</span>
+                <span class="dist-label">${Utils.escapeHtml(cat)}</span>
                 <div class="dist-bar">
                   <div class="dist-fill" style="width: ${stats.total > 0 ? (count / stats.total * 100) : 0}%; background-color: var(--primary);"></div>
                 </div>

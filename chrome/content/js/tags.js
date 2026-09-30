@@ -49,23 +49,41 @@ const Tags = {
     return [...this.predefinedTags, ...this.customTags];
   },
 
+  safeColor(value) {
+    return /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : '#6b7280';
+  },
+
   // Add custom tag
   async addCustomTag(name, color) {
+    name = String(name || '').trim();
+    if (!name) throw new Error('标签名称不能为空');
     const tag = {
-      id: 'tag_' + Date.now(),
+      id: 'tag_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       name: name,
-      color: color || '#6b7280',
+      color: this.safeColor(color),
       icon: '🏷️'
     };
+    const previous = this.customTags;
     this.customTags.push(tag);
-    await this.saveCustomTags();
+    try {
+      await this.saveCustomTags();
+    } catch (error) {
+      this.customTags = previous.filter(item => item.id !== tag.id);
+      throw error;
+    }
     return tag;
   },
 
   // Delete custom tag
   async deleteCustomTag(tagId) {
-    this.customTags = this.customTags.filter(t => t.id !== tagId);
-    await this.saveCustomTags();
+    const previous = this.customTags;
+    this.customTags = previous.filter(t => t.id !== tagId);
+    try {
+      await this.saveCustomTags();
+    } catch (error) {
+      this.customTags = previous;
+      throw error;
+    }
   },
 
   // Get tag by ID
@@ -82,9 +100,9 @@ const Tags = {
     return `
       <div class="custom-tags-manager" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
         ${this.customTags.map(tag => `
-          <span class="custom-tag-manage-item" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-full); font-size: 12px; background-color: ${tag.color}20; color: ${tag.color}; border: 1px solid ${tag.color}40;">
-            <span>${tag.icon} ${Utils.escapeHtml(tag.name)}</span>
-            <button type="button" class="btn-delete-custom-tag" data-tag-id="${tag.id}" style="border:none; background:none; cursor:pointer; color:inherit; font-weight:bold; padding:0 2px;">×</button>
+          <span class="custom-tag-manage-item" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-full); font-size: 12px; background-color: ${this.safeColor(tag.color)}20; color: ${this.safeColor(tag.color)}; border: 1px solid ${this.safeColor(tag.color)}40;">
+            <span>${Utils.escapeHtml(tag.icon || '🏷️')} ${Utils.escapeHtml(tag.name || '')}</span>
+            <button type="button" class="btn-delete-custom-tag" data-tag-id="${Utils.escapeHtml(tag.id)}" style="border:none; background:none; cursor:pointer; color:inherit; font-weight:bold; padding:0 2px;">×</button>
           </span>
         `).join('')}
       </div>
@@ -103,10 +121,10 @@ const Tags = {
         </div>
         <div class="tag-options">
           ${allTags.map(tag => `
-            <label class="tag-option" data-tag-id="${tag.id}">
-              <input type="checkbox" value="${tag.id}" ${selectedTags.includes(tag.id) ? 'checked' : ''}>
-              <span class="tag-badge" style="background-color: ${tag.color}20; color: ${tag.color}; border: 1px solid ${tag.color}40;">
-                ${tag.icon} ${tag.name}
+            <label class="tag-option" data-tag-id="${Utils.escapeHtml(tag.id)}">
+              <input type="checkbox" value="${Utils.escapeHtml(tag.id)}" ${selectedTags.includes(tag.id) ? 'checked' : ''}>
+              <span class="tag-badge" style="background-color: ${this.safeColor(tag.color)}20; color: ${this.safeColor(tag.color)}; border: 1px solid ${this.safeColor(tag.color)}40;">
+                ${Utils.escapeHtml(tag.icon || '🏷️')} ${Utils.escapeHtml(tag.name || '')}
               </span>
             </label>
           `).join('')}
@@ -122,7 +140,7 @@ const Tags = {
     return tagIds.map(tagId => {
       const tag = this.getTagById(tagId);
       if (!tag) return '';
-      return `<span class="tag-badge-small" style="background-color: ${tag.color}20; color: ${tag.color};">${tag.icon} ${tag.name}</span>`;
+      return `<span class="tag-badge-small" style="background-color: ${this.safeColor(tag.color)}20; color: ${this.safeColor(tag.color)};">${Utils.escapeHtml(tag.icon || '🏷️')} ${Utils.escapeHtml(tag.name || '')}</span>`;
     }).join('');
   },
 

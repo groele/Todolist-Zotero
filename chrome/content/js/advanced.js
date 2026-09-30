@@ -102,16 +102,15 @@ const Advanced = {
   // Export tasks to CSV
   exportToCSV(tasks) {
     const headers = ['标题', '描述', '截止日期', '时间', '优先级', '分类', '状态', '创建时间', '完成时间'];
+    const csvCell = value => {
+      let text = String(value ?? '');
+      if (/^[\s\u0000-\u001f]*[=+@-]/.test(text)) text = `'${text}`;
+      return `"${text.replace(/"/g, '""')}"`;
+    };
     const rows = tasks.map(t => [
-      `"${(t.title || '').replace(/"/g, '""')}"`,
-      `"${(t.description || '').replace(/"/g, '""')}"`,
-      t.dueDate || '',
-      t.dueTime || '',
-      Utils.getPriorityLabel(t.priority),
-      t.category || '',
-      t.completed ? '已完成' : '待完成',
-      t.createdAt || '',
-      t.completedAt || ''
+      csvCell(t.title), csvCell(t.description), csvCell(t.dueDate), csvCell(t.dueTime),
+      csvCell(Utils.getPriorityLabel(t.priority)), csvCell(t.category),
+      csvCell(t.completed ? '已完成' : '待完成'), csvCell(t.createdAt), csvCell(t.completedAt)
     ]);
 
     const csv = '﻿' + headers.join(',') + '\n' + rows.map(r => r.join(',')).join('\n');
@@ -246,13 +245,14 @@ const Advanced = {
     if (incomplete.length > 0) {
       html += '<h2>⏳ 待完成任务</h2>';
       incomplete.forEach(t => {
+        const priority = ['high', 'medium', 'low'].includes(t.priority) ? t.priority : 'medium';
         html += `
-          <div class="task priority-${t.priority}">
-            <div class="task-title">${t.title}</div>
-            ${t.description ? `<div class="task-description">${t.description}</div>` : ''}
+          <div class="task priority-${priority}">
+            <div class="task-title">${Utils.escapeHtml(t.title || '')}</div>
+            ${t.description ? `<div class="task-description">${Utils.escapeHtml(t.description)}</div>` : ''}
             <div class="task-meta">
-              ${t.dueDate ? `📅 ${t.dueDate}` : ''}
-              ${t.category ? ` | 📁 ${t.category}` : ''}
+              ${t.dueDate ? `📅 ${Utils.escapeHtml(t.dueDate)}` : ''}
+              ${t.category ? ` | 📁 ${Utils.escapeHtml(t.category)}` : ''}
               | 优先级: ${Utils.getPriorityLabel(t.priority)}
             </div>
           </div>
@@ -265,8 +265,8 @@ const Advanced = {
       completed.forEach(t => {
         html += `
           <div class="task completed">
-            <div class="task-title">${t.title}</div>
-            <div class="task-meta">${t.completedAt ? `完成于: ${t.completedAt.split('T')[0]}` : ''}</div>
+            <div class="task-title">${Utils.escapeHtml(t.title || '')}</div>
+            <div class="task-meta">${t.completedAt ? `完成于: ${Utils.escapeHtml(String(t.completedAt).split('T')[0])}` : ''}</div>
           </div>
         `;
       });
