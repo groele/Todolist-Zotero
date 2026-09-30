@@ -47,13 +47,14 @@
 
     /* Left Sidebar */
     .sidebar {
-      width: 260px;
+      width: 76px;
       height: 100%;
-      background-color: var(--surface);
+      background: linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 92%, var(--primary-bg)) 100%);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      padding: var(--space-xl);
+      align-items: center;
+      padding: 18px 10px 14px;
       flex-shrink: 0;
       z-index: 100;
       transition: transform var(--transition-normal);
@@ -62,30 +63,33 @@
     .sidebar-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: var(--space-2xl);
+      justify-content: center;
+      width: 100%;
+      margin-bottom: 22px;
     }
 
     .sidebar-brand {
       display: flex;
       align-items: center;
-      gap: var(--space-md);
+      gap: 0;
     }
 
     .sidebar-logo {
-      width: 30px;
-      height: 30px;
-      color: var(--primary);
+      width: 34px;
+      height: 34px;
+      display: block;
     }
 
     .sidebar-title {
-      font-size: var(--font-size-2xl);
-      font-weight: 700;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin: 0;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .btn-close-sidebar {
@@ -96,21 +100,23 @@
 
     /* Large Add Task Button */
     .sidebar-add-btn {
-      width: 100%;
+      width: 46px;
+      height: 46px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: var(--space-sm);
-      padding: var(--space-md) var(--space-lg);
+      gap: 0;
+      padding: 0;
       background-color: var(--primary);
       color: white !important;
       border-radius: var(--radius-lg);
       font-weight: 600;
-      font-size: var(--font-size-lg);
-      margin-bottom: var(--space-2xl);
+      font-size: 0;
+      margin-bottom: 24px;
       transition: background-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
       box-shadow: 0 4px 12px var(--primary-bg);
       border: none;
+      flex-shrink: 0;
     }
 
     .sidebar-add-btn:hover {
@@ -125,23 +131,27 @@
 
     /* Sidebar sections and menu */
     .sidebar-section {
-      margin-bottom: var(--space-xl);
+      width: 100%;
+      margin-bottom: 18px;
     }
 
     .sidebar-section-title {
-      font-size: var(--font-size-xs);
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: var(--space-sm);
-      padding: 0 var(--space-sm);
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .sidebar-divider {
       height: 1px;
       background-color: var(--border-light);
-      margin: var(--space-sm) 0 var(--space-xl) 0;
+      width: 34px;
+      margin: 2px 0 18px;
       border: none;
     }
 
@@ -154,16 +164,18 @@
     .sidebar-menu-btn {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 0 var(--space-md);
-      height: 38px;
-      border-radius: var(--radius-md);
+      justify-content: center;
+      position: relative;
+      padding: 0;
+      width: 54px;
+      height: 48px;
+      margin: 0 auto;
+      border-radius: 15px;
       color: var(--text-secondary);
       font-weight: 500;
       font-size: var(--font-size-md, 13px);
       transition: all var(--transition-fast);
-      text-align: left;
-      width: 100%;
+      text-align: center;
       border: none;
       background: none;
       cursor: pointer;
@@ -174,14 +186,14 @@
     .sidebar-menu-btn-content {
       display: flex;
       align-items: center;
-      gap: 10px;
-      flex: 1;
+      gap: 0;
+      flex: none;
       min-width: 0;
     }
 
     .sidebar-menu-icon {
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -189,19 +201,23 @@
     }
 
     .sidebar-menu-icon svg {
-      width: 18px;
-      height: 18px;
+      width: 22px;
+      height: 22px;
       display: block;
       color: var(--text-secondary);
       transition: color var(--transition-fast);
     }
 
     .sidebar-menu-text {
-      font-size: var(--font-size-md, 13px);
-      line-height: 1.2;
-      white-space: nowrap;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
       overflow: hidden;
-      text-overflow: ellipsis;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .sidebar-menu-btn:hover {
@@ -235,10 +251,10 @@
 
     .sidebar .sidebar-menu-btn.tab {
       flex: initial;
-      width: 100%;
-      height: 38px;
-      padding: 0 var(--space-md);
-      font-size: var(--font-size-md, 13px);
+      width: 54px;
+      margin: 0 auto;
+      height: 48px;
+      padding: 0;
       font-weight: 500;
       color: var(--text-secondary);
       background: transparent;
@@ -267,22 +283,58 @@
     .sidebar-footer {
       margin-top: auto;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      padding-top: var(--space-lg);
+      justify-content: center;
+      width: 100%;
+      padding-top: 14px;
       border-top: 1px solid var(--border-light);
       gap: var(--space-sm);
     }
 
     .sidebar-footer .btn-icon {
-      flex: 1;
-      height: 38px;
-      border-radius: var(--radius-md);
+      flex: none;
+      width: 46px;
+      height: 42px;
+      border-radius: 13px;
       background-color: var(--border-light);
       border: 1px solid transparent;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+    }
+
+    .sidebar-menu-btn:focus-visible,
+    .sidebar-add-btn:focus-visible,
+    .sidebar-footer .btn-icon:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--primary) 42%, transparent);
+      outline-offset: 2px;
+    }
+
+    .sidebar-filter-count {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 7px;
+      height: 7px;
+      padding: 0;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 2px var(--surface);
+      font-size: 0;
+      line-height: 0;
+      opacity: 0;
+      transform: scale(.6);
+      transition: opacity var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .sidebar-filter-count.has-count {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .sidebar-filter-count.has-overdue {
+      background: var(--danger, #ef4444);
     }
 
     .sidebar-footer .btn-icon:hover {
@@ -607,7 +659,7 @@
     /* Batch operations bar desktop placement override */
     .batch-bar {
       bottom: var(--space-xl);
-      left: calc(260px + (100% - 260px) / 2);
+      left: calc(76px + (100% - 76px) / 2);
       transform: translateX(-50%) translateY(calc(100% + 100px));
       opacity: 0;
       visibility: hidden;
@@ -632,8 +684,8 @@
     /* Responsive Queries */
     @media (max-width: 1024px) {
       .batch-bar {
-        left: calc(260px + (100% - 260px) / 2);
-        width: calc(100% - 300px);
+        left: calc(76px + (100% - 76px) / 2);
+        width: calc(100% - 116px);
       }
     }
 
@@ -652,8 +704,137 @@
         left: 0;
         top: 0;
         bottom: 0;
+        width: 260px;
+        align-items: stretch;
+        padding: var(--space-xl);
         transform: translateX(-100%);
         box-shadow: var(--shadow-xl);
+      }
+
+      .sidebar-header {
+        justify-content: space-between;
+        margin-bottom: var(--space-2xl);
+      }
+
+      .sidebar-brand {
+        gap: var(--space-md);
+      }
+
+      .sidebar-logo {
+        width: 30px;
+        height: 30px;
+      }
+
+      .sidebar-title,
+      .sidebar-section-title,
+      .sidebar-menu-text {
+        position: static;
+        width: auto;
+        height: auto;
+        padding: 0;
+        margin: 0;
+        overflow: visible;
+        clip: auto;
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .sidebar-title {
+        font-size: var(--font-size-2xl);
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .sidebar-add-btn {
+        width: 100%;
+        height: auto;
+        justify-content: center;
+        gap: var(--space-sm);
+        padding: var(--space-md) var(--space-lg);
+        font-size: var(--font-size-lg);
+        margin-bottom: var(--space-2xl);
+      }
+
+      .sidebar-section {
+        width: auto;
+        margin-bottom: var(--space-xl);
+      }
+
+      .sidebar-section-title {
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: var(--space-sm);
+        padding: 0 var(--space-sm);
+      }
+
+      .sidebar-divider {
+        width: auto;
+        margin: var(--space-sm) 0 var(--space-xl);
+      }
+
+      .sidebar-menu-btn,
+      .sidebar .sidebar-menu-btn.tab {
+        justify-content: space-between;
+        width: 100%;
+        height: 38px;
+        margin: 0;
+        padding: 0 var(--space-md);
+        border-radius: var(--radius-md);
+        text-align: left;
+      }
+
+      .sidebar-menu-btn-content {
+        gap: 10px;
+        flex: 1;
+      }
+
+      .sidebar-menu-icon {
+        width: 20px;
+        height: 20px;
+      }
+
+      .sidebar-menu-icon svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .sidebar-filter-count {
+        position: static;
+        width: auto;
+        height: auto;
+        padding: 2px 7px;
+        border-radius: var(--radius-full);
+        box-shadow: none;
+        font-size: var(--font-size-xs);
+        line-height: 1.2;
+        opacity: 1;
+        transform: none;
+        background: var(--border-light);
+      }
+
+      .sidebar-filter-count.has-count {
+        opacity: 1;
+        transform: none;
+      }
+
+      .sidebar-footer {
+        width: auto;
+        flex-direction: row;
+        justify-content: space-between;
+        padding-top: var(--space-lg);
+      }
+
+      .sidebar-footer .btn-icon {
+        flex: 1;
+        width: auto;
+        height: 38px;
+        border-radius: var(--radius-md);
       }
 
       .sidebar.open {
@@ -737,10 +918,7 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-brand">
-          <svg class="sidebar-logo" viewBox="0 0 24 24">
-            <path fill="currentColor"
-              d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-          </svg>
+          <img class="sidebar-logo" src="icons/todolist.svg" alt="" aria-hidden="true">
           <h1 class="sidebar-title">Todolist</h1>
         </div>
         <button id="btn-close-sidebar" class="btn-close-sidebar" title="关闭菜单">
@@ -763,7 +941,7 @@
       <div class="sidebar-section">
         <div class="sidebar-section-title">视图</div>
         <nav class="sidebar-menu">
-          <button class="sidebar-menu-btn sidebar-view-btn active" data-view="list">
+          <button class="sidebar-menu-btn sidebar-view-btn active" data-view="list" title="列表视图" aria-label="列表视图">
             <div class="sidebar-menu-btn-content">
               <span class="sidebar-menu-icon">
                 <svg viewBox="0 0 24 24">
@@ -774,7 +952,7 @@
               <span class="sidebar-menu-text">列表视图</span>
             </div>
           </button>
-          <button class="sidebar-menu-btn sidebar-view-btn" data-view="kanban">
+          <button class="sidebar-menu-btn sidebar-view-btn" data-view="kanban" title="看板分栏" aria-label="看板分栏">
             <div class="sidebar-menu-btn-content">
               <span class="sidebar-menu-icon">
                 <svg viewBox="0 0 24 24">
@@ -785,7 +963,7 @@
               <span class="sidebar-menu-text">看板分栏</span>
             </div>
           </button>
-          <button class="sidebar-menu-btn sidebar-view-btn" data-view="calendar">
+          <button class="sidebar-menu-btn sidebar-view-btn" data-view="calendar" title="日历视图" aria-label="日历视图">
             <div class="sidebar-menu-btn-content">
               <span class="sidebar-menu-icon">
                 <svg viewBox="0 0 24 24">
@@ -796,7 +974,7 @@
               <span class="sidebar-menu-text">日历视图</span>
             </div>
           </button>
-          <button class="sidebar-menu-btn sidebar-view-btn" data-view="stats">
+          <button class="sidebar-menu-btn sidebar-view-btn" data-view="stats" title="统计分析" aria-label="统计分析">
             <div class="sidebar-menu-btn-content">
               <span class="sidebar-menu-icon">
                 <svg viewBox="0 0 24 24">
@@ -816,7 +994,7 @@
       <div class="sidebar-section">
         <div class="sidebar-section-title">过滤器</div>
         <nav class="sidebar-menu filter-tabs">
-          <button class="sidebar-menu-btn tab active" data-filter="all">
+          <button class="sidebar-menu-btn tab active" data-filter="all" title="全部任务" aria-label="全部任务">
             <div class="sidebar-menu-btn-content">
               <span class="sidebar-menu-icon">
                 <svg viewBox="0 0 24 24">
@@ -828,7 +1006,7 @@
             </div>
             <span class="sidebar-filter-count">0</span>
           </button>
-          <button class="sidebar-menu-btn tab" data-filter="literature">
+          <button class="sidebar-menu-btn tab" data-filter="literature" title="文献研读" aria-label="文献研读">
             <div class="sidebar-menu-btn-content">
               <span class="sidebar-menu-icon">
                 <svg viewBox="0 0 24 24">
@@ -840,7 +1018,7 @@
             </div>
             <span class="sidebar-filter-count">0</span>
           </button>
-          <button class="sidebar-menu-btn tab" data-filter="today">
+          <button class="sidebar-menu-btn tab" data-filter="today" title="今天任务" aria-label="今天任务">
             <div class="sidebar-menu-btn-content">
               <span class="sidebar-menu-icon">
                 <svg viewBox="0 0 24 24">
@@ -852,7 +1030,7 @@
             </div>
             <span class="sidebar-filter-count">0</span>
           </button>
-          <button class="sidebar-menu-btn tab" data-filter="upcoming">
+          <button class="sidebar-menu-btn tab" data-filter="upcoming" title="即将到来" aria-label="即将到来">
             <div class="sidebar-menu-btn-content">
               <span class="sidebar-menu-icon">
                 <svg viewBox="0 0 24 24">
@@ -864,7 +1042,7 @@
             </div>
             <span class="sidebar-filter-count">0</span>
           </button>
-          <button class="sidebar-menu-btn tab" data-filter="overdue">
+          <button class="sidebar-menu-btn tab" data-filter="overdue" title="已逾期" aria-label="已逾期">
             <div class="sidebar-menu-btn-content">
               <span class="sidebar-menu-icon">
                 <svg viewBox="0 0 24 24">
@@ -876,7 +1054,7 @@
             </div>
             <span class="sidebar-filter-count">0</span>
           </button>
-          <button class="sidebar-menu-btn tab" data-filter="completed">
+          <button class="sidebar-menu-btn tab" data-filter="completed" title="已完成" aria-label="已完成">
             <div class="sidebar-menu-btn-content">
               <span class="sidebar-menu-icon">
                 <svg viewBox="0 0 24 24">
@@ -1242,6 +1420,7 @@
     </div>
 
     <div class="modal-actions">
+      <button type="button" id="btn-delete-task" class="btn-secondary hidden">删除任务</button>
       <button type="button" id="btn-cancel" class="btn-secondary">取消</button>
       <button type="submit" class="btn-primary">保存任务</button>
     </div>
@@ -1256,6 +1435,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="js/taskRules.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/taskManager.js"></script>

@@ -8,7 +8,7 @@ const Notifications = {
 
   // Request notification permission
   async requestPermission() {
-    if (chrome.notifications) {
+    if (Storage.isZotero() || (chrome.notifications && !chrome._todolistMock)) {
       return true;
     }
 
@@ -47,11 +47,17 @@ const Notifications = {
 
   // Show notification
   async show(title, body, options = {}) {
+    const host = Storage.getZoteroInstance()?.Todolist;
+    if (host?.showNotice) { host.showNotice(title, body); return true; }
+    if (Storage.isZotero()) {
+      ZoteroBridge.sendToHost({ type: 'TODOLIST_NOTIFY', title, body });
+      return true;
+    }
     if (options.playSound !== false) {
       this.playChime();
     }
 
-    if (chrome.notifications) {
+    if (chrome.notifications && !chrome._todolistMock) {
       // Use Chrome notifications API
       chrome.notifications.create({
         type: 'basic',
@@ -68,12 +74,13 @@ const Notifications = {
         icon: 'images/icon-128.png',
         ...options
       });
-    }
+    } else if (typeof UI !== 'undefined') UI.showToast(title + '：' + body);
+    return true;
   },
 
   // Check for due tasks and send reminders
   async checkReminders() {
-    const tasks = await Storage.getTasks();
+    const tasks = (await Storage.getAll()).tasks;
     const now = new Date();
 
     for (const task of tasks) {
@@ -83,7 +90,7 @@ const Notifications = {
 
       // Calculate reminder time
       const dueDate = new Date(task.dueDate + 'T' + (task.dueTime || '23:59'));
-      const reminderMinutes = task.reminder?.before || 15;
+      const reminderMinutes = task.reminder?.before ?? 15;
       const reminderTime = new Date(dueDate.getTime() - reminderMinutes * 60 * 1000);
 
       // Check if it's time for reminder
@@ -117,7 +124,7 @@ const Notifications = {
 
   // Send daily summary
   async sendDailySummary() {
-    const tasks = await Storage.getTasks();
+    const tasks = (await Storage.getAll()).tasks;
     const today = Utils.getTodayISO();
 
     const todayTasks = tasks.filter(t => !t.completed && Utils.isToday(t.dueDate));
@@ -164,7 +171,7 @@ const Notifications = {
 
   // Reset notified status for tasks that are no longer due
   async resetNotifiedStatus() {
-    const tasks = await Storage.getTasks();
+    const tasks = (await Storage.getAll()).tasks;
     const now = new Date();
 
     for (const task of tasks) {

@@ -650,7 +650,11 @@
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  opacity: 0;
+  opacity: 1;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 156px;
   transition: opacity var(--transition-fast);
 }
 
@@ -678,6 +682,25 @@
 .task-action.delete:hover {
   background-color: var(--danger-bg);
   color: var(--danger);
+}
+
+.task-action.delete {
+  width: auto;
+  min-width: 52px;
+  min-height: 28px;
+  padding: 4px 6px;
+  gap: 3px;
+  color: var(--danger);
+}
+.task-action:focus-visible, .kanban-task-actions button:focus-visible, #btn-delete-task:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+#btn-delete-task { margin-right: auto; color: var(--danger); }
+@media (max-width: 600px) {
+  .task-card { flex-wrap: wrap; }
+  .task-content { min-width: 0; flex-basis: calc(100% - 36px); }
+  .task-actions { max-width: 100%; margin-left: auto; }
 }
 
 /* Empty State */
@@ -2232,6 +2255,5 @@
   height: 16px;
   display: block;
 }
-
 
 

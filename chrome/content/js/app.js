@@ -12,6 +12,7 @@
 
   window.addEventListener('unhandledrejection', function(event) {
     console.error('Unhandled promise rejection:', event.reason);
+    if (typeof UI !== 'undefined') UI.showToast('操作失败，数据未能保存，请重试');
   });
 
   if (document.readyState === 'loading') {
@@ -28,14 +29,12 @@
       // Show loading state
       if (loadingEl) loadingEl.classList.remove('hidden');
 
-      await Modal.init();
-      Calendar.init();
-      await UI.init();
-
-      // Initialize advanced features
       await Advanced.init();
       await Tags.init();
       await TimeTracking.init();
+      await Modal.init();
+      Calendar.init();
+      await UI.init();
 
       await Notifications.requestPermission();
 

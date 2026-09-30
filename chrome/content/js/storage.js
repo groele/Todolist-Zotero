@@ -1,199 +1,132 @@
-// Storage abstraction layer supporting Zotero desktop, Chrome Extension, and localStorage fallback
-
+// Storage returns detached snapshots. Writes are acknowledged before reporting success.
 const Storage = {
-  // Default settings
   defaultSettings: {
-    defaultView: 'list',
-    showCompleted: true,
-    sortOrder: 'dueDate',
-    theme: 'light',
-    dailySummary: false,
-    summaryTime: '09:00',
-    academicPresets: true,
+    defaultView: 'list', showCompleted: true, sortOrder: 'dueDate', theme: 'light',
+    dailySummary: false, summaryTime: '09:00', academicPresets: true,
     defaultTaskType: 'literature_reading'
   },
-
   _zoteroCache: null,
-
+  _taskSnapshot: [],
+  _listeners: new Set(),
+  _saveQueue: Promise.resolve(),
+  clone(value) { return JSON.parse(JSON.stringify(value)); },
   isZotero() {
-    return Boolean(
-      (typeof ZoteroBridge !== 'undefined' && ZoteroBridge.isZotero) ||
-      (typeof window !== 'undefined' && (window.Zotero || window.parent?.Zotero))
-    );
+    return Boolean((typeof ZoteroBridge !== 'undefined' && ZoteroBridge.isZotero) || this.getZoteroInstance());
   },
-
   getZoteroInstance() {
     if (typeof window === 'undefined') return null;
-    return window.Zotero || window.parent?.Zotero || null;
+    try { return window.Zotero || window.parent?.Zotero || null; } catch (_) { return null; }
   },
-
-  // Get all data (tasks + settings + customTags)
+  subscribe(listener) { this._listeners.add(listener); return () => this._listeners.delete(listener); },
+  acceptData(data) {
+    if (data.revision && this._zoteroCache?.revision > data.revision) return;
+    this._zoteroCache = this.clone(data);
+    for (const listener of this._listeners) listener(this.clone(data));
+  },
   async getAll() {
-    const zotero = this.getZoteroInstance();
-    if (zotero?.Todolist?.loadData) {
-      const data = await zotero.Todolist.loadData();
-      return {
-        tasks: data.tasks || [],
-        settings: { ...this.defaultSettings, ...data.settings },
-        customTags: data.customTags || []
-      };
+    const host = this.getZoteroInstance()?.Todolist;
+    let data;
+    if (host?.loadData) data = await host.loadData();
+    else if (this.isZotero()) {
+      await ZoteroBridge.whenReady();
+      data = this._zoteroCache;
+    } else if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      data = await chrome.storage.local.get(null);
+    } else {
+      data = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('todolist_')) data[key.slice(9)] = JSON.parse(localStorage.getItem(key));
+      }
     }
-
-    if (this._zoteroCache) {
-      return {
-        tasks: this._zoteroCache.tasks || [],
-        settings: { ...this.defaultSettings, ...this._zoteroCache.settings },
-        customTags: this._zoteroCache.customTags || []
-      };
-    }
-
-    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-      return new Promise((resolve, reject) => {
-        chrome.storage.local.get(['tasks', 'settings', 'customTags'], (result) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-            return;
-          }
-          resolve({
-            tasks: result.tasks || [],
-            settings: { ...this.defaultSettings, ...result.settings },
-            customTags: result.customTags || []
-          });
-        });
-      });
-    }
-
-    // LocalStorage fallback
-    try {
-      const tasks = JSON.parse(localStorage.getItem('todolist_tasks') || '[]');
-      const settings = JSON.parse(localStorage.getItem('todolist_settings') || '{}');
-      const customTags = JSON.parse(localStorage.getItem('todolist_customTags') || '[]');
-      return {
-        tasks,
-        settings: { ...this.defaultSettings, ...settings },
-        customTags
-      };
-    } catch (_) {
-      return { tasks: [], settings: { ...this.defaultSettings }, customTags: [] };
-    }
+    if (!data || (data.tasks != null && !Array.isArray(data.tasks))) throw new Error('任务数据格式无效');
+    return this.clone({ ...data, tasks: data.tasks || [], settings: { ...this.defaultSettings, ...data.settings }, customTags: data.customTags || [] });
   },
-
-  // Save all data
   async saveAll(data) {
-    const current = await this.getAll();
-    const merged = { ...current, ...data };
-
-    const zotero = this.getZoteroInstance();
-    if (zotero?.Todolist?.saveData) {
-      await zotero.Todolist.saveData(merged);
-      this._zoteroCache = merged;
-      return;
-    }
-
-    if (typeof ZoteroBridge !== 'undefined' && ZoteroBridge.isZotero) {
-      this._zoteroCache = merged;
-      ZoteroBridge.sendToHost({ type: 'TODOLIST_STORAGE_SET', payload: merged });
-      return;
-    }
-
-    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-      return new Promise((resolve, reject) => {
-        chrome.storage.local.set(merged, () => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-            return;
-          }
-          resolve();
-        });
-      });
-    }
-
-    // LocalStorage fallback
-    try {
-      if (data.tasks !== undefined) localStorage.setItem('todolist_tasks', JSON.stringify(data.tasks));
-      if (data.settings !== undefined) localStorage.setItem('todolist_settings', JSON.stringify(data.settings));
-      if (data.customTags !== undefined) localStorage.setItem('todolist_customTags', JSON.stringify(data.customTags));
-    } catch (_) {}
+    const patch = this.clone(data);
+    const run = async () => {
+      const host = this.getZoteroInstance()?.Todolist;
+      let saved;
+      if (host?.saveData) saved = await host.saveData(patch);
+      else if (this.isZotero()) {
+        await ZoteroBridge.whenReady();
+        saved = await ZoteroBridge.saveStorage(patch);
+      } else {
+        const current = await this.getAll();
+        saved = this.mergeData(current, patch);
+        if (typeof chrome !== 'undefined' && chrome.storage?.local) await chrome.storage.local.set(saved);
+        else for (const [key, value] of Object.entries(saved)) localStorage.setItem('todolist_' + key, JSON.stringify(value));
+      }
+      this.acceptData(saved);
+      return this.clone(saved);
+    };
+    const result = this._saveQueue.then(run);
+    this._saveQueue = result.catch(() => {});
+    return result;
   },
-
-  // Get tasks array
+  mergeData(current, patch) {
+    const merged = { ...current, ...patch };
+    if (patch.settings) merged.settings = { ...current.settings, ...patch.settings };
+    if (patch.taskChanges) {
+      const { added = [], updated = [], deleted = [] } = patch.taskChanges;
+      const removed = new Set(deleted);
+      merged.tasks = current.tasks.filter(t => !removed.has(t.id)).map(t => {
+        const update = updated.find(u => u.id === t.id);
+        return update ? { ...t, ...update.changes, id: t.id } : t;
+      });
+      for (const task of added) if (!merged.tasks.some(t => t.id === task.id)) merged.tasks.push(task);
+      delete merged.taskChanges;
+    }
+    if (patch.activeTimerChanges) {
+      merged.activeTimers = { ...current.activeTimers };
+      for (const [id, timer] of Object.entries(patch.activeTimerChanges)) {
+        if (timer) merged.activeTimers[id] = timer;
+        else delete merged.activeTimers[id];
+      }
+      delete merged.activeTimerChanges;
+    }
+    if (patch.taskChanges || patch.tasks || patch.activeTimerChanges) {
+      const ids = new Set(merged.tasks.map(t => t.id));
+      merged.activeTimers = Object.fromEntries(Object.entries(merged.activeTimers || {}).filter(([id]) => ids.has(id)));
+    }
+    merged.tasks.sort((a, b) => (a.order || 0) - (b.order || 0));
+    return merged;
+  },
   async getTasks() {
     const data = await this.getAll();
+    this._taskSnapshot = this.clone(data.tasks);
     return data.tasks;
   },
-
-  // Save tasks array
-  async saveTasks(tasks) {
-    return this.saveAll({ tasks });
-  },
-
-  // Get settings
-  async getSettings() {
-    const data = await this.getAll();
-    return data.settings;
-  },
-
-  // Save settings
-  async saveSettings(settings) {
-    return this.saveAll({ settings });
-  },
-
-  // Add a single task (deduplicating by ID)
-  async addTask(task) {
-    const tasks = await this.getTasks();
-    const index = tasks.findIndex(t => t.id === task.id);
-    if (index === -1) {
-      tasks.push(task);
-    } else {
-      tasks[index] = task;
+  // Field-level changes prevent a stale window from resurrecting deletions or erasing additions.
+  async saveTasks(tasks, baseline = this._taskSnapshot, extra = {}) {
+    const before = new Map(baseline.map(t => [t.id, t]));
+    const after = new Map(tasks.map(t => [t.id, t]));
+    const taskChanges = { added: [], updated: [], deleted: [] };
+    for (const [id, task] of after) {
+      if (!before.has(id)) taskChanges.added.push(task);
+      else {
+        const changes = {};
+        for (const [key, value] of Object.entries(task)) {
+          if (key !== 'id' && JSON.stringify(value) !== JSON.stringify(before.get(id)[key])) changes[key] = value;
+        }
+        if (Object.keys(changes).length) taskChanges.updated.push({ id, changes });
+      }
     }
-    await this.saveTasks(tasks);
-    return task;
+    for (const id of before.keys()) if (!after.has(id)) taskChanges.deleted.push(id);
+    const data = await this.saveAll({ ...extra, taskChanges });
+    this._taskSnapshot = this.clone(data.tasks);
+    return data.tasks;
   },
-
-  // Update a task by ID
-  async updateTask(id, changes) {
-    const tasks = await this.getTasks();
-    const index = tasks.findIndex(t => t.id === id);
-    if (index === -1) return null;
-
-    tasks[index] = { ...tasks[index], ...changes };
-    await this.saveTasks(tasks);
-    return tasks[index];
-  },
-
-  // Delete a task by ID
-  async deleteTask(id) {
-    const tasks = await this.getTasks();
-    const index = tasks.findIndex(t => t.id === id);
-    if (index === -1) return null;
-
-    const deleted = tasks.splice(index, 1)[0];
-    await this.saveTasks(tasks);
-    return deleted;
-  },
-
-  // Get a single task by ID
-  async getTaskById(id) {
-    const tasks = await this.getTasks();
-    return tasks.find(t => t.id === id) || null;
-  },
-
-  // Get all unique categories
+  async getSettings() { return (await this.getAll()).settings; },
+  async saveSettings(settings) { return this.saveAll({ settings }); },
+  async addTask(task) { return this.saveAll({ taskChanges: { added: [task] } }); },
+  async updateTask(id, changes) { return this.saveAll({ taskChanges: { updated: [{ id, changes }] } }); },
+  async deleteTask(id) { return this.saveAll({ taskChanges: { deleted: [id] } }); },
+  async getTaskById(id) { return (await this.getAll()).tasks.find(t => t.id === id) || null; },
   async getCategories() {
-    const tasks = await this.getTasks();
-    const categories = new Set();
-    // Default academic categories in Zotero
-    if (this.isZotero()) {
-      categories.add('论文研读');
-      categories.add('论文写作');
-      categories.add('代码实验');
-      categories.add('会议投稿');
-      categories.add('审稿评阅');
-    }
-    tasks.forEach(t => {
-      if (t.category) categories.add(t.category);
-    });
-    return Array.from(categories);
+    const categories = new Set(this.isZotero() ? ['论文研读', '论文写作', '代码实验', '会议投稿', '审稿评阅'] : []);
+    for (const task of (await this.getAll()).tasks) if (task.category) categories.add(task.category);
+    return [...categories];
   }
 };
+

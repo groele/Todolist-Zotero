@@ -27,9 +27,7 @@
   <!-- Header -->
   <header class="header">
     <div class="header-left">
-      <svg class="logo" viewBox="0 0 24 24" width="24" height="24">
-        <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-      </svg>
+      <img class="logo" src="icons/todolist.svg" alt="" aria-hidden="true" width="24" height="24">
       <h1>Todolist</h1>
       <div class="header-progress-widget" id="header-progress-widget" title="今日任务完成率"></div>
     </div>
@@ -354,6 +352,7 @@
     </div>
 
     <div class="modal-actions">
+      <button type="button" id="btn-delete-task" class="btn-secondary hidden">删除任务</button>
       <button type="button" id="btn-cancel" class="btn-secondary">取消</button>
       <button type="submit" class="btn-primary">保存任务</button>
     </div>
@@ -369,6 +368,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="js/taskRules.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/taskManager.js"></script>

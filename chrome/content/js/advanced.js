@@ -12,17 +12,13 @@ const Advanced = {
 
   // Load search history from storage
   async loadSearchHistory() {
-    const result = await new Promise(resolve => {
-      chrome.storage.local.get('searchHistory', resolve);
-    });
+    const result = await Storage.getAll();
     this.searchHistory = result.searchHistory || [];
   },
 
   // Save search history
   async saveSearchHistory() {
-    await new Promise(resolve => {
-      chrome.storage.local.set({ searchHistory: this.searchHistory }, resolve);
-    });
+    await Storage.saveAll({ searchHistory: this.searchHistory });
   },
 
   // Add to search history

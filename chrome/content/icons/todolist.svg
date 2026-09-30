@@ -1,40 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-  <style>
-    .td-card { fill: #ffffff; stroke: #059669; }
-    .td-check { stroke: #059669; }
-    .td-line-done { stroke: #94a3b8; }
-    .td-box { stroke: #059669; }
-    .td-line-active { stroke: #1e293b; }
-    @media (prefers-color-scheme: dark) {
-      .td-card { fill: #1e293b; stroke: #10b981; }
-      .td-check { stroke: #10b981; }
-      .td-line-done { stroke: #64748b; }
-      .td-box { stroke: #10b981; }
-      .td-line-active { stroke: #f1f5f9; }
-    }
-  </style>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="title desc">
+  <title id="title">Todolist</title>
+  <desc id="desc">A rounded checklist card with a completed task</desc>
 
-  <!-- 1. Sleek Academic Sheet / Card (Clean rounded corners, generous margins) -->
-  <rect class="td-card" x="2.5" y="2.5" width="19" height="19" rx="4.2" stroke-width="1.8" />
-
-  <!-- 2. Academic Literature Bookmark Ribbon (Top-Right Accent) -->
-  <path d="M15 2.5V8.2L17 7L19 8.2V2.5H15Z" fill="#f59e0b" />
-
-  <!-- 3. Completed Milestone (Bold Emerald Checkmark + Clean Task Line) -->
-  <path class="td-check" d="M6 10L8.5 12.5L13.2 7.2"
-        fill="none"
-        stroke-width="2.4"
-        stroke-linecap="round"
-        stroke-linejoin="round" />
-  <line class="td-line-done" x1="14.5" y1="10" x2="18.2" y2="10"
-        stroke-width="2"
-        stroke-linecap="round" />
-
-  <!-- 4. Active Reading Task (Clear Rounded Checkbox + Title Line) -->
-  <rect class="td-box" x="6.2" y="14.5" width="3.6" height="3.6" rx="1"
-        fill="none"
-        stroke-width="1.6" />
-  <line class="td-line-active" x1="12" y1="16.3" x2="18.2" y2="16.3"
-        stroke-width="2"
-        stroke-linecap="round" />
+  <!-- Rounded card silhouette reads clearly at the native 20px sidenav size. -->
+  <rect x="3.25" y="3.25" width="17.5" height="17.5" rx="5" fill="#edf3ff" stroke="#3157a6" stroke-width="1.5"/>
+  <path d="M8 7.7h8" fill="none" stroke="#3157a6" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="m7.1 11.55 1.35 1.35 2.55-2.75" fill="none" stroke="#159a76" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13.25 12.25h4" fill="none" stroke="#52627a" stroke-width="1.35" stroke-linecap="round"/>
+  <path d="M7.55 16.2h2.15M12.1 16.2h5.05" fill="none" stroke="#52627a" stroke-width="1.35" stroke-linecap="round"/>
 </svg>

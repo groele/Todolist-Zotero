@@ -11,6 +11,17 @@ const ZoteroBridge = {
     this.setupMessageListener();
 
     if (this.isZotero) {
+      this._readyPromise = new Promise((resolve, reject) => {
+        this._resolveReady = resolve;
+        this._readyTimer = setTimeout(() => reject(new Error('无法连接 Zotero 数据，请重新打开待办窗口')), 5000);
+      });
+      this._readyPromise.catch(() => {});
+      const host = Storage.getZoteroInstance()?.Todolist;
+      if (host?.registerDataListener) {
+        this._dataListener = data => Storage.acceptData(data);
+        host.registerDataListener(this._dataListener);
+        window.addEventListener('unload', () => host.unregisterDataListener(this._dataListener), { once: true });
+      }
       document.documentElement.classList.add('zotero-env');
       this.sendToHost({ type: 'TODOLIST_READY' });
       console.log('[Todolist] Running in Zotero environment');
@@ -72,13 +83,17 @@ const ZoteroBridge = {
 
       // Handle initial data handshake
       if (data.type === 'TODOLIST_INIT_DATA') {
-        if (data.data && typeof Storage !== 'undefined' && Storage._zoteroCache) {
-          Storage._zoteroCache = data.data;
+        if (data.data && typeof Storage !== 'undefined') {
+          Storage.acceptData(data.data);
+          clearTimeout(this._readyTimer);
+          this._resolveReady?.();
         }
         if (data.pending) {
           this.handleHostNavigation(data.pending);
         }
       }
+
+      if (data.type === 'TODOLIST_DATA_CHANGED' && data.data) Storage.acceptData(data.data);
 
       // Handle direct navigation request from host
       if (data.type === 'TODOLIST_NAVIGATE') {
@@ -173,7 +188,7 @@ const ZoteroBridge = {
             if (msg.requestId && this._requestCallbacks.has(msg.requestId)) {
               const cb = this._requestCallbacks.get(msg.requestId);
               this._requestCallbacks.delete(msg.requestId);
-              cb({ item: activeItem ? serializeLiteratureItem(activeItem) : null });
+              cb({ item: activeItem ? todolist.serializeLiteratureItem(activeItem) : null });
             }
             break;
           }
@@ -182,6 +197,24 @@ const ZoteroBridge = {
     } catch (e) {
       console.warn('[ZoteroBridge] sendToHost failed:', e);
     }
+  },
+
+  whenReady() { return this._readyPromise || Promise.resolve(); },
+
+  saveStorage(payload) {
+    return new Promise((resolve, reject) => {
+      const requestId = 'save_' + (++this._pendingRequestId) + '_' + Date.now();
+      const timer = setTimeout(() => {
+        this._requestCallbacks.delete(requestId);
+        reject(new Error('Zotero 保存确认超时，请重新打开窗口检查数据'));
+      }, 5000);
+      this._requestCallbacks.set(requestId, data => {
+        clearTimeout(timer);
+        if (data.success && data.data) resolve(data.data);
+        else reject(new Error(data.error || 'Zotero 保存失败'));
+      });
+      this.sendToHost({ type: 'TODOLIST_STORAGE_SET', requestId, payload });
+    });
   },
 
   executeWhenReady(fn) {
@@ -342,4 +375,3 @@ window.ZoteroBridge = ZoteroBridge;
 
 // Initialize ZoteroBridge immediately
 ZoteroBridge.init();
-

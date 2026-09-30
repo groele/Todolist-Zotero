@@ -235,17 +235,13 @@ const Templates = {
 
   // Load custom templates
   async loadCustomTemplates() {
-    const result = await new Promise(resolve => {
-      chrome.storage.local.get('customTemplates', resolve);
-    });
+    const result = await Storage.getAll();
     this.customTemplates = result.customTemplates || [];
   },
 
   // Save custom templates
   async saveCustomTemplates() {
-    await new Promise(resolve => {
-      chrome.storage.local.set({ customTemplates: this.customTemplates }, resolve);
-    });
+    await Storage.saveAll({ customTemplates: this.customTemplates });
   },
 
   // Get all templates (builtin + custom)

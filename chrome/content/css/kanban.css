@@ -1,4 +1,8 @@
 /* Kanban View Styles */
+.kanban-task-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.kanban-task-actions button { padding: 4px 8px; min-height: 28px; border-radius: var(--radius-sm); cursor: pointer; }
+.kanban-delete { color: var(--danger); }
+.kanban-delete:hover { background: var(--danger-bg); }
 
 #kanban-view.view.active,
 .kanban-view {

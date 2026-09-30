@@ -7,6 +7,8 @@ todolist-reader-add-task = 将选中文本/批注转为研读待办 (Ctrl+Shift+
 todolist-item-pane-header = 学术待办
     .label = 学术待办
     .tooltiptext = Todolist 学术待办与研读任务
+todolist-item-pane-sidenav = 学术待办
+    .tooltiptext = 打开学术待办
 todolist-item-pane-count =
     { $count ->
         [0] 此文献暂无待办事项

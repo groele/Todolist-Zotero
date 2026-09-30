@@ -4,12 +4,10 @@ const DataManager = {
   // Export all data to JSON (including tasks, settings, customTags, customTemplates, searchHistory, activeTimers)
   async exportData() {
     const data = await Storage.getAll();
-    const extraData = await new Promise(resolve => {
-      chrome.storage.local.get(['customTags', 'customTemplates', 'searchHistory', 'activeTimers'], resolve);
-    });
+    const extraData = data;
 
     const exportData = {
-      version: '3.3.0',
+      version: '1.0.1',
       exportDate: new Date().toISOString(),
       tasks: data.tasks,
       settings: data.settings,
@@ -48,47 +46,39 @@ const DataManager = {
             return;
           }
 
-          // Validate each task
-          const validTasks = importData.tasks.filter(task => {
-            return task.id && task.title && typeof task.completed === 'boolean';
-          });
-
+          // Validate the entire payload before committing anything.
+          const validTasks = importData.tasks.filter(task => task && typeof task.id === 'string' &&
+            typeof task.title === 'string' && task.title.trim() && typeof task.completed === 'boolean');
+          for (const task of validTasks) {
+            task.subtasks = Array.isArray(task.subtasks) ? task.subtasks.filter(st => st && typeof st.title === 'string') : [];
+            task.tags = Array.isArray(task.tags) ? task.tags.filter(tag => typeof tag === 'string') : [];
+          }
+          if (!['merge', 'replace'].includes(mode)) throw new Error('导入模式无效');
+          const current = await Storage.getAll();
+          const patch = {};
+          let imported;
           if (mode === 'replace') {
-            // Replace all data
-            await Storage.saveTasks(validTasks);
-            if (importData.settings) {
-              await Storage.saveSettings(importData.settings);
-            }
-            if (importData.customTags) {
-              await new Promise(r => chrome.storage.local.set({ customTags: importData.customTags }, r));
-            }
-            if (importData.customTemplates) {
-              await new Promise(r => chrome.storage.local.set({ customTemplates: importData.customTemplates }, r));
-            }
+            patch.tasks = validTasks;
+            patch.settings = importData.settings || Storage.defaultSettings;
+            patch.customTags = importData.customTags || [];
+            patch.customTemplates = importData.customTemplates || [];
+            patch.activeTimers = {}; // A restored backup never resumes historical timers.
+            imported = validTasks.length;
           } else {
-            // Merge mode - add new tasks, skip duplicates
-            const existingTasks = await Storage.getTasks();
-            const existingIds = new Set(existingTasks.map(t => t.id));
-            const newTasks = validTasks.filter(t => !existingIds.has(t.id));
-
-            await Storage.saveTasks([...existingTasks, ...newTasks]);
-
-            // Merge custom tags
-            if (importData.customTags && Array.isArray(importData.customTags)) {
-              const currentTags = await new Promise(r => chrome.storage.local.get('customTags', r)).then(res => res.customTags || []);
-              const tagIds = new Set(currentTags.map(t => t.id));
-              const mergedTags = [...currentTags, ...importData.customTags.filter(t => !tagIds.has(t.id))];
-              await new Promise(r => chrome.storage.local.set({ customTags: mergedTags }, r));
-            }
-
-            // Merge custom templates
-            if (importData.customTemplates && Array.isArray(importData.customTemplates)) {
-              const currentTpls = await new Promise(r => chrome.storage.local.get('customTemplates', r)).then(res => res.customTemplates || []);
-              const tplIds = new Set(currentTpls.map(t => t.id));
-              const mergedTpls = [...currentTpls, ...importData.customTemplates.filter(t => !tplIds.has(t.id))];
-              await new Promise(r => chrome.storage.local.set({ customTemplates: mergedTpls }, r));
+            const seen = new Set(current.tasks.map(t => t.id));
+            const added = validTasks.filter(t => !seen.has(t.id) && seen.add(t.id));
+            patch.taskChanges = { added };
+            imported = added.length;
+            for (const key of ['customTags', 'customTemplates']) {
+              if (Array.isArray(importData[key])) {
+                const existing = current[key] || [];
+                const ids = new Set(existing.map(t => t.id));
+                patch[key] = [...existing, ...importData[key].filter(t => t && t.id && !ids.has(t.id) && ids.add(t.id))];
+              }
             }
           }
+          if (!Array.isArray(patch.customTags || []) || !Array.isArray(patch.customTemplates || [])) throw new Error('标签或模板格式无效');
+          await Storage.saveAll(patch);
 
           // Reload in-memory modules
           await TaskManager.loadTasks();
@@ -96,7 +86,7 @@ const DataManager = {
           if (typeof Templates !== 'undefined' && Templates.loadCustomTemplates) await Templates.loadCustomTemplates();
 
           resolve({
-            imported: validTasks.length,
+            imported,
             mode: mode
           });
         } catch (error) {
@@ -114,14 +104,14 @@ const DataManager = {
 
   // Clear all tasks
   async clearAllTasks() {
-    await Storage.saveTasks([]);
+    await Storage.saveAll({ tasks: [], activeTimers: {} });
     await TaskManager.loadTasks();
     return true;
   },
 
   // Get statistics
   async getStats() {
-    const tasks = await Storage.getTasks();
+    const tasks = (await Storage.getAll()).tasks;
     const now = new Date();
     const today = Utils.getTodayISO();
 
@@ -155,9 +145,9 @@ const DataManager = {
     for (let i = 6; i >= 0; i--) {
       const date = new Date(now);
       date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = Utils.toDateISO(date);
       const dayCompleted = tasks.filter(t =>
-        t.completed && t.completedAt && t.completedAt.startsWith(dateStr)
+        t.completed && t.completedAt && Utils.toDateISO(new Date(t.completedAt)) === dateStr
       ).length;
       weeklyTrend.push({
         date: dateStr,

@@ -35,17 +35,13 @@ const Tags = {
 
   // Load custom tags
   async loadCustomTags() {
-    const result = await new Promise(resolve => {
-      chrome.storage.local.get('customTags', resolve);
-    });
+    const result = await Storage.getAll();
     this.customTags = result.customTags || [];
   },
 
   // Save custom tags
   async saveCustomTags() {
-    await new Promise(resolve => {
-      chrome.storage.local.set({ customTags: this.customTags }, resolve);
-    });
+    await Storage.saveAll({ customTags: this.customTags });
   },
 
   // Get all tags

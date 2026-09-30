@@ -401,7 +401,9 @@
             font-size: 14px !important;
             line-height: 1 !important;
             padding: 0 3px !important;
-            opacity: 0.5;
+            opacity: 1;
+            min-width: 36px;
+            min-height: 28px;
             appearance: none;
             -moz-appearance: none;
             flex-shrink: 0;
@@ -558,6 +560,26 @@
             color: #1e40af !important;
           }
 
+          /* The ItemPane sidenav is an icon rail. Keep its localized name as
+             a tooltip/accessibility label without allowing it to wrap beside
+             the icon in narrow Zotero panes. */
+          item-pane-sidenav .btn[data-pane*="todolist-item-pane"] {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            padding: 4px !important;
+            overflow: hidden !important;
+            font-size: 0 !important;
+            line-height: 0 !important;
+            color: transparent !important;
+            text-indent: -9999px !important;
+            white-space: nowrap !important;
+          }
+          item-pane-sidenav .btn[data-pane*="todolist-item-pane"]::before,
+          item-pane-sidenav .btn[data-pane*="todolist-item-pane"]::after {
+            content: none !important;
+          }
+
           /* Dark theme support */
           @media (prefers-color-scheme: dark) {
             .td-pane-wrap { color: #e2e8f0; }
@@ -618,64 +640,104 @@
       return PathUtils.join(baseDir, 'todolist-data.json');
     },
 
+    localDateString(date) {
+      return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+    },
+
+    serializeLiteratureItem,
+
+    cloneData(data) { return JSON.parse(JSON.stringify(data)); },
+
     async loadData() {
-      if (this._cachedData) return this._cachedData;
+      if (this._cachedData) return this.cloneData(this._cachedData);
+      if (!this._loadPromise) this._loadPromise = this.readDataFile();
+      try { return this.cloneData(await this._loadPromise); }
+      finally { this._loadPromise = null; }
+    },
+
+    async readDataFile() {
       const filePath = this.getDataFilePath();
       try {
-        const exists = await IOUtils.exists(filePath);
-        if (exists) {
-          const content = await IOUtils.readUTF8(filePath);
-          this._cachedData = JSON.parse(content);
-          if (Array.isArray(this._cachedData?.tasks)) {
-            const seen = new Set();
-            this._cachedData.tasks = this._cachedData.tasks.filter((t) => {
-              if (!t || !t.id || seen.has(t.id)) return false;
-              seen.add(t.id);
-              return true;
-            });
-          }
-          return this._cachedData;
+        if (await IOUtils.exists(filePath)) {
+          const data = JSON.parse(await IOUtils.readUTF8(filePath));
+          if (!data || !Array.isArray(data.tasks)) throw new Error('任务数据格式无效');
+          const seen = new Set();
+          data.tasks = data.tasks.filter(t => t && t.id && !seen.has(t.id) && seen.add(t.id));
+          this._cachedData = data;
+        } else {
+          this._cachedData = { tasks: [], settings: { defaultView: 'list', showCompleted: true,
+            sortOrder: 'dueDate', theme: 'light', dailySummary: false, summaryTime: '09:00' }, customTags: [] };
         }
-      } catch (e) {
-        Zotero.logError?.('[Todolist] Failed to read todolist-data.json: ' + e);
+        return this._cachedData;
+      } catch (error) {
+        Zotero.logError?.('[Todolist] 数据读取失败，保留原文件: ' + error);
+        throw error;
       }
-
-      // Default initial data
-      this._cachedData = {
-        tasks: [],
-        settings: {
-          defaultView: 'list',
-          showCompleted: true,
-          sortOrder: 'dueDate',
-          theme: 'light',
-          dailySummary: false,
-          summaryTime: '09:00'
-        },
-        customTags: []
-      };
-      return this._cachedData;
     },
 
     async saveData(data) {
-      if (Array.isArray(data.tasks)) {
+      const patch = this.cloneData(data);
+      const run = async () => {
+        const current = await this.loadData();
+        const next = { ...current, ...patch };
+        if (patch.settings) next.settings = { ...current.settings, ...patch.settings };
+        if (patch.taskChanges) {
+          const { added = [], updated = [], deleted = [] } = patch.taskChanges;
+          const removed = new Set(deleted);
+          next.tasks = current.tasks.filter(t => !removed.has(t.id)).map(t => {
+            const update = updated.find(u => u.id === t.id);
+            return update ? { ...t, ...update.changes, id: t.id } : t;
+          });
+          for (const task of added) if (!next.tasks.some(t => t.id === task.id)) next.tasks.push(task);
+          delete next.taskChanges;
+        }
+        if (patch.activeTimerChanges) {
+          next.activeTimers = { ...current.activeTimers };
+          for (const [id, timer] of Object.entries(patch.activeTimerChanges)) {
+            if (timer) next.activeTimers[id] = timer;
+            else delete next.activeTimers[id];
+          }
+          delete next.activeTimerChanges;
+        }
+        if (patch.taskChanges) {
+          for (const task of [...next.tasks]) {
+            const was = current.tasks.find(t => t.id === task.id);
+            if (task.completed && !was?.completed) {
+              const recurring = TaskRules.buildNextTask(task, next.tasks,
+                () => 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10));
+              if (recurring) next.tasks.push(recurring);
+            }
+          }
+        }
         const seen = new Set();
-        data.tasks = data.tasks.filter((t) => {
-          if (!t || !t.id || seen.has(t.id)) return false;
-          seen.add(t.id);
-          return true;
-        });
-      }
-      this._cachedData = { ...this._cachedData, ...data };
-      const filePath = this.getDataFilePath();
-      try {
-        const jsonStr = JSON.stringify(this._cachedData, null, 2);
-        const tmpPath = `${filePath}.tmp-${Date.now()}`;
-        await IOUtils.writeUTF8(filePath, jsonStr, { tmpPath });
+        next.tasks = next.tasks.filter(t => t && t.id && !seen.has(t.id) && seen.add(t.id));
+        next.tasks.sort((a, b) => (a.order || 0) - (b.order || 0));
+        next.revision = (current.revision || 0) + 1;
+        const ids = new Set(next.tasks.map(t => t.id));
+        next.activeTimers = Object.fromEntries(Object.entries(next.activeTimers || {}).filter(([id]) => ids.has(id)));
+        const filePath = this.getDataFilePath();
+        try {
+          await IOUtils.writeUTF8(filePath, JSON.stringify(next, null, 2), { tmpPath: filePath + '.tmp' });
+        } catch (error) {
+          Zotero.logError?.('[Todolist] 数据保存失败: ' + error);
+          throw error;
+        }
+        this._cachedData = next;
         this.notifyDataChanged();
-      } catch (e) {
-        Zotero.logError?.('[Todolist] Failed to write todolist-data.json: ' + e);
-      }
-      return this._cachedData;
+        return this.cloneData(next);
+      };
+      const result = (this._saveQueue || Promise.resolve()).then(run);
+      this._saveQueue = result.catch(() => {});
+      return result;
+    },
+
+    async updateTaskState(id, change) {
+      const data = await this.loadData();
+      const task = data.tasks.find(t => t.id === id);
+      if (!task) return null;
+      const changes = typeof change === 'function' ? change(task) : change;
+      await this.saveData({ taskChanges: { updated: [{ id, changes }] } });
+      return task;
     },
 
     registerDataListener(listener) {
@@ -687,9 +749,15 @@
     },
 
     notifyDataChanged() {
+      for (const client of this._uiClients || []) {
+        try {
+          if (client.closed) { this._uiClients.delete(client); continue; }
+          client.postMessage({ type: 'TODOLIST_DATA_CHANGED', data: this.cloneData(this._cachedData) }, '*');
+        } catch (_) { this._uiClients.delete(client); }
+      }
       for (const listener of this._dataListeners) {
         try {
-          listener(this._cachedData);
+          listener(this.cloneData(this._cachedData));
         } catch (e) {
           Zotero.logError?.('[Todolist] Error in data listener: ' + e);
         }
@@ -878,6 +946,10 @@
                 modified = true;
               }
             }
+          } else if (tasks.length === 0) {
+            for (const tag of [pendingTag, completedTag]) {
+              if (tag && target.hasTag(tag)) { target.removeTag(tag); modified = true; }
+            }
           } else if (uncompleted.length > 0) {
             // Still has uncompleted tasks
             if (completedTag && target.hasTag(completedTag)) {
@@ -934,6 +1006,8 @@
             zoteroItemKey: meta.key,
             zoteroItemTitle: meta.title,
             zoteroAuthors: meta.authors,
+            zoteroLibraryID: meta.libraryID,
+            zoteroPublication: meta.publication,
             zoteroYear: meta.year,
             zoteroUri: meta.zoteroUri,
             zoteroPdfUri: meta.pdfUri,
@@ -1065,6 +1139,8 @@
           zoteroItemKey: meta.key,
           zoteroItemTitle: meta.title,
           zoteroAuthors: meta.authors,
+            zoteroLibraryID: meta.libraryID,
+            zoteroPublication: meta.publication,
           zoteroYear: meta.year,
           zoteroUri: meta.zoteroUri,
           zoteroPdfUri: pageLink,
@@ -1423,7 +1499,6 @@
               {
                 menuType: 'menuitem',
                 label: '添加为待办',
-                icon: `${CHROME_ROOT}icons/todolist.svg`,
                 onCommand: () => {
                   try {
                     this.createTaskFromSelection();
@@ -1445,6 +1520,21 @@
 
       // Register modern MenuManager if available (Zotero 8+)
       this.registerMenus();
+
+      // Purge any rogue buttons from existing non-main windows (e.g. 插件市场, 偏好设置, 对话框)
+      try {
+        if (typeof Services !== 'undefined' && Services.wm?.getEnumerator) {
+          const allWindows = Services.wm.getEnumerator(null);
+          while (allWindows.hasMoreElements()) {
+            const win = allWindows.getNext();
+            if (win && win.document && !this.isMainWindow(win)) {
+              try {
+                win.document.getElementById('todolist-toolbar-button')?.remove();
+              } catch (_) {}
+            }
+          }
+        }
+      } catch (_) {}
 
       const windows = Services.wm.getEnumerator('navigator:browser');
       while (windows.hasMoreElements()) {
@@ -1497,7 +1587,7 @@
           paneID: 'todolist-item-pane',
           pluginID: ADDON_ID,
           header: { l10nID: 'todolist-item-pane-header', icon },
-          sidenav: { l10nID: 'todolist-item-pane-header', icon },
+          sidenav: { l10nID: 'todolist-item-pane-sidenav', icon },
           onInit: ({ doc, body, item, refresh }) => {
             const document = doc || body?.ownerDocument;
             if (document) {
@@ -1645,9 +1735,12 @@
                 checkbox.title = t.completed ? '标记为未完成' : '标记为已完成';
                 checkbox.addEventListener('change', async (e) => {
                   e.stopPropagation();
-                  t.completed = checkbox.checked;
-                  t.completedAt = checkbox.checked ? new Date().toISOString() : null;
-                  await this.saveData({ tasks: data.tasks });
+                  try {
+                    await this.updateTaskState(t.id, current => ({ completed: checkbox.checked,
+                      completedAt: checkbox.checked ? new Date().toISOString() : null,
+                      status: checkbox.checked ? 'done' : 'todo',
+                      subtasks: (current.subtasks || []).map(sub => ({ ...sub, completed: checkbox.checked ? true : sub.completed })) }));
+                  } catch (error) { checkbox.checked = t.completed; this.showNotice('保存失败', String(error)); return; }
                   await this.tagItemOnTaskEvent(target.key, 'complete_check', target.libraryID);
                   if (this.getPref('autoSyncChildNote', true)) {
                     await this.syncTasksToChildNote(target);
@@ -1666,7 +1759,7 @@
 
                 // Due date badge
                 if (t.dueDate) {
-                  const todayStr = new Date().toISOString().slice(0, 10);
+                  const todayStr = this.localDateString(new Date());
                   const isOverdue = !t.completed && t.dueDate < todayStr;
                   const dateText = (isOverdue ? '⚠️ ' : '📅 ') + (t.dueDate.length > 5 ? t.dueDate.slice(5) : t.dueDate);
                   const dueBadge = createEl('span', `td-badge-date ${isOverdue ? 'is-overdue' : ''}`, dateText);
@@ -1701,16 +1794,14 @@
                     subCheck.style.transform = 'scale(0.85)';
                     subCheck.addEventListener('change', async (e) => {
                       e.stopPropagation();
-                      sub.completed = subCheck.checked;
-                      const allDone = t.subtasks.every((st) => st.completed);
-                      if (allDone && !t.completed) {
-                        t.completed = true;
-                        t.completedAt = new Date().toISOString();
-                      } else if (!allDone && t.completed) {
-                        t.completed = false;
-                        t.completedAt = null;
-                      }
-                      await this.saveData({ tasks: data.tasks });
+                      try {
+                        await this.updateTaskState(t.id, current => {
+                          const subtasks = (current.subtasks || []).map(st => st.id === sub.id ? { ...st, completed: subCheck.checked } : st);
+                          const completed = subtasks.every(st => st.completed);
+                          return { subtasks, completed, completedAt: completed ? (current.completedAt || new Date().toISOString()) : null,
+                            status: completed ? 'done' : 'todo' };
+                        });
+                      } catch (error) { subCheck.checked = sub.completed; this.showNotice('保存失败', String(error)); return; }
                       await this.tagItemOnTaskEvent(target.key, 'complete_check', target.libraryID);
                       if (this.getPref('autoSyncChildNote', true) && this.getPref('childNoteAutoUpdateOnSubtask', true)) {
                         await this.syncTasksToChildNote(target);
@@ -1726,13 +1817,24 @@
                 }
 
                 // Delete task button
-                const delBtn = createEl('button', 'td-task-delete', '×');
+                const delBtn = createEl('button', 'td-task-delete', '删除');
                 delBtn.type = 'button';
                 delBtn.title = '删除此待办';
                 delBtn.addEventListener('click', async (e) => {
                   e.stopPropagation();
-                  data.tasks = data.tasks.filter((tk) => tk.id !== t.id);
-                  await this.saveData({ tasks: data.tasks });
+                  if (delBtn.disabled) return;
+                  delBtn.disabled = true;
+                  try {
+                    await this.saveData({ taskChanges: { deleted: [t.id] } });
+                    this._paneDeleted ||= [];
+                    this._paneDeleted.push(this.cloneData(t));
+                    clearTimeout(this._paneUndoTimer);
+                    this._paneUndoTimer = setTimeout(() => { this._paneDeleted = []; this.notifyDataChanged(); }, 8000);
+                  } catch (error) {
+                    delBtn.disabled = false;
+                    this.showNotice('删除失败', String(error));
+                    return;
+                  }
                   await this.tagItemOnTaskEvent(target.key, 'complete_check', target.libraryID);
                   if (this.getPref('autoSyncChildNote', true)) {
                     await this.syncTasksToChildNote(target);
@@ -1746,6 +1848,25 @@
                 taskList.appendChild(taskCard);
               }
               wrapper.appendChild(taskList);
+            }
+
+            if (this._paneDeleted?.length) {
+              const undoBtn = createEl('button', 'td-subtask-toggle', '撤销删除（8 秒内）');
+              undoBtn.type = 'button';
+              undoBtn.addEventListener('click', async () => {
+                if (undoBtn.disabled) return;
+                undoBtn.disabled = true;
+                try {
+                  const restored = this._paneDeleted;
+                  await this.saveData({ taskChanges: { added: restored } });
+                  this._paneDeleted = [];
+                  clearTimeout(this._paneUndoTimer);
+                  for (const task of restored) await this.tagItemOnTaskEvent(task.zoteroItemKey, 'complete_check', task.zoteroLibraryID);
+                  if (this.getPref('autoSyncChildNote', true)) await this.syncTasksToChildNote(target);
+                  state?.refresh?.();
+                } catch (error) { undoBtn.disabled = false; this.showNotice('恢复失败', String(error)); }
+              });
+              wrapper.appendChild(undoBtn);
             }
 
             // 4. Compound Quick Add Row
@@ -1798,13 +1919,18 @@
                 zoteroItemKey: meta.key,
                 zoteroItemTitle: meta.title,
                 zoteroAuthors: meta.authors,
+            zoteroLibraryID: meta.libraryID,
+            zoteroPublication: meta.publication,
                 zoteroYear: meta.year,
                 zoteroUri: meta.zoteroUri,
                 zoteroPdfUri: meta.pdfUri,
                 academicType: defaultType
               };
-              data.tasks.push(newTask);
-              await this.saveData({ tasks: data.tasks });
+              if (quickBtn.disabled) return;
+              quickBtn.disabled = true;
+              try { await this.saveData({ taskChanges: { added: [newTask] } }); }
+              catch (error) { this.showNotice('保存失败', String(error)); return; }
+              finally { quickBtn.disabled = false; }
               quickInput.value = '';
               await this.tagItemOnTaskEvent(target.key, 'create', target.libraryID);
               if (this.getPref('autoSyncChildNote', true)) {
@@ -1933,9 +2059,51 @@
       return doc.createElement(tagName);
     },
 
+    isMainWindow(win) {
+      if (!win || !win.document) return false;
+      if (win.ZoteroPane) return true;
+      const doc = win.document;
+      if (doc.getElementById('zotero-pane') || doc.getElementById('zotero-items-tree') || doc.getElementById('zotero-items-toolbar')) {
+        return true;
+      }
+      const href = String(win.location?.href || '');
+      return href.includes('zoteroPane') || href.includes('standalone/standalone');
+    },
+
+    isReaderWindow(win) {
+      if (!win || !win.document) return false;
+      const doc = win.document;
+      if (doc.getElementById('reader-toolbar') || doc.querySelector?.('.reader')) return true;
+      const href = String(win.location?.href || '');
+      return href.includes('reader');
+    },
+
     addToWindow(window) {
       if (!window || !window.document) return;
       const doc = window.document;
+
+      const isMain = this.isMainWindow(window);
+      const isReader = !isMain && this.isReaderWindow(window);
+
+      // If this window is neither the main Zotero library window nor a reader window
+      // (e.g. 插件市场, 偏好设置, 独立对话框等), immediately clean up any mistakenly
+      // injected Todolist toolbar buttons, menu items or styles and do NOT inject into it!
+      if (!isMain && !isReader) {
+        try {
+          doc.getElementById('todolist-toolbar-button')?.remove();
+          doc.getElementById('todolist-tools-menu')?.remove();
+          doc.getElementById('todolist-tools-preferences')?.remove();
+          doc.getElementById('todolist-tab-style')?.remove();
+        } catch (_) {}
+        return;
+      }
+
+      // Standalone reader windows should never have the library toolbar button
+      if (!isMain) {
+        try {
+          doc.getElementById('todolist-toolbar-button')?.remove();
+        } catch (_) {}
+      }
 
       // Always clean up any stale or previous context menu items first (guarantees "仅保留添加为待办")
       const staleMenuIds = [
@@ -1995,8 +2163,6 @@
           const createFromItem = this.createXULElement(doc, 'menuitem');
           createFromItem.id = 'todolist-itemmenu-create';
           createFromItem.setAttribute('label', '添加为待办');
-          createFromItem.setAttribute('image', `${CHROME_ROOT}icons/todolist.svg`);
-          createFromItem.setAttribute('class', 'menuitem-iconic');
 
           // ONLY use 'command' event! Never attach 'click' or 'mousedown', which conflicts with Gecko popup manager!
           createFromItem.addEventListener('command', (e) => {
@@ -2075,6 +2241,8 @@
 
           // A. Handshake Ready
           if (data.type === 'TODOLIST_READY') {
+            this._uiClients ||= new Set();
+            if (sourceWin) this._uiClients.add(sourceWin);
             if (iframe) iframe._todolistReady = true;
             this.loadData().then((storedData) => {
               const pendingNav = iframe?._todolistPending || null;
@@ -2090,15 +2258,22 @@
 
           // B. Storage Save Request
           if (data.type === 'TODOLIST_STORAGE_SET' && data.payload) {
-            this.saveData(data.payload).then(() => {
+            this.saveData(data.payload).then((saved) => {
               if (data.requestId) {
                 replyResult({
                   type: 'TODOLIST_STORAGE_SET_RESULT',
                   requestId: data.requestId,
+                  data: saved,
                   success: true
                 });
               }
-            });
+            }).catch(error => replyResult({ type: 'TODOLIST_STORAGE_SET_RESULT',
+              requestId: data.requestId, success: false, error: String(error) }));
+            return;
+          }
+
+          if (data.type === 'TODOLIST_NOTIFY') {
+            this.showNotice(data.title || '任务提醒', data.body || '');
             return;
           }
 
@@ -2252,12 +2427,21 @@
       if (!window || !window.document) return;
       const doc = window.document;
 
+      // Strictly restrict toolbar button injection to the main Zotero library window!
+      // NEVER inject into secondary windows or extension panels (e.g. 插件市场, 偏好设置, 对话框)
+      if (!this.isMainWindow(window)) {
+        try {
+          doc.getElementById('todolist-toolbar-button')?.remove();
+        } catch (_) {}
+        return;
+      }
+
       const toolbar =
-        doc.getElementById('zotero-item-toolbar') ||
         doc.getElementById('zotero-items-toolbar') ||
+        doc.getElementById('zotero-item-toolbar') ||
         doc.getElementById('zotero-tb') ||
         doc.getElementById('zotero-toolbar') ||
-        doc.querySelector('toolbar');
+        (doc.getElementById('zotero-pane')?.querySelector('toolbar') || null);
 
       if (!toolbar) {
         if (retryCount < 10) {
@@ -2381,16 +2565,23 @@
 
     repositionToolbarButton(window) {
       if (!window || !window.document) return;
+      if (!this.isMainWindow(window)) {
+        try {
+          window.document.getElementById('todolist-toolbar-button')?.remove();
+        } catch (_) {}
+        return;
+      }
       const doc = window.document;
       const btn = doc.getElementById('todolist-toolbar-button');
       if (!btn) return;
 
       const toolbar =
         btn.parentNode ||
-        doc.getElementById('zotero-item-toolbar') ||
         doc.getElementById('zotero-items-toolbar') ||
+        doc.getElementById('zotero-item-toolbar') ||
         doc.getElementById('zotero-tb') ||
-        doc.querySelector('toolbar');
+        doc.getElementById('zotero-toolbar') ||
+        (doc.getElementById('zotero-pane')?.querySelector('toolbar') || null);
       if (!toolbar) return;
 
       const isTodolistButton = (b) => b.id === 'todolist-toolbar-button';
@@ -2577,6 +2768,8 @@
         zoteroItemKey: meta.key,
         zoteroItemTitle: meta.title,
         zoteroAuthors: meta.authors,
+            zoteroLibraryID: meta.libraryID,
+            zoteroPublication: meta.publication,
         zoteroYear: meta.year,
         zoteroUri: meta.zoteroUri,
         zoteroPdfUri: meta.pdfUri,
@@ -2795,6 +2988,9 @@
     },
 
     async shutdown() {
+      clearTimeout(this._paneUndoTimer);
+      this._paneDeleted = [];
+      this._uiClients?.clear();
       // Unregister data listeners
       this._dataListeners.clear();
 

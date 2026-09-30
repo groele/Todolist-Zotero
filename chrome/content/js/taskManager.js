@@ -3,9 +3,9 @@
 const TaskManager = {
   // In-memory cache of tasks
   _tasks: [],
-  _deletedTask: null,
-  _deletedTaskIndex: -1,
   _undoTimeout: null,
+  _deletedTasks: [],
+  undoDuration: 8000,
   _selectedTasks: new Set(),
   _selectionMode: false,
   _literatureFilter: null,
@@ -34,8 +34,10 @@ const TaskManager = {
       unique.push(t);
     }
     this._tasks = unique;
+    this._baseline = Storage.clone(unique);
+    this._selectedTasks = new Set([...this._selectedTasks].filter(id => seen.has(id)));
     if (raw && raw.length !== unique.length) {
-      await Storage.saveTasks(this._tasks);
+      await Storage.saveTasks(this._tasks, this._baseline);
     }
     return this._tasks;
   },
@@ -47,35 +49,44 @@ const TaskManager = {
 
   // Add a new task (ensures exactly 1 task added without double push)
   async addTask(taskData) {
+    if (!String(taskData.title || '').trim()) throw new Error('任务标题不能为空');
     const task = {
       id: Utils.generateId(),
-      title: taskData.title.trim(),
-      description: taskData.description?.trim() || '',
+      title: String(taskData.title).trim(),
+      description: String(taskData.description || '').trim(),
       dueDate: taskData.dueDate || null,
       dueTime: taskData.dueTime || null,
       priority: taskData.priority || 'medium',
-      category: taskData.category?.trim() || '',
-      completed: false,
+      category: String(taskData.category || '').trim(),
+      completed: Boolean(taskData.completed),
+      status: taskData.completed ? 'done' : (taskData.status === 'in-progress' ? 'in-progress' : 'todo'),
       createdAt: new Date().toISOString(),
-      completedAt: null,
+      completedAt: taskData.completed ? new Date().toISOString() : null,
       subtasks: taskData.subtasks || [],
       reminder: taskData.reminder || { enabled: false, before: 15, notified: false },
-      order: this._tasks.length,
+      order: Math.max(-1, ...this._tasks.map(t => t.order || 0)) + 1,
       tags: taskData.tags || [],
       repeat: taskData.repeat || null,
       zoteroItemKey: taskData.zoteroItemKey || null,
       zoteroItemTitle: taskData.zoteroItemTitle || null,
       zoteroAuthors: taskData.zoteroAuthors || null,
       zoteroYear: taskData.zoteroYear || null,
+      zoteroLibraryID: taskData.zoteroLibraryID || null,
+      zoteroPublication: taskData.zoteroPublication || null,
+      zoteroPage: taskData.zoteroPage || null,
+      zoteroQuote: taskData.zoteroQuote || null,
+      recurringFrom: taskData.recurringFrom || null,
       zoteroUri: taskData.zoteroUri || null,
       zoteroPdfUri: taskData.zoteroPdfUri || null,
       academicType: taskData.academicType || null
     };
 
+    if (task.completed) this.setCompletion(task, true);
+
     // Prevent duplicate entries
     this._tasks = this._tasks.filter(t => t.id !== task.id);
     this._tasks.push(task);
-    await Storage.saveTasks(this._tasks);
+    await Storage.saveTasks(this._tasks, this._baseline);
     return task;
   },
 
@@ -89,6 +100,13 @@ const TaskManager = {
     const index = this._tasks.findIndex(t => t.id === id);
     if (index === -1) return null;
 
+    changes = { ...changes };
+    delete changes.id;
+    if (changes.title != null && !String(changes.title).trim()) throw new Error('任务标题不能为空');
+    if ((changes.dueDate !== undefined && changes.dueDate !== this._tasks[index].dueDate) ||
+        (changes.dueTime !== undefined && changes.dueTime !== this._tasks[index].dueTime)) {
+      changes.reminder = { ...this._tasks[index].reminder, ...changes.reminder, notified: false };
+    }
     // Clean up changes
     if (changes.title != null) changes.title = String(changes.title).trim();
     if (changes.description != null) changes.description = String(changes.description).trim();
@@ -102,7 +120,14 @@ const TaskManager = {
     }
 
     this._tasks[index] = { ...this._tasks[index], ...changes };
-    await Storage.saveTasks(this._tasks);
+    const task = this._tasks[index];
+    if (changes.subtasks !== undefined && task.subtasks.length) {
+      this.syncSubtaskCompletion(task);
+    } else if (changes.completed !== undefined) {
+      this.setCompletion(task, task.completed);
+    }
+    this.appendRecurringTask(task);
+    await Storage.saveTasks(this._tasks, this._baseline);
     return this._tasks[index];
   },
 
@@ -111,47 +136,54 @@ const TaskManager = {
     const index = this._tasks.findIndex(t => t.id === id);
     if (index === -1) return null;
 
-    // Store for undo
-    this._deletedTask = { ...this._tasks[index] };
-    this._deletedTaskIndex = index;
-
-    // Remove from array
+    const deleted = Storage.clone(this._tasks[index]);
     this._tasks.splice(index, 1);
-    await Storage.saveTasks(this._tasks);
+    await Storage.saveTasks(this._tasks, this._baseline);
+    this._selectedTasks.delete(id);
+    this.rememberDeleted([{ task: deleted, index }]);
+    return deleted;
+  },
 
-    // Clear any existing undo timeout
-    if (this._undoTimeout) {
-      clearTimeout(this._undoTimeout);
-    }
-
-    // Set timeout to permanently delete (matches toast duration)
-    this._undoTimeout = setTimeout(() => {
-      this._deletedTask = null;
-      this._deletedTaskIndex = -1;
-    }, 3500);
-
-    return this._deletedTask;
+  rememberDeleted(entries) {
+    this._deletedTasks.push(...entries);
+    clearTimeout(this._undoTimeout);
+    this._undoTimeout = setTimeout(() => { this._deletedTasks = []; this._undoTimeout = null; }, this.undoDuration);
   },
 
   // Undo last deletion
   async undoDelete() {
-    if (!this._deletedTask) return false;
-
-    // Insert back at original position
-    const insertIndex = Math.min(this._deletedTaskIndex, this._tasks.length);
-    this._tasks.splice(insertIndex, 0, this._deletedTask);
-    await Storage.saveTasks(this._tasks);
-
-    const restored = this._deletedTask;
-    this._deletedTask = null;
-    this._deletedTaskIndex = -1;
-
+    if (!this._deletedTasks.length) return false;
+    const entries = this._deletedTasks;
+    for (const entry of [...entries].reverse()) {
+      if (!this.getTaskById(entry.task.id)) this._tasks.splice(Math.min(entry.index, this._tasks.length), 0, entry.task);
+    }
+    await Storage.saveTasks(this._tasks, this._baseline);
+    this._deletedTasks = [];
     if (this._undoTimeout) {
       clearTimeout(this._undoTimeout);
       this._undoTimeout = null;
     }
 
-    return restored;
+    return entries.map(entry => entry.task);
+  },
+
+  setCompletion(task, completed) {
+    task.completed = Boolean(completed);
+    task.completedAt = completed ? (task.completedAt || new Date().toISOString()) : null;
+    task.status = completed ? 'done' : 'todo';
+    if (completed) (task.subtasks || []).forEach(st => { st.completed = true; });
+  },
+
+  syncSubtaskCompletion(task) {
+    if (!task.subtasks?.length) return;
+    const allDone = task.subtasks.every(st => st.completed);
+    if (allDone || task.completed) this.setCompletion(task, allDone);
+  },
+
+  appendRecurringTask(task) {
+    if (!task.completed || !task.repeat || typeof Recurring === 'undefined') return;
+    const next = Recurring.buildNextTask(task, this._tasks);
+    if (next) this._tasks.push(next);
   },
 
   // Toggle task completion
@@ -160,16 +192,15 @@ const TaskManager = {
     if (index === -1) return null;
 
     const task = this._tasks[index];
-    task.completed = !task.completed;
-    task.completedAt = task.completed ? new Date().toISOString() : null;
-    task.status = task.completed ? 'done' : (Utils.isOverdue(task.dueDate) ? 'overdue' : 'todo');
+    this.setCompletion(task, !task.completed);
 
     // Sync subtask completion when completing parent task
     if (task.completed && task.subtasks?.length > 0) {
       task.subtasks.forEach(st => st.completed = true);
     }
 
-    await Storage.updateTask(id, task);
+    this.appendRecurringTask(task);
+    await Storage.saveTasks(this._tasks, this._baseline);
     return task;
   },
 
@@ -188,9 +219,15 @@ const TaskManager = {
       id: Utils.generateId(),
       title: original.title + ' (副本)',
       completed: false,
+      status: 'todo',
       completedAt: null,
       createdAt: new Date().toISOString(),
-      order: this._tasks.length,
+      order: Math.max(-1, ...this._tasks.map(t => t.order || 0)) + 1,
+      reminder: { ...original.reminder, notified: false },
+      tags: [...(original.tags || [])],
+      timeEntries: [],
+      recurringFrom: null,
+      recurringGenerated: false,
       subtasks: (original.subtasks || []).map(st => ({
         ...st,
         id: Utils.generateId(),
@@ -200,12 +237,13 @@ const TaskManager = {
 
     this._tasks = this._tasks.filter(t => t.id !== newTask.id);
     this._tasks.push(newTask);
-    await Storage.saveTasks(this._tasks);
+    await Storage.saveTasks(this._tasks, this._baseline);
     return newTask;
   },
 
   // Subtask operations
   async addSubtask(taskId, subtaskTitle) {
+    if (!String(subtaskTitle || '').trim()) throw new Error('子任务标题不能为空');
     const task = this.getTaskById(taskId);
     if (!task) return null;
 
@@ -225,7 +263,7 @@ const TaskManager = {
       task.status = Utils.isOverdue(task.dueDate) ? 'overdue' : 'todo';
     }
 
-    await Storage.updateTask(taskId, task);
+    await Storage.saveTasks(this._tasks, this._baseline);
     return subtask;
   },
 
@@ -250,7 +288,8 @@ const TaskManager = {
       task.status = Utils.isOverdue(task.dueDate) ? 'overdue' : 'todo';
     }
 
-    await Storage.updateTask(taskId, task);
+    this.appendRecurringTask(task);
+    await Storage.saveTasks(this._tasks, this._baseline);
     return subtask;
   },
 
@@ -259,11 +298,14 @@ const TaskManager = {
     if (!task || !task.subtasks) return null;
 
     task.subtasks = task.subtasks.filter(st => st.id !== subtaskId);
-    await Storage.updateTask(taskId, task);
+    this.syncSubtaskCompletion(task);
+    this.appendRecurringTask(task);
+    await Storage.saveTasks(this._tasks, this._baseline);
     return true;
   },
 
   async updateSubtask(taskId, subtaskId, newTitle) {
+    if (!String(newTitle || '').trim()) throw new Error('子任务标题不能为空');
     const task = this.getTaskById(taskId);
     if (!task || !task.subtasks) return null;
 
@@ -271,7 +313,7 @@ const TaskManager = {
     if (!subtask) return null;
 
     subtask.title = newTitle.trim();
-    await Storage.updateTask(taskId, task);
+    await Storage.saveTasks(this._tasks, this._baseline);
     return subtask;
   },
 
@@ -316,26 +358,29 @@ const TaskManager = {
   // Batch complete selected tasks
   async batchComplete() {
     const selected = Array.from(this._selectedTasks);
+    let count = 0;
     for (const id of selected) {
       const task = this.getTaskById(id);
       if (task && !task.completed) {
-        task.completed = true;
-        task.completedAt = new Date().toISOString();
-        task.status = 'done';
-        await Storage.updateTask(id, task);
+        this.setCompletion(task, true);
+        this.appendRecurringTask(task);
+        count++;
       }
     }
+    await Storage.saveTasks(this._tasks, this._baseline);
     this.clearSelection();
-    return selected.length;
+    return count;
   },
 
   // Batch delete selected tasks
   async batchDelete() {
-    const selected = Array.from(this._selectedTasks);
+    const deleted = this._tasks.map((task, index) => ({ task: Storage.clone(task), index }))
+      .filter(entry => this._selectedTasks.has(entry.task.id));
     this._tasks = this._tasks.filter(t => !this._selectedTasks.has(t.id));
-    await Storage.saveTasks(this._tasks);
+    await Storage.saveTasks(this._tasks, this._baseline);
+    this.rememberDeleted(deleted.reverse());
     this.clearSelection();
-    return selected.length;
+    return deleted.length;
   },
 
   // Filter tasks
@@ -348,7 +393,12 @@ const TaskManager = {
       filtered = filtered.filter(t =>
         (t.title || '').toLowerCase().includes(query) ||
         (t.description || '').toLowerCase().includes(query) ||
-        (t.category || '').toLowerCase().includes(query)
+        (t.category || '').toLowerCase().includes(query) ||
+        (t.zoteroItemTitle || '').toLowerCase().includes(query) ||
+        (t.tags || []).some(tag => {
+          const resolved = typeof Tags !== 'undefined' ? Tags.getAllTags().find(t => t.id === tag) : null;
+          return String(resolved?.name || tag).toLowerCase().includes(query);
+        })
       );
     }
 
@@ -484,8 +534,8 @@ const TaskManager = {
   },
 
   // Get tasks for kanban view
-  getKanbanTasks() {
-    const tasks = this._tasks;
+  getKanbanTasks(filters = {}) {
+    const tasks = this.getSortedTasks(this.getFilteredTasks(filters), filters.sortOrder || 'order');
 
     return {
       overdue: tasks.filter(t => !t.completed && this.getKanbanStatus(t) === 'overdue'),
@@ -499,12 +549,11 @@ const TaskManager = {
   getKanbanStatus(task) {
     if (!task) return 'todo';
     if (task.completed) return 'done';
+    if (Utils.isOverdue(task.dueDate)) return 'overdue';
 
     // 1. Explicit user status takes priority (from kanban drag or explicit setting)
     if (task.status === 'in-progress') return 'in-progress';
     if (task.status === 'todo') return 'todo';
-    if (task.status === 'overdue') return 'overdue';
-    if (task.status === 'done') return 'done';
 
     // 2. Inferred status from date and subtask progress
     if (Utils.isOverdue(task.dueDate)) {
@@ -534,30 +583,22 @@ const TaskManager = {
       changes.completed = false;
       changes.completedAt = null;
       changes.status = 'todo';
-      if (Utils.isOverdue(task.dueDate)) {
-        changes.dueDate = Utils.formatDate(new Date());
-      }
     } else if (column === 'in-progress') {
       changes.completed = false;
       changes.completedAt = null;
       changes.status = 'in-progress';
-      if (Utils.isOverdue(task.dueDate)) {
-        changes.dueDate = Utils.formatDate(new Date());
-      }
     } else if (column === 'overdue') {
       changes.completed = false;
       changes.completedAt = null;
       changes.status = 'overdue';
-      if (!Utils.isOverdue(task.dueDate)) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        changes.dueDate = Utils.formatDate(yesterday);
-      }
+      if (!Utils.isOverdue(task.dueDate)) return null;
     } else {
       return null;
     }
 
     Object.assign(task, changes);
+    if (column === 'done') this.setCompletion(task, true);
+    this.appendRecurringTask(task);
     task.updatedAt = now;
 
     // Handle position reordering if targetTaskId is specified
@@ -579,7 +620,42 @@ const TaskManager = {
       t.order = idx;
     });
 
-    await Storage.saveTasks(this._tasks);
+    await Storage.saveTasks(this._tasks, this._baseline);
+    return task;
+  },
+
+  async moveTaskInList(taskId, targetId, after, section) {
+    const task = this.getTaskById(taskId);
+    if (!task) return null;
+    if (section === 'completed') this.setCompletion(task, true);
+    else if (section) {
+      this.setCompletion(task, false);
+      // These list groups explicitly represent dates; changing group schedules the task.
+      const date = new Date();
+      if (section === 'today') task.dueDate = Utils.toDateISO(date);
+      else if (section === 'overdue' && !Utils.isOverdue(task.dueDate)) {
+        date.setDate(date.getDate() - 1); task.dueDate = Utils.toDateISO(date);
+      } else if (section === 'upcoming' && (Utils.isToday(task.dueDate) || Utils.isOverdue(task.dueDate))) {
+        date.setDate(date.getDate() + 1); task.dueDate = Utils.toDateISO(date);
+      }
+      task.reminder = { ...task.reminder, notified: false };
+    }
+    if (targetId && targetId !== taskId) {
+      this._tasks.splice(this._tasks.indexOf(task), 1);
+      const targetIndex = this._tasks.findIndex(t => t.id === targetId);
+      this._tasks.splice(targetIndex < 0 ? this._tasks.length : targetIndex + (after ? 1 : 0), 0, task);
+    }
+    this.appendRecurringTask(task);
+    this._tasks.forEach((t, index) => { t.order = index; });
+    await Storage.saveTasks(this._tasks, this._baseline);
+    return task;
+  },
+
+  async recordTime(taskId, elapsed) {
+    const task = this.getTaskById(taskId);
+    if (!task) return null;
+    task.timeEntries = [...(task.timeEntries || []), { date: new Date().toISOString(), duration: elapsed }];
+    await Storage.saveTasks(this._tasks, this._baseline, { activeTimerChanges: { [taskId]: null } });
     return task;
   },
 
@@ -616,3 +692,38 @@ const TaskManager = {
     };
   }
 };
+
+// Serialize local mutations, refresh before editing, and roll back the UI on persistence failure.
+TaskManager._mutationQueue = Promise.resolve();
+for (const name of ['addTask', 'updateTask', 'deleteTask', 'undoDelete', 'toggleComplete',
+  'duplicateTask', 'addSubtask', 'toggleSubtask', 'deleteSubtask', 'updateSubtask',
+  'batchComplete', 'batchDelete', 'moveTaskToKanbanColumn', 'moveTaskInList', 'recordTime']) {
+  const operation = TaskManager[name];
+  TaskManager[name] = function(...args) {
+    const run = async () => {
+      this._mutating = true;
+      try {
+        await this.loadTasks();
+        const before = Storage.clone(this._tasks);
+        try {
+          const result = await operation.apply(this, args);
+          if (Storage._zoteroCache) {
+            this._tasks = Storage.clone(Storage._zoteroCache.tasks);
+            if (typeof TimeTracking !== 'undefined') TimeTracking.activeTimers = Storage._zoteroCache.activeTimers || {};
+          }
+          this._baseline = Storage.clone(this._tasks);
+          return result;
+        } catch (error) {
+          this._tasks = before;
+          throw error;
+        }
+      } finally {
+        this._mutating = false;
+        if (typeof UI !== 'undefined' && UI._storageReady) UI.render();
+      }
+    };
+    const result = this._mutationQueue.then(run);
+    this._mutationQueue = result.catch(() => {});
+    return result;
+  };
+}

@@ -17,6 +17,21 @@ const UI = {
 
     this.setupEventListeners();
     await TaskManager.loadTasks();
+    this._storageReady = true;
+    Storage.subscribe(data => {
+      if (!this._storageReady || TaskManager._mutating) return;
+      TaskManager._tasks = Storage.clone(data.tasks || []);
+      TaskManager._baseline = Storage.clone(TaskManager._tasks);
+      const ids = new Set(TaskManager._tasks.map(t => t.id));
+      TaskManager._selectedTasks = new Set([...TaskManager._selectedTasks].filter(id => ids.has(id)));
+      if (typeof TimeTracking !== 'undefined') TimeTracking.activeTimers = data.activeTimers || {};
+      if (typeof Tags !== 'undefined' && data.customTags) Tags.customTags = data.customTags;
+      this.render();
+      this.updateBatchBar();
+    });
+    chrome.storage.onChanged?.addListener(async (changes, area) => {
+      if (area === 'local' && changes.tasks && !TaskManager._mutating) Storage.acceptData(await Storage.getAll());
+    });
     this.render();
 
     // Initialize drag and drop
@@ -245,6 +260,7 @@ const UI = {
               zoteroItemKey: activeItem.key,
               zoteroItemTitle: activeItem.title,
               zoteroAuthors: activeItem.authors || '',
+              zoteroLibraryID: activeItem.libraryID,
               zoteroYear: activeItem.year || null,
               zoteroPublication: activeItem.publication || '',
               zoteroPdfUri: activeItem.pdfUri || ''
@@ -509,7 +525,7 @@ const UI = {
 
     document.getElementById('btn-batch-delete')?.addEventListener('click', async () => {
       const count = await TaskManager.batchDelete();
-      this.showToast(`已删除 ${count} 个任务`);
+      this.showToast(`已删除 ${count} 个任务`, count > 0);
       this.render();
       this.updateBatchBar();
     });
@@ -525,6 +541,7 @@ const UI = {
     document.getElementById('task-list').addEventListener('mousedown', (e) => {
       const taskCard = e.target.closest('.task-card');
       if (!taskCard) return;
+      if (e.target.closest('button, input, textarea, .task-checkbox, .card-subtask-checkbox')) return;
 
       longPressTimer = setTimeout(() => {
         this._justLongPressed = true;
@@ -666,7 +683,7 @@ const UI = {
           const m = String(task.zoteroPdfUri).match(/[?&]page=(\d+)/);
           if (m) page = Number(m[1]);
         }
-        ZoteroBridge.openPdf(task.zoteroItemKey, null, page);
+        ZoteroBridge.openPdf(task.zoteroUri || task.zoteroItemKey, task.zoteroLibraryID, page);
       }
       return;
     }
@@ -677,8 +694,8 @@ const UI = {
       const task = TaskManager.getTaskById(taskId);
       if (task) {
         let citation = '';
-        if (task.zoteroAuthor && task.zoteroYear) {
-          citation = `${task.zoteroAuthor} (${task.zoteroYear}). ${task.zoteroItemTitle || task.title}`;
+        if (task.zoteroAuthors && task.zoteroYear) {
+          citation = `${task.zoteroAuthors} (${task.zoteroYear}). ${task.zoteroItemTitle || task.title}`;
         } else if (task.zoteroItemTitle) {
           citation = `《${task.zoteroItemTitle}》`;
         } else {
@@ -700,7 +717,7 @@ const UI = {
       const task = TaskManager.getTaskById(taskId);
       if (typeof ZoteroBridge !== 'undefined' && task?.zoteroItemKey) {
         this.showToast('正在同步至文献笔记...');
-        ZoteroBridge.syncChildNote(task.zoteroItemKey).then((res) => {
+        ZoteroBridge.syncChildNote(task.zoteroUri || task.zoteroItemKey, task.zoteroLibraryID).then((res) => {
           if (res?.success) {
             this.showToast('已同步至文献笔记');
           }
@@ -714,7 +731,7 @@ const UI = {
       e.stopPropagation();
       const task = TaskManager.getTaskById(taskId);
       if (typeof ZoteroBridge !== 'undefined' && task?.zoteroItemKey) {
-        ZoteroBridge.locateItem(task.zoteroItemKey);
+        ZoteroBridge.locateItem(task.zoteroUri || task.zoteroItemKey, task.zoteroLibraryID);
       }
       return;
     }
@@ -737,20 +754,34 @@ const UI = {
 
   // Handle kanban clicks with quick-actions, PDF direct jump, and modal editing
   async handleKanbanClick(e) {
+    const deleteButton = e.target.closest('.kanban-delete');
+    if (deleteButton) {
+      e.stopPropagation();
+      const card = deleteButton.closest('.kanban-task');
+      await this.handleDeleteTask(card.dataset.taskId, card);
+      return;
+    }
+    const editButton = e.target.closest('.kanban-edit');
+    if (editButton) {
+      e.stopPropagation();
+      await Modal.openEdit(editButton.closest('.kanban-task').dataset.taskId);
+      return;
+    }
     // 1. Column footer quick add button
     const quickAddBtn = e.target.closest('.kanban-quick-add-btn');
     if (quickAddBtn) {
       e.stopPropagation();
       const colKey = quickAddBtn.dataset.column;
       const prefill = {};
+      prefill.status = colKey === 'in-progress' ? 'in-progress' : 'todo';
       if (colKey === 'done') {
         prefill.completed = true;
       } else if (colKey === 'overdue') {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
-        prefill.dueDate = Utils.formatDate(yesterday);
+        prefill.dueDate = Utils.toDateISO(yesterday);
       } else if (colKey === 'todo' || colKey === 'in-progress') {
-        prefill.dueDate = Utils.formatDate(new Date());
+        prefill.dueDate = Utils.toDateISO(new Date());
       }
       Modal.openAdd(prefill);
       return;
@@ -775,7 +806,7 @@ const UI = {
       if (typeof ZoteroBridge !== 'undefined' && task?.zoteroItemKey) {
         let page = null;
         if (task.zoteroPage) page = Number(task.zoteroPage);
-        ZoteroBridge.openPdf(task.zoteroItemKey, null, page);
+        ZoteroBridge.openPdf(task.zoteroUri || task.zoteroItemKey, task.zoteroLibraryID, page);
       }
       return;
     }
@@ -788,7 +819,7 @@ const UI = {
       const taskId = taskCard?.dataset.taskId;
       const task = TaskManager.getTaskById(taskId);
       if (typeof ZoteroBridge !== 'undefined' && task?.zoteroItemKey) {
-        ZoteroBridge.locateItem(task.zoteroItemKey);
+        ZoteroBridge.locateItem(task.zoteroUri || task.zoteroItemKey, task.zoteroLibraryID);
       }
       return;
     }
@@ -826,22 +857,16 @@ const UI = {
 
   // Handle toggle complete
   async handleToggleComplete(taskId, taskCard) {
-    const checkbox = taskCard.querySelector('.task-checkbox');
+    const checkbox = taskCard.querySelector('.task-checkbox, .kanban-task-checkbox');
 
     // Add animation
-    checkbox.classList.add('just-checked');
-    setTimeout(() => checkbox.classList.remove('just-checked'), 200);
+    checkbox?.classList.add('just-checked');
+    setTimeout(() => checkbox?.classList.remove('just-checked'), 200);
 
     const task = await TaskManager.toggleComplete(taskId);
 
     if (task && task.completed) {
       this.triggerSparkles(checkbox);
-      if (task.repeat) {
-        const newTask = await Recurring.createNextTask(task);
-        if (newTask) {
-          this.showToast(`已创建下一个重复任务`);
-        }
-      }
     }
 
     this.render();
@@ -852,13 +877,18 @@ const UI = {
 
   // Handle delete task
   async handleDeleteTask(taskId, taskCard) {
+    this._deleting ||= new Set();
+    if (this._deleting.has(taskId)) return false;
+    this._deleting.add(taskId);
+    try {
     // Add exit animation
-    taskCard.classList.add('removing');
+    taskCard?.classList.add('removing');
 
     // Wait for animation
     await new Promise(resolve => setTimeout(resolve, 150));
 
     const deletedTask = await TaskManager.deleteTask(taskId);
+    if (!deletedTask) return false;
     this.render();
 
     // Show undo toast
@@ -866,6 +896,13 @@ const UI = {
 
     // Update badge
     this.notifyServiceWorker();
+    this.updateBatchBar();
+    return true;
+    } catch (error) {
+      taskCard?.classList.remove('removing');
+      this.showToast('删除失败，请重试');
+      return false;
+    } finally { this._deleting.delete(taskId); }
   },
 
   // Handle duplicate task
@@ -882,7 +919,7 @@ const UI = {
     const suggestions = Advanced.getSearchSuggestions(query);
     const datalist = document.getElementById('search-suggestions');
     if (datalist) {
-      datalist.innerHTML = suggestions.map(s => `<option value="${s}">`).join('');
+      datalist.innerHTML = suggestions.map(s => `<option value="${Utils.escapeHtml(s)}">`).join('');
     }
   },
 
@@ -1000,7 +1037,7 @@ const UI = {
     const el = document.getElementById('header-progress-widget');
     if (!el) return;
 
-    const todayTasks = TaskManager.getFilteredTasks({ status: 'today' });
+    const todayTasks = TaskManager.getTasks().filter(task => Utils.isToday(task.dueDate));
     const todayTotal = todayTasks.length;
     const todayCompleted = todayTasks.filter(t => t.completed).length;
     const percentage = todayTotal > 0 ? Math.round((todayCompleted / todayTotal) * 100) : 0;
@@ -1061,6 +1098,7 @@ const UI = {
       Calendar.render();
       return;
     }
+    if (this.currentView === 'stats') { this.showStats(); return; }
 
     const filters = {
       search: this.currentSearch,
@@ -1160,7 +1198,10 @@ const UI = {
 
   // Render kanban view
   renderKanban() {
-    const kanbanData = TaskManager.getKanbanTasks();
+    const kanbanData = TaskManager.getKanbanTasks({ search: this.currentSearch,
+      priority: this.currentPriorityFilter, category: this.currentCategoryFilter,
+      status: this.currentFilter === 'date' ? 'all' : this.currentFilter,
+      sortOrder: this.currentSortOrder });
     const container = document.getElementById('kanban-view');
     if (!container) return;
 
@@ -1224,7 +1265,7 @@ const UI = {
       peer_review: '📑'
     };
     if (task.academicType && task.academicType !== 'general') {
-      academicBadge = `<span class="kanban-academic-badge" title="${task.academicType}">${typeIcons[task.academicType] || '🎓'}</span> `;
+      academicBadge = `<span class="kanban-academic-badge" title="${Utils.escapeHtml(task.academicType)}">${typeIcons[task.academicType] || '🎓'}</span> `;
     } else if (task.zoteroItemKey) {
       academicBadge = '<span class="kanban-academic-badge" title="关联文献">📖</span> ';
     }
@@ -1232,17 +1273,21 @@ const UI = {
     const isAcademic = !!(task.zoteroItemKey || (task.academicType && task.academicType !== 'general'));
 
     return `
-      <div class="kanban-task ${task.completed ? 'completed' : ''} ${isAcademic ? 'task-academic-kanban' : ''}" data-task-id="${task.id}">
+      <div class="kanban-task ${task.completed ? 'completed' : ''} ${isAcademic ? 'task-academic-kanban' : ''}" data-task-id="${Utils.escapeHtml(task.id)}">
         <div class="kanban-task-header-row">
-          <div class="kanban-task-checkbox ${task.completed ? 'checked' : ''}" data-task-id="${task.id}" title="${task.completed ? '标记为未完成' : '标记为已完成'}"></div>
+          <div class="kanban-task-checkbox ${task.completed ? 'checked' : ''}" data-task-id="${Utils.escapeHtml(task.id)}" title="${task.completed ? '标记为未完成' : '标记为已完成'}"></div>
           <div class="kanban-task-title">${academicBadge}${Utils.escapeHtml(task.title)}</div>
         </div>
         <div class="kanban-task-meta">
-          <span class="kanban-task-priority ${task.priority}" title="优先级: ${task.priority}"></span>
+          <span class="kanban-task-priority ${Utils.escapeHtml(task.priority)}" title="优先级: ${Utils.escapeHtml(task.priority)}"></span>
           ${task.dueDate ? `<span class="kanban-task-date ${Utils.isOverdue(task.dueDate) && !task.completed ? 'overdue' : ''}">${Utils.formatRelativeDate(task.dueDate)}</span>` : ''}
-          ${task.zoteroPage ? `<span class="kanban-task-page" data-task-id="${task.id}" title="点击直接打开关联 PDF 并跳转至第 ${task.zoteroPage} 页">📖 P.${task.zoteroPage}</span>` : ''}
+          ${task.zoteroPage ? `<span class="kanban-task-page" data-task-id="${Utils.escapeHtml(task.id)}" title="点击直接打开关联 PDF 并跳转至第 ${Utils.escapeHtml(task.zoteroPage)} 页">📖 P.${Utils.escapeHtml(task.zoteroPage)}</span>` : ''}
         </div>
         ${progressHtml}
+        <div class="kanban-task-actions">
+          <button type="button" class="kanban-edit" aria-label="编辑任务">编辑</button>
+          <button type="button" class="kanban-delete" aria-label="删除任务">删除</button>
+        </div>
       </div>
     `;
   },
@@ -1469,7 +1514,7 @@ const UI = {
 
     // Build priority HTML
     const priorityHtml = `
-      <span class="task-priority ${task.priority}">
+      <span class="task-priority ${Utils.escapeHtml(task.priority)}">
         ${Utils.getPriorityLabel(task.priority)}
       </span>
     `;
@@ -1487,9 +1532,9 @@ const UI = {
 
     const subtaskItems = hasSubtasks ? task.subtasks.map(st => `
       <div class="card-subtask-item ${st.completed ? 'completed' : ''}">
-        <div class="card-subtask-checkbox ${st.completed ? 'checked' : ''}" data-subtask-id="${st.id}"></div>
+        <div class="card-subtask-checkbox ${st.completed ? 'checked' : ''}" data-subtask-id="${Utils.escapeHtml(st.id)}"></div>
         <span class="card-subtask-text">${this.highlightText(st.title)}</span>
-        <button type="button" class="btn-card-delete-subtask" data-subtask-id="${st.id}" title="删除子任务">×</button>
+        <button type="button" class="btn-card-delete-subtask" data-subtask-id="${Utils.escapeHtml(st.id)}" title="删除子任务">×</button>
       </div>
     `).join('') : '';
 
@@ -1508,7 +1553,7 @@ const UI = {
         <div class="card-subtasks-container">
           ${subtaskItems}
           <div class="card-add-subtask-row">
-            <input type="text" class="card-add-subtask-input" placeholder="+ 添加子任务 (按 Enter 确认)" data-task-id="${task.id}" autocomplete="off" />
+            <input type="text" class="card-add-subtask-input" placeholder="+ 添加子任务 (按 Enter 确认)" data-task-id="${Utils.escapeHtml(task.id)}" autocomplete="off" />
           </div>
         </div>
       `;
@@ -1533,12 +1578,12 @@ const UI = {
     // Build Zotero literature badge HTML
     let zoteroBadgeHtml = '';
     if (task.zoteroItemKey || task.zoteroItemTitle) {
-      const pageChip = task.zoteroPage ? `<span class="zotero-badge-page" title="关联文献 PDF 锚点页码">P.${task.zoteroPage}</span>` : '';
-      const authorYear = [task.zoteroAuthor, task.zoteroYear].filter(Boolean).join(' · ');
+      const pageChip = task.zoteroPage ? `<span class="zotero-badge-page" title="关联文献 PDF 锚点页码">P.${Utils.escapeHtml(task.zoteroPage)}</span>` : '';
+      const authorYear = [task.zoteroAuthors, task.zoteroYear].filter(Boolean).join(' · ');
       const authorChip = authorYear ? `<span class="zotero-badge-author-year" title="作者/年份">${this.highlightText(authorYear)}</span>` : '';
       const pubChip = task.zoteroPublication ? `<span class="zotero-badge-pub" title="发表期刊/会议">${this.highlightText(task.zoteroPublication)}</span>` : '';
       const openPdfBtn = (task.zoteroPdfUri || task.zoteroItemKey) ? 
-        `<button type="button" class="btn-card-open-pdf" data-item-key="${task.zoteroItemKey || ''}" data-page="${task.zoteroPage || ''}" title="在 Zotero 阅读器中打开 PDF 并跳转至对应页面">📖 伴读</button>` : '';
+        `<button type="button" class="btn-card-open-pdf" data-item-key="${Utils.escapeHtml(task.zoteroItemKey || '')}" data-page="${Utils.escapeHtml(task.zoteroPage || '')}" title="在 Zotero 阅读器中打开 PDF 并跳转至对应页面">📖 伴读</button>` : '';
 
       const quoteHtml = task.zoteroQuote ? `
         <blockquote class="task-lit-quote" title="论文关键摘录/观点">
@@ -1547,8 +1592,8 @@ const UI = {
       ` : '';
 
       zoteroBadgeHtml = `
-        <div class="task-zotero-badge-card" data-item-key="${task.zoteroItemKey || ''}">
-          <div class="task-zotero-badge-main" title="点击在 Zotero 文献库中高亮定位：${task.zoteroItemTitle || ''}">
+        <div class="task-zotero-badge-card" data-item-key="${Utils.escapeHtml(task.zoteroItemKey || '')}">
+          <div class="task-zotero-badge-main" title="点击在 Zotero 文献库中高亮定位：${Utils.escapeHtml(task.zoteroItemTitle || '')}">
             <span class="zotero-badge-icon">📄</span>
             <span class="zotero-badge-title">${this.highlightText(task.zoteroItemTitle || '关联文献')}</span>
             ${pageChip}
@@ -1583,23 +1628,23 @@ const UI = {
       </div>
       <div class="task-actions">
         ${task.zoteroItemKey ? `
-          <button class="task-action zotero-copy-citation" title="复制文献学术引用" data-item-key="${task.zoteroItemKey}">
+          <button class="task-action zotero-copy-citation" title="复制文献学术引用" data-item-key="${Utils.escapeHtml(task.zoteroItemKey)}">
             <svg viewBox="0 0 24 24" width="15" height="15">
               <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
             </svg>
           </button>
-          <button class="task-action zotero-sync-note" title="同步待办至 Zotero 文献笔记 (支持云同步)" data-item-key="${task.zoteroItemKey}">
+          <button class="task-action zotero-sync-note" title="同步待办至 Zotero 文献笔记 (支持云同步)" data-item-key="${Utils.escapeHtml(task.zoteroItemKey)}">
             <svg viewBox="0 0 24 24" width="15" height="15">
               <path fill="currentColor" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
             </svg>
           </button>
-          <button class="task-action zotero-locate" title="在 Zotero 中定位该文献" data-item-key="${task.zoteroItemKey}">
+          <button class="task-action zotero-locate" title="在 Zotero 中定位该文献" data-item-key="${Utils.escapeHtml(task.zoteroItemKey)}">
             <svg viewBox="0 0 24 24" width="15" height="15">
               <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
             </svg>
           </button>
         ` : ''}
-        <button class="task-action timer" title="${TimeTracking.isTimerRunning(task.id) ? '停止计时' : '开始计时'}" data-task-id="${task.id}">
+        <button class="task-action timer" title="${TimeTracking.isTimerRunning(task.id) ? '停止计时' : '开始计时'}" data-task-id="${Utils.escapeHtml(task.id)}">
           ${TimeTracking.isTimerRunning(task.id) ? `
             <svg viewBox="0 0 24 24" width="15" height="15">
               <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
@@ -1620,7 +1665,8 @@ const UI = {
             <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
           </svg>
         </button>
-        <button class="task-action delete" title="删除">
+        <button type="button" class="task-action delete" title="删除任务" aria-label="删除任务">
+          <span>删除</span>
           <svg viewBox="0 0 24 24" width="16" height="16">
             <path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
           </svg>
@@ -1662,6 +1708,8 @@ const UI = {
           tab.appendChild(countEl);
         }
         countEl.textContent = counts[filter];
+        countEl.dataset.count = String(counts[filter]);
+        countEl.classList.toggle('has-count', counts[filter] > 0);
         if (filter === 'overdue' && counts[filter] > 0) {
           countEl.classList.add('has-overdue');
         } else {
@@ -1700,11 +1748,11 @@ const UI = {
     toast.classList.remove('hidden');
     toast.classList.add('show');
 
-    // Auto hide after 3 seconds (matches undo timeout)
+    // Undo remains visible for exactly the supported recovery window.
     this._toastTimer = setTimeout(() => {
       toast.classList.remove('show');
       this._toastHideTimer = setTimeout(() => toast.classList.add('hidden'), 300);
-    }, 3000);
+    }, showUndo ? TaskManager.undoDuration : 3000);
   },
 
   // Get current view
@@ -1712,3 +1760,11 @@ const UI = {
     return this.currentView;
   }
 };
+
+for (const name of ['handleTaskListClick', 'handleKanbanClick', 'handleToggleComplete', 'handleDuplicateTask']) {
+  const handler = UI[name];
+  UI[name] = async function(...args) {
+    try { return await handler.apply(this, args); }
+    catch (error) { console.error(error); this.showToast('操作失败，请重试'); }
+  };
+}

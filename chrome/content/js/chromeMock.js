@@ -7,6 +7,7 @@
   const messageListeners = [];
 
   window.chrome = window.chrome || {};
+  window.chrome._todolistMock = true;
 
   window.chrome.runtime = window.chrome.runtime || {
     lastError: null,
@@ -57,15 +58,15 @@
     get: (keys, callback) => {
       const p = new Promise(resolve => {
         const result = {};
-        const keysArray = typeof keys === 'string' ? [keys] : Array.isArray(keys) ? keys : Object.keys(keys || {});
+        const keysArray = keys == null
+          ? Object.keys(localStorage).filter(k => k.startsWith('todolist_')).map(k => k.slice(9))
+          : typeof keys === 'string' ? [keys] : Array.isArray(keys) ? keys : Object.keys(keys);
 
         keysArray.forEach(key => {
           try {
             const val = localStorage.getItem('todolist_' + key);
             result[key] = val !== null ? JSON.parse(val) : (typeof keys === 'object' && !Array.isArray(keys) ? keys[key] : null);
-          } catch (e) {
-            result[key] = null;
-          }
+          } catch (e) { throw new Error('无法读取保存的数据: ' + key, { cause: e }); }
         });
 
         if (callback) callback(result);

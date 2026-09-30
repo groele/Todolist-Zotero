@@ -126,65 +126,11 @@ const DragDrop = {
     const taskId = this.draggedTaskId;
     if (!taskId) return;
 
-    const tasks = TaskManager.getTasks();
-    const draggedTask = tasks.find(t => t.id === taskId);
-    if (!draggedTask) return;
-
-    // Check if dragged across list view sections
-    const targetSectionKey = targetSection?.dataset?.section;
-    if (targetSectionKey) {
-      if (targetSectionKey === 'completed') {
-        draggedTask.completed = true;
-        draggedTask.completedAt = new Date().toISOString();
-        draggedTask.status = 'done';
-      } else {
-        if (draggedTask.completed) {
-          draggedTask.completed = false;
-          draggedTask.completedAt = null;
-        }
-        if (targetSectionKey === 'today') {
-          draggedTask.dueDate = Utils.formatDate(new Date());
-          draggedTask.status = 'todo';
-        } else if (targetSectionKey === 'overdue') {
-          if (!Utils.isOverdue(draggedTask.dueDate)) {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            draggedTask.dueDate = Utils.formatDate(yesterday);
-          }
-          draggedTask.status = 'overdue';
-        } else if (targetSectionKey === 'upcoming') {
-          if (!draggedTask.dueDate || Utils.isToday(draggedTask.dueDate) || Utils.isOverdue(draggedTask.dueDate)) {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            draggedTask.dueDate = Utils.formatDate(tomorrow);
-          }
-          draggedTask.status = 'todo';
-        }
-      }
-    }
-
-    if (targetCard && targetCard.dataset.taskId && targetCard.dataset.taskId !== taskId) {
-      const targetTaskId = targetCard.dataset.taskId;
-      const draggedIndex = tasks.findIndex(t => t.id === taskId);
-      const targetIndex = tasks.findIndex(t => t.id === targetTaskId);
-
-      if (draggedIndex !== -1 && targetIndex !== -1) {
-        const [draggedTaskItem] = tasks.splice(draggedIndex, 1);
-        const rect = targetCard.getBoundingClientRect();
-        const midY = rect.top + rect.height / 2;
-        const insertIndex = e.clientY < midY ? targetIndex : targetIndex + 1;
-        tasks.splice(insertIndex, 0, draggedTaskItem);
-      }
-    }
-
-    // Update order property
-    tasks.forEach((task, index) => {
-      task.order = index;
-    });
-
-    // Save and re-render
-    await Storage.saveTasks(tasks);
-    await TaskManager.loadTasks();
+    const rect = targetCard?.getBoundingClientRect();
+    const after = rect ? e.clientY >= rect.top + rect.height / 2 : false;
+    try {
+      await TaskManager.moveTaskInList(taskId, targetCard?.dataset.taskId, after, targetSection?.dataset.section);
+    } catch (error) { UI.showToast('移动失败，请重试'); }
     UI.render();
   },
 

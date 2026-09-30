@@ -54,6 +54,19 @@ const Modal = {
       this.close();
     });
 
+    document.getElementById('btn-delete-task')?.addEventListener('click', async () => {
+      if (!this.currentTaskId || this._isSubmitting) return;
+      const btn = document.getElementById('btn-delete-task');
+      btn.disabled = true;
+      const deleted = await UI.handleDeleteTask(this.currentTaskId, null);
+      btn.disabled = false;
+      if (deleted) this.close();
+    });
+    this.dialog?.addEventListener('cancel', event => {
+      if (this._isSubmitting) event.preventDefault();
+      else this.close();
+    });
+
     // Academic type segmented buttons
     document.querySelectorAll('#academic-type-segmented .academic-seg-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -108,7 +121,7 @@ const Modal = {
 
         const dateInput = document.getElementById('task-due-date');
         if (dateInput) {
-          dateInput.value = Utils.formatDate(targetDate);
+          dateInput.value = Utils.toDateISO(targetDate);
         }
       });
     });
@@ -262,6 +275,7 @@ const Modal = {
   },
 
   setAcademicType(type) {
+    this._academicType = type;
     const input = document.getElementById('task-academic-type');
     if (input) input.value = type;
 
@@ -293,7 +307,7 @@ const Modal = {
   },
 
   getAcademicType() {
-    return document.getElementById('task-academic-type')?.value || 'literature_reading';
+    return document.getElementById('task-academic-type')?.value || this._academicType || 'general';
   },
 
   // Open add modal
@@ -304,7 +318,10 @@ const Modal = {
       return;
     }
 
+    this.form.reset();
     this.currentTaskId = null;
+    this._creationState = { completed: Boolean(prefill?.completed), status: prefill?.status || 'todo' };
+    document.getElementById('btn-delete-task')?.classList.add('hidden');
     this.currentSubtasks = [];
     this.currentTags = [];
 
@@ -316,6 +333,7 @@ const Modal = {
       title: prefill.zoteroItemTitle,
       authors: prefill.zoteroAuthors,
       year: prefill.zoteroYear,
+      libraryID: prefill.zoteroLibraryID,
       publication: prefill.zoteroPublication || '',
       zoteroUri: prefill.zoteroUri,
       pdfUri: prefill.zoteroPdfUri,
@@ -327,8 +345,7 @@ const Modal = {
     const iconEl = this.dialog.querySelector('.modal-header-icon');
     if (iconEl) iconEl.textContent = '✨';
 
-    // Reset form
-    this.form.reset();
+    // The form was reset before applying the task type.
 
     this.updateTimePickerUI(prefill?.dueTime || '');
 
@@ -380,6 +397,9 @@ const Modal = {
     if (!task) return;
 
     this.currentTaskId = taskId;
+    this._creationState = null;
+    this._originalTask = Storage.clone(task);
+    document.getElementById('btn-delete-task')?.classList.remove('hidden');
     this.currentSubtasks = (task.subtasks || []).map(st => ({
       id: st.id || Utils.generateId(),
       title: st.title || '',
@@ -395,6 +415,7 @@ const Modal = {
       title: task.zoteroItemTitle,
       authors: task.zoteroAuthors,
       year: task.zoteroYear,
+      libraryID: task.zoteroLibraryID,
       publication: task.zoteroPublication || '',
       zoteroUri: task.zoteroUri,
       pdfUri: task.zoteroPdfUri,
@@ -601,13 +622,13 @@ const Modal = {
 
       section.querySelector('#btn-modal-open-pdf')?.addEventListener('click', () => {
         if (typeof ZoteroBridge !== 'undefined') {
-          ZoteroBridge.openPdf(lit.key, null, lit.page);
+          ZoteroBridge.openPdf(lit.zoteroUri || lit.key, lit.libraryID, lit.page);
         }
       });
 
       section.querySelector('#btn-modal-locate-item')?.addEventListener('click', () => {
         if (typeof ZoteroBridge !== 'undefined') {
-          ZoteroBridge.locateItem(lit.key);
+          ZoteroBridge.locateItem(lit.zoteroUri || lit.key, lit.libraryID);
         }
       });
 
@@ -632,6 +653,7 @@ const Modal = {
             title: item.title,
             authors: item.authors,
             year: item.year,
+            libraryID: item.libraryID,
             publication: item.publication,
             zoteroUri: item.zoteroUri,
             pdfUri: item.pdfUri,
@@ -678,12 +700,21 @@ const Modal = {
       zoteroItemTitle: this.currentZoteroLiterature?.title || null,
       zoteroAuthors: this.currentZoteroLiterature?.authors || null,
       zoteroYear: this.currentZoteroLiterature?.year || null,
+      zoteroLibraryID: this.currentZoteroLiterature?.libraryID || null,
+      zoteroPublication: this.currentZoteroLiterature?.publication || null,
       zoteroUri: this.currentZoteroLiterature?.zoteroUri || null,
       zoteroPdfUri: this.currentZoteroLiterature?.pdfUri || null,
       zoteroPage: this.currentZoteroLiterature?.page || null,
       zoteroQuote: this.currentZoteroLiterature?.quote || null,
       academicType: this.currentZoteroLiterature?.academicType || this.getAcademicType() || null
     };
+
+    if (this._creationState) Object.assign(formData, this._creationState);
+    const old = this._originalTask;
+    if (this.currentTaskId && old && old.dueDate === formData.dueDate && old.dueTime === formData.dueTime &&
+      old.reminder?.enabled === formData.reminder.enabled && old.reminder?.before === formData.reminder.before) {
+      formData.reminder.notified = Boolean(old.reminder?.notified);
+    }
 
     if (!formData.title) {
       document.getElementById('task-title').focus();
@@ -697,7 +728,8 @@ const Modal = {
     try {
       if (this.currentTaskId) {
         // Update existing task
-        await TaskManager.updateTask(this.currentTaskId, formData);
+        const updated = await TaskManager.updateTask(this.currentTaskId, formData);
+        if (!updated) throw new Error('任务已在其他窗口中删除');
         UI.showToast('任务已更新');
       } else {
         // Add new task
@@ -705,6 +737,7 @@ const Modal = {
         UI.showToast('任务已添加');
       }
 
+      this._isSubmitting = false;
       this.close();
       await this.loadCategories();
       UI.render();
@@ -722,6 +755,7 @@ const Modal = {
 
   // Close modal
   close() {
+    if (this._isSubmitting) return;
     if (this.dialog && this.dialog.open) {
       this.dialog.close();
     }

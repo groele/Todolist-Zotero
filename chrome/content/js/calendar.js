@@ -48,7 +48,7 @@ const Calendar = {
 
   // Render calendar
   async render() {
-    const tasks = await Storage.getTasks();
+    const tasks = TaskManager.getFilteredTasks({ search: UI.currentSearch, priority: UI.currentPriorityFilter, category: UI.currentCategoryFilter });
     this.renderCalendar(this.currentYear, this.currentMonth, tasks);
   },
 

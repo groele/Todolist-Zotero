@@ -11,26 +11,25 @@ const TimeTracking = {
 
   // Load active timers from storage
   async loadTimers() {
-    const result = await new Promise(resolve => {
-      chrome.storage.local.get('activeTimers', resolve);
-    });
+    const result = await Storage.getAll();
     this.activeTimers = result.activeTimers || {};
   },
 
   // Save active timers
   async saveTimers() {
-    await new Promise(resolve => {
-      chrome.storage.local.set({ activeTimers: this.activeTimers }, resolve);
-    });
+    await Storage.saveAll({ activeTimers: this.activeTimers });
   },
 
   // Start timer for task
   async startTimer(taskId) {
-    this.activeTimers[taskId] = {
+    if (!(await Storage.getTaskById(taskId))) return null;
+    if (this.activeTimers[taskId]) return this.activeTimers[taskId];
+    const timer = {
       startTime: Date.now(),
       elapsed: 0
     };
-    await this.saveTimers();
+    const saved = await Storage.saveAll({ activeTimerChanges: { [taskId]: timer } });
+    this.activeTimers = saved.activeTimers;
     return this.activeTimers[taskId];
   },
 
@@ -40,11 +39,9 @@ const TimeTracking = {
     if (!timer) return null;
 
     const elapsed = Date.now() - timer.startTime;
+    // Timer removal and elapsed-time history must either both save or both fail.
+    await TaskManager.recordTime(taskId, elapsed);
     delete this.activeTimers[taskId];
-    await this.saveTimers();
-
-    // Save to task history
-    await this.addTimeEntry(taskId, elapsed);
 
     return elapsed;
   },
@@ -66,13 +63,13 @@ const TimeTracking = {
     const task = await Storage.getTaskById(taskId);
     if (!task) return;
 
-    const timeEntries = task.timeEntries || [];
+    const timeEntries = [...(task.timeEntries || [])];
     timeEntries.push({
       date: new Date().toISOString(),
       duration: elapsed
     });
 
-    await Storage.updateTask(taskId, { timeEntries });
+    await TaskManager.updateTask(taskId, { timeEntries });
   },
 
   // Get total time for task

@@ -11,6 +11,7 @@ const Utils = {
   // Safe local date parser for YYYY-MM-DD strings
   parseLocalDate(isoDate) {
     if (!isoDate) return null;
+    if (isoDate instanceof Date) return new Date(isoDate.getTime());
     const cleanDate = String(isoDate).split('T')[0];
     const parts = cleanDate.split('-');
     if (parts.length !== 3) return new Date(isoDate);
@@ -93,10 +94,12 @@ const Utils = {
 
   // Escape HTML to prevent XSS
   escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  },
+
+  toDateISO(date) {
+    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
   },
 
   // Get today's date as ISO string (YYYY-MM-DD) using local time
