@@ -22,6 +22,8 @@ const Storage = {
     if (data.revision && this._zoteroCache?.revision > data.revision) return;
     data = { ...data, tasks: data.tasks || [], settings: { ...this.defaultSettings, ...data.settings },
       customTags: data.customTags || [] };
+    if (this._zoteroCache && (data.tasksGeneration || 0) !== (this._zoteroCache.tasksGeneration || 0) &&
+        typeof TaskManager !== 'undefined') TaskManager.clearUndo();
     this._zoteroCache = this.clone(data);
     for (const listener of this._listeners) {
       try { listener(this.clone(data)); } catch (error) { console.error('Storage listener failed:', error); }
@@ -60,11 +62,14 @@ const Storage = {
         const current = await this.getAll();
         const prepared = patch.importRequest ? TaskRules.prepareImport(current, patch.importRequest.payload, patch.importRequest.mode) : null;
         saved = this.mergeData(current, prepared ? prepared.patch : patch);
+        const notificationResult = TaskRules.applyNotificationAction(saved, patch.notificationAction);
+        delete saved.notificationAction;
         if (typeof chrome !== 'undefined' && chrome.storage?.local) await chrome.storage.local.set(saved);
         else for (const [key, value] of Object.entries(saved)) localStorage.setItem('todolist_' + key, JSON.stringify(value));
         if (prepared) saved.importResult = { imported: prepared.imported };
+        if (notificationResult) saved.notificationResult = notificationResult;
       }
-      const { importResult, ...snapshot } = saved;
+      const { importResult, notificationResult, ...snapshot } = saved;
       this.acceptData(snapshot);
       return this.clone(saved);
     };
@@ -74,6 +79,7 @@ const Storage = {
   },
   mergeData(current, patch) {
     const merged = { ...current, ...patch };
+    TaskRules.applyTaskGeneration(current, merged, patch);
     if (patch.settings) merged.settings = patch.replaceSettings ? { ...this.defaultSettings, ...patch.settings } : { ...current.settings, ...patch.settings };
     delete merged.replaceSettings;
     if (patch.taskChanges) {
@@ -106,6 +112,7 @@ const Storage = {
   async getTasks() {
     const data = await this.getAll();
     this._taskSnapshot = this.clone(data.tasks);
+    this._taskSnapshotGeneration = data.tasksGeneration || 0;
     return data.tasks;
   },
   // Field-level changes prevent a stale window from resurrecting deletions or erasing additions.
@@ -124,7 +131,7 @@ const Storage = {
       }
     }
     for (const id of before.keys()) if (!after.has(id)) taskChanges.deleted.push(id);
-    const data = await this.saveAll({ ...extra, taskChanges });
+    const data = await this.saveAll({ ...extra, taskChanges, expectedTasksGeneration: this._taskSnapshotGeneration || 0 });
     this._taskSnapshot = this.clone(data.tasks);
     return data.tasks;
   },

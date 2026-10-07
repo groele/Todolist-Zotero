@@ -682,6 +682,7 @@
         const prepared = request.importRequest ? TaskRules.prepareImport(current, request.importRequest.payload, request.importRequest.mode) : null;
         const patch = prepared ? { ...prepared.patch, syncLinkedItems: request.syncLinkedItems } : request;
         const next = { ...current, ...patch };
+        TaskRules.applyTaskGeneration(current, next, patch);
         delete next.syncLinkedItems;
         if (patch.settings) next.settings = patch.replaceSettings ? patch.settings : { ...current.settings, ...patch.settings };
         delete next.replaceSettings;
@@ -705,6 +706,8 @@
         }
         TaskRules.applyTimerAction(next, patch.timerAction);
         delete next.timerAction;
+        const notificationResult = TaskRules.applyNotificationAction(next, patch.notificationAction);
+        delete next.notificationAction;
         if (patch.taskChanges) {
           for (const task of [...next.tasks]) {
             const was = current.tasks.find(t => t.id === task.id);
@@ -729,6 +732,10 @@
           throw error;
         }
         this._cachedData = next;
+        if (patch.tasks) {
+          this._paneDeleted = [];
+          clearTimeout(this._paneUndoTimer);
+        }
         this.notifyDataChanged();
         if (patch.syncLinkedItems) {
           try { await this.syncLinkedTaskChanges(current, next); }
@@ -736,6 +743,7 @@
         }
         const result = this.cloneData(next);
         if (prepared) result.importResult = { imported: prepared.imported };
+        if (notificationResult) result.notificationResult = notificationResult;
         return result;
       };
       const result = (this._saveQueue || Promise.resolve()).then(run);
@@ -778,7 +786,7 @@
       const task = data.tasks.find(t => t.id === id);
       if (!task) return null;
       const changes = typeof change === 'function' ? change(task) : change;
-      await this.saveData({ taskChanges: { updated: [{ id, changes }] } });
+      await this.saveData({ taskChanges: { updated: [{ id, changes }] }, expectedTasksGeneration: data.tasksGeneration || 0 });
       return task;
     },
 

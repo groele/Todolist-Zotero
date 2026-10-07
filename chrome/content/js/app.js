@@ -38,19 +38,8 @@
 
       await Notifications.requestPermission();
 
-      // Periodic reminder checks
-      setInterval(async () => {
-        try {
-          await Notifications.checkReminders();
-        } catch (e) {
-          console.error('Reminder check failed:', e);
-        }
-      }, 60000);
-
-      await Notifications.checkReminders();
-
-      // Daily summary
-      setupDailySummary();
+      Notifications.startScheduler();
+      await Notifications.checkScheduled();
 
       // Hide loading state
       if (loadingEl) loadingEl.classList.add('hidden');
@@ -101,25 +90,4 @@
     }
   }
 
-  async function setupDailySummary() {
-    try {
-      const settings = await Storage.getSettings();
-      if (settings.dailySummary) {
-        setInterval(async () => {
-          try {
-            const now = new Date();
-            const summaryTime = settings.summaryTime || '09:00';
-            const [hours, minutes] = summaryTime.split(':').map(Number);
-            if (now.getHours() === hours && now.getMinutes() === minutes) {
-              await Notifications.sendDailySummary();
-            }
-          } catch (e) {
-            console.error('Daily summary failed:', e);
-          }
-        }, 60000);
-      }
-    } catch (e) {
-      console.error('Failed to setup daily summary:', e);
-    }
-  }
 })();

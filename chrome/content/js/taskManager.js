@@ -103,6 +103,13 @@ const TaskManager = {
     changes = { ...changes };
     delete changes.id;
     if (changes.title != null && !String(changes.title).trim()) throw new Error('任务标题不能为空');
+    if (changes.reminder !== undefined) {
+      const previous = this._tasks[index].reminder || {};
+      changes.reminder = { ...previous, ...changes.reminder };
+      if (changes.reminder.enabled !== previous.enabled || changes.reminder.before !== previous.before) {
+        changes.reminder.notified = false;
+      }
+    }
     if ((changes.dueDate !== undefined && changes.dueDate !== this._tasks[index].dueDate) ||
         (changes.dueTime !== undefined && changes.dueTime !== this._tasks[index].dueTime)) {
       changes.reminder = { ...this._tasks[index].reminder, ...changes.reminder, notified: false };

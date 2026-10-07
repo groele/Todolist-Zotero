@@ -26,7 +26,7 @@ async function page(file = 'index.html', data = null, host = null) {
   if (data) for (const [key, value] of Object.entries(data)) win.localStorage.setItem('todolist_' + key, JSON.stringify(value));
   if (host) win.Zotero = { Todolist: host, getMainWindow: () => null };
   const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map(match => read('chrome/content/' + match[1]));
-  win.eval(scripts.join('\n;\n') + '\nwindow.__test = {Storage, TaskManager, Modal, UI, Utils, Recurring, Tags, Templates, TimeTracking, DataManager, Advanced, ZoteroBridge, TaskRules};');
+  win.eval(scripts.join('\n;\n') + '\nwindow.__test = {Storage, TaskManager, Modal, UI, Utils, Recurring, Tags, Templates, TimeTracking, DataManager, Advanced, ZoteroBridge, TaskRules, Notifications};');
   try {
     await waitFor(() => win.__test.UI._storageReady && (!win.document.getElementById('loading-state') ||
       win.document.getElementById('loading-state').classList.contains('hidden')), errors.join('\n') || 'app initialization');

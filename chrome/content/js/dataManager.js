@@ -7,7 +7,7 @@ const DataManager = {
     const extraData = data;
 
     const exportData = {
-      version: '1.0.4',
+      version: '1.0.5',
       exportDate: new Date().toISOString(),
       tasks: data.tasks,
       settings: data.settings,

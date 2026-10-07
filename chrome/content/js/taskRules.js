@@ -1,5 +1,68 @@
 // Pure rules shared by the Gecko host and task windows.
 var TaskRules = {
+  applyTaskGeneration(current, next, patch) {
+    if (patch.expectedTasksGeneration != null && patch.expectedTasksGeneration !== (current.tasksGeneration || 0)) {
+      throw new Error('任务已被清空或替换，请重新加载后重试');
+    }
+    delete next.expectedTasksGeneration;
+    if (patch.tasks) next.tasksGeneration = (current.tasksGeneration || 0) + 1;
+  },
+  reminderFingerprint(task) {
+    return JSON.stringify([task.dueDate, task.dueTime || '23:59', task.reminder?.enabled,
+      task.reminder?.before ?? 15]);
+  },
+  // Reserve notification delivery in the same queue as task writes. Leases recover after a crashed window.
+  applyNotificationAction(data, action) {
+    if (!action) return null;
+    const { type, kind, token, now, key } = action;
+    if (!['claim', 'ack', 'release'].includes(type) || !['reminders', 'summary'].includes(kind) ||
+        typeof token !== 'string' || !token || !Number.isFinite(now)) throw new Error('提醒请求无效');
+    const leases = data.notificationLeases = { ...data.notificationLeases };
+    const result = { tasks: [], summary: false };
+    if (type === 'claim') for (const [id, lease] of Object.entries(leases)) if (lease.expiresAt <= now) delete leases[id];
+    if (type !== 'claim') {
+      const lease = leases[key];
+      if (!lease || lease.token !== token) return result;
+      if (type === 'ack') {
+        if (kind === 'summary') data.lastSummaryDate = lease.date;
+        else {
+          const task = data.tasks.find(t => 'task:' + t.id === key);
+          if (task && this.reminderFingerprint(task) === lease.fingerprint) {
+            task.reminder = { ...task.reminder, notified: true, notifiedFor: lease.fingerprint };
+          }
+        }
+      }
+      delete leases[key];
+      return result;
+    }
+    if (kind === 'summary') {
+      const date = new Date(now);
+      const today = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0')].join('-');
+      const time = String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
+      const leaseKey = 'summary:' + today;
+      if (data.settings?.dailySummary && (data.settings.summaryTime || '09:00') === time &&
+          data.lastSummaryDate !== today && !leases[leaseKey]) {
+        leases[leaseKey] = { token, date: today, expiresAt: now + 60000 };
+        result.summary = true;
+        result.key = leaseKey;
+      }
+      return result;
+    }
+    for (const task of data.tasks) {
+      if (task.completed || !task.reminder?.enabled || task.reminder.notified || !task.dueDate) continue;
+      const due = new Date(task.dueDate + 'T' + (task.dueTime || '23:59')).getTime();
+      const before = Number(task.reminder.before ?? 15);
+      if (!Number.isFinite(due) || !Number.isFinite(before) || before < 0 || now < due - before * 60000 ||
+          now > due + 86400000) continue;
+      const leaseKey = 'task:' + task.id;
+      const fingerprint = this.reminderFingerprint(task);
+      if (leases[leaseKey]?.fingerprint === fingerprint) continue;
+      leases[leaseKey] = { token, fingerprint, expiresAt: now + 60000 };
+      result.tasks.push({ task: JSON.parse(JSON.stringify(task)), key: leaseKey });
+    }
+    return result;
+  },
   // Run inside the storage write queue, against the latest committed snapshot.
   applyTimerAction(data, action) {
     if (!action) return;
