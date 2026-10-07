@@ -676,11 +676,15 @@
     },
 
     async saveData(data) {
-      const patch = this.cloneData(data);
+      const request = this.cloneData(data);
       const run = async () => {
         const current = await this.loadData();
+        const prepared = request.importRequest ? TaskRules.prepareImport(current, request.importRequest.payload, request.importRequest.mode) : null;
+        const patch = prepared ? { ...prepared.patch, syncLinkedItems: request.syncLinkedItems } : request;
         const next = { ...current, ...patch };
-        if (patch.settings) next.settings = { ...current.settings, ...patch.settings };
+        delete next.syncLinkedItems;
+        if (patch.settings) next.settings = patch.replaceSettings ? patch.settings : { ...current.settings, ...patch.settings };
+        delete next.replaceSettings;
         if (patch.taskChanges) {
           const { added = [], updated = [], deleted = [] } = patch.taskChanges;
           const removed = new Set(deleted);
@@ -699,6 +703,8 @@
           }
           delete next.activeTimerChanges;
         }
+        TaskRules.applyTimerAction(next, patch.timerAction);
+        delete next.timerAction;
         if (patch.taskChanges) {
           for (const task of [...next.tasks]) {
             const was = current.tasks.find(t => t.id === task.id);
@@ -724,11 +730,47 @@
         }
         this._cachedData = next;
         this.notifyDataChanged();
-        return this.cloneData(next);
+        if (patch.syncLinkedItems) {
+          try { await this.syncLinkedTaskChanges(current, next); }
+          catch (error) { Zotero.logError?.('[Todolist] 任务已保存，文献联动更新失败: ' + error); }
+        }
+        const result = this.cloneData(next);
+        if (prepared) result.importResult = { imported: prepared.imported };
+        return result;
       };
       const result = (this._saveQueue || Promise.resolve()).then(run);
       this._saveQueue = result.catch(() => {});
       return result;
+    },
+
+    async syncLinkedTaskChanges(before, after) {
+      const previous = new Map(before.tasks.map(t => [t.id, t]));
+      const current = new Map(after.tasks.map(t => [t.id, t]));
+      const affected = new Map();
+      for (const id of new Set([...previous.keys(), ...current.keys()])) {
+        const oldTask = previous.get(id), newTask = current.get(id);
+        if (JSON.stringify(oldTask) === JSON.stringify(newTask)) continue;
+        for (const task of [oldTask, newTask]) {
+          if (!task?.zoteroItemKey) continue;
+          const key = String(task.zoteroLibraryID || Zotero.Libraries.userLibraryID) + ':' + task.zoteroItemKey;
+          const onlySubtasks = oldTask && newTask && JSON.stringify({ ...oldTask, subtasks: null }) ===
+            JSON.stringify({ ...newTask, subtasks: null });
+          affected.set(key, { task, syncNote: (affected.get(key)?.syncNote || !onlySubtasks ||
+            this.getPref('childNoteAutoUpdateOnSubtask', true)) });
+        }
+      }
+      for (const { task, syncNote } of affected.values()) {
+        try {
+        const libraryID = task.zoteroLibraryID || Zotero.Libraries.userLibraryID;
+        const item = this.resolveItemReference(task.zoteroItemKey, libraryID);
+        if (!item) continue;
+        await this.tagItemOnTaskEvent(task.zoteroItemKey, 'complete_check', libraryID);
+        if (syncNote && this.getPref('autoSyncChildNote', true)) {
+          const note = await this.syncTasksToChildNote(item, null, { silent: true });
+          if (!note) Zotero.logError?.('[Todolist] 任务已保存，但子笔记未能更新: ' + task.zoteroItemKey);
+        }
+        } catch (error) { Zotero.logError?.('[Todolist] 任务已保存，文献联动更新失败: ' + task.zoteroItemKey + ': ' + error); }
+      }
     },
 
     async updateTaskState(id, change) {
@@ -826,13 +868,14 @@
       }));
     },
 
-    async syncTasksToChildNote(item, tasks = null) {
+    async syncTasksToChildNote(item, tasks = null, options = {}) {
       const target = getLiteratureItem(item);
       if (!target) return null;
 
       try {
         const data = await this.loadData();
-        const allTasks = tasks || (data.tasks || []).filter((t) => t.zoteroItemKey === target.key);
+        const allTasks = (tasks || data.tasks || []).filter(t => t.zoteroItemKey === target.key &&
+          (t.zoteroLibraryID || Zotero.Libraries.userLibraryID) === target.libraryID);
         const meta = serializeLiteratureItem(target);
 
         const total = allTasks.length;
@@ -840,7 +883,7 @@
         const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
         // Construct formatted HTML note
-        let noteHtml = `<h1>📝 [Todolist] 研读清单与进度</h1>`;
+        let noteHtml = `<h1>${escapeHtml(this.getPref('childNoteTitle', '📝 [Todolist] 研读清单与进度'))}</h1>`;
         noteHtml += `<p><strong>文献：</strong>${escapeHtml(meta.title)} (${escapeHtml(meta.authors)} ${escapeHtml(meta.year)})</p>`;
         noteHtml += `<p><strong>研读进度：</strong>${completed}/${total} 已完成 (<strong>${percent}%</strong>) | 更新于：${new Date().toLocaleString()}</p>`;
         noteHtml += `<div style="background:#e2e8f0;border-radius:4px;height:10px;width:100%;margin:8px 0;overflow:hidden;"><div style="background:#059669;height:10px;width:${percent}%;"></div></div>`;
@@ -852,16 +895,16 @@
           for (const t of allTasks) {
             const checkMark = t.completed ? '☑' : '☐';
             const statusStyle = t.completed ? 'text-decoration:line-through;color:#64748b;' : 'font-weight:600;';
-            const dueInfo = t.dueDate ? ` <span style="font-size:11px;color:#d97706;">(截止: ${t.dueDate})</span>` : '';
+            const dueInfo = t.dueDate ? ` <span style="font-size:11px;color:#d97706;">(截止: ${escapeHtml(t.dueDate)})</span>` : '';
             noteHtml += `<li>${checkMark} <span style="${statusStyle}">${escapeHtml(t.title)}</span>${dueInfo}`;
-            if (t.subtasks && t.subtasks.length > 0) {
+            if (this.getPref('childNoteIncludeSubtasks', true) && t.subtasks && t.subtasks.length > 0) {
               noteHtml += `<ul>`;
               for (const sub of t.subtasks) {
                 noteHtml += `<li>${sub.completed ? '☑' : '☐'} ${escapeHtml(sub.title)}</li>`;
               }
               noteHtml += `</ul>`;
             }
-            if (t.description && t.description.trim()) {
+            if (this.getPref('childNoteIncludeQuotes', true) && t.description && t.description.trim()) {
               noteHtml += `<blockquote>${escapeHtml(t.description).replace(/\n/g, '<br/>')}</blockquote>`;
             }
             noteHtml += `</li>`;
@@ -902,7 +945,7 @@
           targetNote = newNote;
         }
 
-        this.showNotice('文献笔记同步成功', `已更新《${meta.title.slice(0, 20)}...》的研读进度笔记，支持多端云同步！`);
+        if (!options.silent) this.showNotice('文献笔记同步成功', `已更新《${meta.title.slice(0, 20)}...》的研读进度笔记，支持多端云同步！`);
         return targetNote;
       } catch (err) {
         Zotero.logError?.('[Todolist] syncTasksToChildNote error: ' + err);
@@ -923,7 +966,8 @@
         const completedTag = this.getPref('tagForCompleted', '精读已完成');
 
         const data = await this.loadData();
-        const tasks = (data.tasks || []).filter((t) => t.zoteroItemKey === target.key);
+        const tasks = (data.tasks || []).filter(t => t.zoteroItemKey === target.key &&
+          (t.zoteroLibraryID || Zotero.Libraries.userLibraryID) === target.libraryID);
         const uncompleted = tasks.filter((t) => !t.completed);
 
         let modified = false;
@@ -982,11 +1026,13 @@
         }
 
         const data = await this.loadData();
-        const existingKeys = new Set((data.tasks || []).map((t) => t.zoteroItemKey).filter(Boolean));
+        const existingKeys = new Set((data.tasks || []).filter(t => t.zoteroItemKey)
+          .map(t => (t.zoteroLibraryID || Zotero.Libraries.userLibraryID) + ':' + t.zoteroItemKey));
         let addedCount = 0;
+        const addedTasks = [];
 
         for (const item of regularItems) {
-          if (existingKeys.has(item.key)) continue;
+          if (existingKeys.has(item.libraryID + ':' + item.key)) continue;
           const meta = serializeLiteratureItem(item);
           const taskId = 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
           const mainTask = {
@@ -1020,20 +1066,13 @@
             ]
           };
           data.tasks.push(mainTask);
-          existingKeys.add(item.key);
+          addedTasks.push(mainTask);
+          existingKeys.add(item.libraryID + ':' + item.key);
           addedCount++;
-
-          if (this.getPref('autoTagOnCreate', true)) {
-            const pendingTag = this.getPref('tagForPending', '待研读');
-            if (pendingTag && !item.hasTag(pendingTag)) {
-              item.addTag(pendingTag);
-              await item.saveTx();
-            }
-          }
         }
 
         if (addedCount > 0) {
-          await this.saveData({ tasks: data.tasks });
+          await this.saveData({ taskChanges: { added: addedTasks }, syncLinkedItems: true });
           this.showNotice(
             '专题研读规划已建立',
             `已为【${collection.name}】下的 ${addedCount} 篇文献批量生成研读清单！`
@@ -1153,8 +1192,7 @@
           return;
         }
 
-        data.tasks.push(newTask);
-        await this.saveData({ tasks: data.tasks });
+        await this.saveData({ taskChanges: { added: [newTask] } });
 
         if (this.getPref('autoTagOnCreate', true)) {
           await this.tagItemOnTaskEvent(meta.key, 'create', regularItem.libraryID);
@@ -1288,53 +1326,15 @@
             throw new Error('所选文件不是合法的 JSON 格式数据');
           }
 
-          const importedTasks = Array.isArray(importedJson.tasks)
-            ? importedJson.tasks
-            : (Array.isArray(importedJson) ? importedJson : []);
-
-          if (importedTasks.length === 0 && !importedJson.customTags) {
-            throw new Error('未在备份文件中找到有效的任务或标签数据');
+          const saved = await this.saveData({ importRequest: { payload: importedJson, mode }, syncLinkedItems: true });
+          const imported = saved.importResult.imported;
+          if (mode === 'replace') {
+            this._paneDeleted = [];
+            clearTimeout(this._paneUndoTimer);
           }
 
-          const currentData = await this.loadData();
-          let finalTasks = [];
-          if (mode === 'merge') {
-            const taskMap = new Map();
-            for (const t of (currentData.tasks || [])) {
-              if (t && t.id) taskMap.set(t.id, t);
-            }
-            for (const t of importedTasks) {
-              if (!t) continue;
-              const id = t.id || ('imported_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
-              taskMap.set(id, { ...t, id });
-            }
-            finalTasks = Array.from(taskMap.values());
-          } else {
-            // Overwrite
-            finalTasks = importedTasks;
-          }
-
-          // Merge custom tags
-          let finalTags = currentData.customTags || [];
-          if (Array.isArray(importedJson.customTags)) {
-            const tagMap = new Map();
-            if (mode === 'merge') {
-              for (const tag of finalTags) tagMap.set(tag.id || tag.name, tag);
-            }
-            for (const tag of importedJson.customTags) {
-              if (tag && (tag.id || tag.name)) tagMap.set(tag.id || tag.name, tag);
-            }
-            finalTags = Array.from(tagMap.values());
-          }
-
-          await this.saveData({
-            tasks: finalTasks,
-            customTags: finalTags,
-            settings: { ...(currentData.settings || {}), ...(importedJson.settings || {}) }
-          });
-
-          this.showNotice('导入成功', `已成功导入 ${importedTasks.length} 个任务与标签数据！`);
-          return { success: true, count: importedTasks.length };
+          this.showNotice('导入成功', `已成功导入 ${imported} 个任务与标签数据！`);
+          return { success: true, count: imported };
         }
       } catch (err) {
         Zotero.logError?.('[Todolist] importDataFile error: ' + err);
@@ -1346,7 +1346,10 @@
 
     async clearAllData(window = null) {
       try {
-        await this.saveData({ tasks: [], history: [], customTags: [] });
+        await this.saveData({ tasks: [], history: [], customTags: [], customTemplates: [],
+          searchHistory: [], activeTimers: {}, syncLinkedItems: true });
+        this._paneDeleted = [];
+        clearTimeout(this._paneUndoTimer);
         this.showNotice('数据已清空', '所有任务、历史记录与自定义标签已安全清空。');
         return true;
       } catch (err) {
@@ -1645,7 +1648,8 @@
 
             const data = await this.loadData();
             const targetKey = target.key;
-            const tasks = (data.tasks || []).filter((t) => t.zoteroItemKey === targetKey);
+            const tasks = (data.tasks || []).filter(t => t.zoteroItemKey === targetKey &&
+              (t.zoteroLibraryID || Zotero.Libraries.userLibraryID) === target.libraryID);
             const uncompletedTasks = tasks.filter((t) => !t.completed);
             const total = tasks.length;
             const done = total - uncompletedTasks.length;
@@ -2748,7 +2752,7 @@
       if (!meta) return;
 
       const data = await this.loadData();
-      const parentTaskId = 'task_' + Date.now();
+      const parentTaskId = 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
       const nowStr = new Date().toISOString();
 
       const mainTask = {
@@ -2783,8 +2787,7 @@
         ]
       };
 
-      data.tasks.push(mainTask);
-      await this.saveData({ tasks: data.tasks });
+      await this.saveData({ taskChanges: { added: [mainTask] } });
 
       if (this.getPref('autoTagOnCreate', true)) {
         await this.tagItemOnTaskEvent(meta.key, 'create', item.libraryID);

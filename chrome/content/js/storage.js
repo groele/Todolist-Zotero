@@ -20,8 +20,12 @@ const Storage = {
   subscribe(listener) { this._listeners.add(listener); return () => this._listeners.delete(listener); },
   acceptData(data) {
     if (data.revision && this._zoteroCache?.revision > data.revision) return;
+    data = { ...data, tasks: data.tasks || [], settings: { ...this.defaultSettings, ...data.settings },
+      customTags: data.customTags || [] };
     this._zoteroCache = this.clone(data);
-    for (const listener of this._listeners) listener(this.clone(data));
+    for (const listener of this._listeners) {
+      try { listener(this.clone(data)); } catch (error) { console.error('Storage listener failed:', error); }
+    }
   },
   async getAll() {
     const host = this.getZoteroInstance()?.Todolist;
@@ -44,6 +48,7 @@ const Storage = {
   },
   async saveAll(data) {
     const patch = this.clone(data);
+    if (this.isZotero() && (patch.taskChanges || patch.tasks || patch.importRequest)) patch.syncLinkedItems = true;
     const run = async () => {
       const host = this.getZoteroInstance()?.Todolist;
       let saved;
@@ -53,11 +58,14 @@ const Storage = {
         saved = await ZoteroBridge.saveStorage(patch);
       } else {
         const current = await this.getAll();
-        saved = this.mergeData(current, patch);
+        const prepared = patch.importRequest ? TaskRules.prepareImport(current, patch.importRequest.payload, patch.importRequest.mode) : null;
+        saved = this.mergeData(current, prepared ? prepared.patch : patch);
         if (typeof chrome !== 'undefined' && chrome.storage?.local) await chrome.storage.local.set(saved);
         else for (const [key, value] of Object.entries(saved)) localStorage.setItem('todolist_' + key, JSON.stringify(value));
+        if (prepared) saved.importResult = { imported: prepared.imported };
       }
-      this.acceptData(saved);
+      const { importResult, ...snapshot } = saved;
+      this.acceptData(snapshot);
       return this.clone(saved);
     };
     const result = this._saveQueue.then(run);
@@ -66,7 +74,8 @@ const Storage = {
   },
   mergeData(current, patch) {
     const merged = { ...current, ...patch };
-    if (patch.settings) merged.settings = { ...current.settings, ...patch.settings };
+    if (patch.settings) merged.settings = patch.replaceSettings ? { ...this.defaultSettings, ...patch.settings } : { ...current.settings, ...patch.settings };
+    delete merged.replaceSettings;
     if (patch.taskChanges) {
       const { added = [], updated = [], deleted = [] } = patch.taskChanges;
       const removed = new Set(deleted);
@@ -85,6 +94,8 @@ const Storage = {
       }
       delete merged.activeTimerChanges;
     }
+    TaskRules.applyTimerAction(merged, patch.timerAction);
+    delete merged.timerAction;
     if (patch.taskChanges || patch.tasks || patch.activeTimerChanges) {
       const ids = new Set(merged.tasks.map(t => t.id));
       merged.activeTimers = Object.fromEntries(Object.entries(merged.activeTimers || {}).filter(([id]) => ids.has(id)));

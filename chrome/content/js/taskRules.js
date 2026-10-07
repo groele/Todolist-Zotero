@@ -1,5 +1,105 @@
 // Pure rules shared by the Gecko host and task windows.
 var TaskRules = {
+  // Run inside the storage write queue, against the latest committed snapshot.
+  applyTimerAction(data, action) {
+    if (!action) return;
+    const { type, taskId, timer, startTime, stoppedAt, sessionId } = action;
+    if (!['start', 'stop'].includes(type)) throw new Error('计时操作无效');
+    const task = data.tasks.find(t => t.id === taskId);
+    data.activeTimers = { ...data.activeTimers };
+    if (type === 'start') {
+      if (!timer || !Number.isFinite(timer.startTime)) throw new Error('计时数据无效');
+      if (task && !data.activeTimers[taskId]) data.activeTimers[taskId] = timer;
+    } else {
+      const active = data.activeTimers[taskId];
+      if (!active || active.startTime !== startTime || active.sessionId !== sessionId) return;
+      if (!Number.isFinite(stoppedAt)) throw new Error('停止时间无效');
+      if (task) task.timeEntries = [...(task.timeEntries || []), {
+        date: new Date(stoppedAt).toISOString(), duration: Math.max(0, stoppedAt - startTime)
+      }];
+      delete data.activeTimers[taskId];
+    }
+  },
+  prepareImport(current, payload, mode) {
+    if (!['merge', 'replace'].includes(mode)) throw new Error('导入模式无效');
+    const source = Array.isArray(payload) ? { tasks: payload } : payload;
+    if (!source || !Array.isArray(source.tasks)) throw new Error('无效的数据格式：缺少任务数组');
+    const tasks = JSON.parse(JSON.stringify(source.tasks));
+    const ids = new Set();
+    for (const task of tasks) {
+      if (!task || typeof task.id !== 'string' || !task.id.trim() || ids.has(task.id) ||
+          typeof task.title !== 'string' || !task.title.trim() || typeof task.completed !== 'boolean') {
+        throw new Error('备份包含无效或重复任务，未导入任何数据');
+      }
+      ids.add(task.id);
+      for (const key of ['description', 'category', 'zoteroItemTitle']) {
+        if (task[key] != null && typeof task[key] !== 'string') throw new Error('任务文本格式无效：' + key);
+      }
+      if (task.dueDate && !this.nextDueDate(task.dueDate, 'daily')) throw new Error('截止日期无效');
+      if (task.dueTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(task.dueTime)) throw new Error('截止时间无效');
+      if (task.reminder != null && (typeof task.reminder !== 'object' || Array.isArray(task.reminder))) {
+        throw new Error('提醒格式无效');
+      }
+      for (const key of ['subtasks', 'tags', 'timeEntries']) {
+        if (task[key] != null && !Array.isArray(task[key])) throw new Error('任务字段格式无效：' + key);
+      }
+      const subIds = new Set();
+      task.subtasks = (task.subtasks || []).map((st, index) => {
+        if (!st || typeof st.title !== 'string' || !st.title.trim()) throw new Error('子任务格式无效');
+        const id = st.id || task.id + '_sub_' + index;
+        if (typeof id !== 'string' || subIds.has(id)) throw new Error('子任务标识无效或重复');
+        subIds.add(id);
+        return { ...st, id, completed: Boolean(st.completed) };
+      });
+      task.tags = task.tags || [];
+      if (task.tags.some(tag => typeof tag !== 'string')) throw new Error('任务标签格式无效');
+      if ((task.timeEntries || []).some(entry => !entry || !Number.isFinite(entry.duration) || entry.duration < 0 ||
+          !Number.isFinite(Date.parse(entry.date)))) throw new Error('计时历史格式无效');
+      task.title = task.title.trim();
+      task.status = task.completed ? 'done' : (task.status === 'in-progress' ? 'in-progress' : 'todo');
+      if (!task.completed) task.completedAt = null;
+      if (task.completed) task.subtasks.forEach(st => { st.completed = true; });
+    }
+    if (source.settings != null && (typeof source.settings !== 'object' || Array.isArray(source.settings))) {
+      throw new Error('设置格式无效');
+    }
+    const patch = {};
+    const existingIds = new Set(current.tasks.map(t => t.id));
+    const added = tasks.filter(t => !existingIds.has(t.id));
+    if (mode === 'replace') {
+      patch.tasks = tasks;
+      patch.settings = source.settings || {};
+      patch.replaceSettings = true;
+      patch.activeTimers = {};
+      patch.searchHistory = Array.isArray(source.searchHistory) ? source.searchHistory : [];
+    } else patch.taskChanges = { added };
+    for (const key of ['customTags', 'customTemplates']) {
+      if (source[key] != null && !Array.isArray(source[key])) throw new Error('标签或模板格式无效');
+      const entries = source[key] || [];
+      const seen = new Set();
+      for (const entry of entries) {
+        if (!entry || typeof entry.id !== 'string' || !entry.id || seen.has(entry.id) ||
+            typeof entry.name !== 'string' || !entry.name.trim() ||
+            (key === 'customTemplates' && (!entry.task || typeof entry.task !== 'object' || Array.isArray(entry.task)))) {
+          throw new Error('标签或模板内容无效或重复');
+        }
+        seen.add(entry.id);
+        if (key === 'customTemplates') {
+          if (entry.task.subtasks != null && (!Array.isArray(entry.task.subtasks) ||
+              entry.task.subtasks.some(st => !st || typeof st.title !== 'string'))) throw new Error('模板子任务格式无效');
+        }
+      }
+      if (mode === 'replace') patch[key] = entries;
+      else if (source[key]) {
+        const existing = current[key] || [];
+        const existingIds = new Set(existing.map(t => t.id));
+        patch[key] = [...existing, ...entries.filter(t => !existingIds.has(t.id))];
+      }
+    }
+    if (source.searchHistory != null && (!Array.isArray(source.searchHistory) ||
+        source.searchHistory.some(query => typeof query !== 'string'))) throw new Error('搜索历史格式无效');
+    return { patch, imported: mode === 'replace' ? tasks.length : added.length };
+  },
   nextDueDate(value, pattern) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return null;
     const [year, month, day] = value.split('-').map(Number);

@@ -12,6 +12,9 @@ const UI = {
   async init() {
     // Load theme preference
     const settings = await Storage.getSettings();
+    this._settings = settings;
+    this.currentSortOrder = settings.sortOrder || 'dueDate';
+    this.showCompleted = settings.showCompleted !== false;
     this.currentTheme = settings.theme || 'light';
     this.applyTheme(this.currentTheme);
 
@@ -26,13 +29,29 @@ const UI = {
       TaskManager._selectedTasks = new Set([...TaskManager._selectedTasks].filter(id => ids.has(id)));
       if (typeof TimeTracking !== 'undefined') TimeTracking.activeTimers = data.activeTimers || {};
       if (typeof Tags !== 'undefined' && data.customTags) Tags.customTags = data.customTags;
+      if (typeof Templates !== 'undefined' && data.customTemplates) Templates.customTemplates = data.customTemplates;
+      if (data.settings) {
+        this.currentSortOrder = data.settings.sortOrder || 'dueDate';
+        this.showCompleted = data.settings.showCompleted !== false;
+        if (data.settings.theme !== this.currentTheme) {
+          this.currentTheme = data.settings.theme;
+          this.applyTheme(this.currentTheme);
+        }
+        const sortSelect = document.getElementById('sort-select');
+        if (sortSelect) sortSelect.value = this.currentSortOrder;
+        const viewChanged = data.settings.defaultView !== this._settings.defaultView;
+        this._settings = data.settings;
+        if (viewChanged) this.switchView(data.settings.defaultView);
+      }
       this.render();
       this.updateBatchBar();
     });
     chrome.storage.onChanged?.addListener(async (changes, area) => {
-      if (area === 'local' && changes.tasks && !TaskManager._mutating) Storage.acceptData(await Storage.getAll());
+      if (area === 'local' && !TaskManager._mutating) Storage.acceptData(await Storage.getAll());
     });
-    this.render();
+    const sortSelect = document.getElementById('sort-select');
+    if (sortSelect) sortSelect.value = this.currentSortOrder;
+    await this.switchView(settings.defaultView || 'list');
 
     // Initialize drag and drop
     DragDrop.init();
@@ -307,9 +326,16 @@ const UI = {
     });
 
     // Sort select
-    document.getElementById('sort-select')?.addEventListener('change', (e) => {
+    document.getElementById('sort-select')?.addEventListener('change', async (e) => {
       this.currentSortOrder = e.target.value;
       this.render();
+      try { await Storage.saveSettings({ sortOrder: this.currentSortOrder }); }
+      catch (error) {
+        this.currentSortOrder = (await Storage.getSettings()).sortOrder;
+        e.target.value = this.currentSortOrder;
+        this.render();
+        this.showToast('排序设置保存失败');
+      }
     });
 
     // Filter tabs
@@ -959,6 +985,7 @@ const UI = {
 
   // Switch to specific view
   async switchView(view) {
+    if (!['list', 'calendar', 'kanban', 'stats'].includes(view)) view = 'list';
     this.currentView = view;
 
     // Update view visibility
@@ -1008,9 +1035,13 @@ const UI = {
     this.applyTheme(this.currentTheme);
 
     // Save preference
-    const settings = await Storage.getSettings();
-    settings.theme = this.currentTheme;
-    await Storage.saveSettings(settings);
+    try { await Storage.saveSettings({ theme: this.currentTheme }); }
+    catch (error) {
+      this.currentTheme = (await Storage.getSettings()).theme;
+      this.applyTheme(this.currentTheme);
+      this.showToast('主题设置保存失败');
+      return;
+    }
 
     this.showToast(`主题已切换：${this.currentTheme === 'light' ? '浅色' : this.currentTheme === 'dark' ? '深色' : '跟随系统'}`);
   },
@@ -1104,6 +1135,7 @@ const UI = {
       search: this.currentSearch,
       priority: this.currentPriorityFilter,
       category: this.currentCategoryFilter && this.currentCategoryFilter !== 'all' ? this.currentCategoryFilter : null,
+      showCompleted: this.showCompleted,
       sortOrder: this.currentSortOrder || 'dueDate'
     };
 
@@ -1201,6 +1233,7 @@ const UI = {
     const kanbanData = TaskManager.getKanbanTasks({ search: this.currentSearch,
       priority: this.currentPriorityFilter, category: this.currentCategoryFilter,
       status: this.currentFilter === 'date' ? 'all' : this.currentFilter,
+      showCompleted: this.showCompleted,
       sortOrder: this.currentSortOrder });
     const container = document.getElementById('kanban-view');
     if (!container) return;

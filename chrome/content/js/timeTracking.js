@@ -22,26 +22,26 @@ const TimeTracking = {
 
   // Start timer for task
   async startTimer(taskId) {
-    if (!(await Storage.getTaskById(taskId))) return null;
-    if (this.activeTimers[taskId]) return this.activeTimers[taskId];
     const timer = {
+      sessionId: Utils.generateId(),
       startTime: Date.now(),
       elapsed: 0
     };
-    const saved = await Storage.saveAll({ activeTimerChanges: { [taskId]: timer } });
+    const saved = await Storage.saveAll({ timerAction: { type: 'start', taskId, timer } });
     this.activeTimers = saved.activeTimers;
-    return this.activeTimers[taskId];
+    return this.activeTimers[taskId] || null;
   },
 
   // Stop timer for task
   async stopTimer(taskId) {
-    const timer = this.activeTimers[taskId];
+    const timer = (await Storage.getAll()).activeTimers?.[taskId];
     if (!timer) return null;
 
-    const elapsed = Date.now() - timer.startTime;
-    // Timer removal and elapsed-time history must either both save or both fail.
-    await TaskManager.recordTime(taskId, elapsed);
-    delete this.activeTimers[taskId];
+    const stoppedAt = Date.now();
+    const elapsed = Math.max(0, stoppedAt - timer.startTime);
+    const saved = await Storage.saveAll({ timerAction: { type: 'stop', taskId, sessionId: timer.sessionId,
+      startTime: timer.startTime, stoppedAt } });
+    this.activeTimers = saved.activeTimers || {};
 
     return elapsed;
   },

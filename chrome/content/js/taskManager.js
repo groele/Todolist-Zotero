@@ -125,6 +125,9 @@ const TaskManager = {
       this.syncSubtaskCompletion(task);
     } else if (changes.completed !== undefined) {
       this.setCompletion(task, task.completed);
+    } else if (changes.status !== undefined) {
+      this.setCompletion(task, changes.status === 'done');
+      if (!task.completed && changes.status === 'in-progress') task.status = 'in-progress';
     }
     this.appendRecurringTask(task);
     await Storage.saveTasks(this._tasks, this._baseline);
@@ -148,6 +151,13 @@ const TaskManager = {
     this._deletedTasks.push(...entries);
     clearTimeout(this._undoTimeout);
     this._undoTimeout = setTimeout(() => { this._deletedTasks = []; this._undoTimeout = null; }, this.undoDuration);
+  },
+
+  clearUndo() {
+    this._deletedTasks = [];
+    clearTimeout(this._undoTimeout);
+    this._undoTimeout = null;
+    this.clearSelection();
   },
 
   // Undo last deletion
@@ -386,6 +396,9 @@ const TaskManager = {
   // Filter tasks
   getFilteredTasks(filters = {}) {
     let filtered = [...this._tasks];
+    if (filters.showCompleted === false && filters.status !== 'completed') {
+      filtered = filtered.filter(t => !t.completed);
+    }
 
     // Filter by search query
     if (filters.search) {

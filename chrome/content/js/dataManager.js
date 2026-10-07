@@ -7,7 +7,7 @@ const DataManager = {
     const extraData = data;
 
     const exportData = {
-      version: '1.0.3',
+      version: '1.0.4',
       exportDate: new Date().toISOString(),
       tasks: data.tasks,
       settings: data.settings,
@@ -40,50 +40,15 @@ const DataManager = {
         try {
           const importData = JSON.parse(e.target.result);
 
-          // Validate data structure
-          if (!importData.tasks || !Array.isArray(importData.tasks)) {
-            reject(new Error('无效的数据格式：缺少任务数组'));
-            return;
-          }
-
-          // Validate the entire payload before committing anything.
-          const validTasks = importData.tasks.filter(task => task && typeof task.id === 'string' &&
-            typeof task.title === 'string' && task.title.trim() && typeof task.completed === 'boolean');
-          for (const task of validTasks) {
-            task.subtasks = Array.isArray(task.subtasks) ? task.subtasks.filter(st => st && typeof st.title === 'string') : [];
-            task.tags = Array.isArray(task.tags) ? task.tags.filter(tag => typeof tag === 'string') : [];
-          }
-          if (!['merge', 'replace'].includes(mode)) throw new Error('导入模式无效');
-          const current = await Storage.getAll();
-          const patch = {};
-          let imported;
-          if (mode === 'replace') {
-            patch.tasks = validTasks;
-            patch.settings = importData.settings || Storage.defaultSettings;
-            patch.customTags = importData.customTags || [];
-            patch.customTemplates = importData.customTemplates || [];
-            patch.activeTimers = {}; // A restored backup never resumes historical timers.
-            imported = validTasks.length;
-          } else {
-            const seen = new Set(current.tasks.map(t => t.id));
-            const added = validTasks.filter(t => !seen.has(t.id) && seen.add(t.id));
-            patch.taskChanges = { added };
-            imported = added.length;
-            for (const key of ['customTags', 'customTemplates']) {
-              if (Array.isArray(importData[key])) {
-                const existing = current[key] || [];
-                const ids = new Set(existing.map(t => t.id));
-                patch[key] = [...existing, ...importData[key].filter(t => t && t.id && !ids.has(t.id) && ids.add(t.id))];
-              }
-            }
-          }
-          if (!Array.isArray(patch.customTags || []) || !Array.isArray(patch.customTemplates || [])) throw new Error('标签或模板格式无效');
-          await Storage.saveAll(patch);
+          const saved = await Storage.saveAll({ importRequest: { payload: importData, mode } });
+          const imported = saved.importResult.imported;
+          if (mode === 'replace') TaskManager.clearUndo();
 
           // Reload in-memory modules
           await TaskManager.loadTasks();
           if (typeof Tags !== 'undefined' && Tags.loadCustomTags) await Tags.loadCustomTags();
           if (typeof Templates !== 'undefined' && Templates.loadCustomTemplates) await Templates.loadCustomTemplates();
+          if (typeof Advanced !== 'undefined') await Advanced.loadSearchHistory();
 
           resolve({
             imported,
@@ -105,6 +70,7 @@ const DataManager = {
   // Clear all tasks
   async clearAllTasks() {
     await Storage.saveAll({ tasks: [], activeTimers: {} });
+    TaskManager.clearUndo();
     await TaskManager.loadTasks();
     return true;
   },
