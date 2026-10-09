@@ -104,10 +104,10 @@
 Todolist-Zotero/
 ├── bootstrap.js                      # Gecko 插件生命周期与资源映射
 ├── chrome.manifest                   # 协议资源注册
-├── manifest.json                     # 扩展清单与版本声明 (v3.1.0, Zotero 10+)
+├── manifest.json                     # 扩展清单与版本声明 (v11.0.0, Zotero 10+)
 ├── prefs.js                          # 插件默认偏好配置
 ├── update.json                       # 自动更新配置元数据
-├── todolist-zotero-3.1.0.xpi         # 发布安装包产物
+├── todolist-zotero-11.0.0.xpi        # 发布安装包产物
 ├── locale/                           # 多语言国际化 (zh-CN, en-US)
 │   ├── en-US/todolist.ftl
 │   └── zh-CN/todolist.ftl

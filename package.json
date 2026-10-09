@@ -1,6 +1,6 @@
 {
   "name": "todolist-zotero",
-  "version": "3.1.0",
+  "version": "11.0.0",
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.cjs",
