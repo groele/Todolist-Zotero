@@ -32,6 +32,37 @@ def main() -> int:
     if not isinstance(version, str) or not version.strip():
         raise ValueError("manifest.json must contain a non-empty version")
 
+    update_feed = json.loads((ROOT / "update.json").read_text(encoding="utf-8"))
+    addon_id = manifest.get("applications", {}).get("zotero", {}).get("id")
+    update_url = manifest.get("applications", {}).get("zotero", {}).get("update_url")
+    browser_zotero = manifest.get("browser_specific_settings", {}).get("zotero", {})
+    if not addon_id or browser_zotero.get("id") != addon_id:
+        raise ValueError("Zotero add-on IDs must match in both manifest sections")
+    expected_update_url = "https://raw.githubusercontent.com/groele/Todolist-Zotero/zotero/update.json"
+    if update_url != expected_update_url or browser_zotero.get("update_url") != expected_update_url:
+        raise ValueError("Both manifest update URLs must point to the repository's zotero branch")
+    update_entries = update_feed.get("addons", {}).get(addon_id, {}).get("updates", [])
+    matching_update = next(
+        (entry for entry in update_entries if entry.get("version") == version),
+        None,
+    )
+    if not matching_update:
+        raise ValueError("update.json must contain an entry matching manifest.json version")
+    expected_update_link = (
+        f"https://github.com/groele/Todolist-Zotero/releases/download/v{version}/"
+        f"todolist-zotero-{version}.xpi"
+    )
+    if matching_update.get("update_link") != expected_update_link:
+        raise ValueError("update.json update_link must match the versioned GitHub Release asset")
+    update_app = matching_update.get("applications", {}).get("zotero", {})
+    update_browser = matching_update.get("browser_specific_settings", {}).get("zotero", {})
+    for key in ("strict_min_version", "strict_max_version"):
+        expected = manifest.get("applications", {}).get("zotero", {}).get(key)
+        if expected != browser_zotero.get(key):
+            raise ValueError(f"Manifest Zotero compatibility fields do not match: {key}")
+        if expected != update_app.get(key) or expected != update_browser.get(key):
+            raise ValueError(f"update.json compatibility fields do not match manifest.json: {key}")
+
     for relative in REQUIRED_FILES:
         if not (ROOT / relative).is_file():
             raise FileNotFoundError(f"Required package file is missing: {relative}")

@@ -99,7 +99,7 @@
 .timer-btn.running {
   background: var(--danger-bg);
   border-color: var(--danger);
-  animation: pulse 2s ease infinite;
+  box-shadow: 0 0 0 2px var(--danger-bg);
 }
 
 .timer-display {

@@ -1,9 +1,6 @@
 /* CSS Custom Properties - Design System */
 
 :root {
-  /* Theme transition */
-  transition: background-color 0.3s ease, color 0.3s ease;
-
   /* Colors - Primary Palette */
   --primary: #6366f1;
   --primary-light: #818cf8;
@@ -65,9 +62,14 @@
   --font-size-3xl: 20px;
 
   /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-normal: 200ms ease;
-  --transition-slow: 300ms ease;
+  --motion-fast: 140ms;
+  --motion-normal: 220ms;
+  --motion-slow: 280ms;
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.25, 1);
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: var(--motion-fast) var(--ease-standard);
+  --transition-normal: var(--motion-normal) var(--ease-standard);
+  --transition-slow: var(--motion-slow) var(--ease-standard);
 
   /* Z-index */
   --z-base: 1;

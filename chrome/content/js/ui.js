@@ -91,6 +91,32 @@ const UI = {
     }
   },
 
+  captureTaskMotionState() {
+    const selector = this.currentView === 'kanban' ? '.kanban-task' : '.task-card';
+    const renderedCards = Array.from(document.querySelectorAll(selector));
+    const state = {
+      view: this.currentView,
+      animateNew: this._hasRenderedMotionView && this._lastMotionView === this.currentView,
+      existingIds: new Set(renderedCards.map(card => card.dataset.taskId).filter(Boolean))
+    };
+    this._hasRenderedMotionView = true;
+    this._lastMotionView = this.currentView;
+    return state;
+  },
+
+  applyTaskEntryMotion(container, state) {
+    if (!container || !state?.animateNew || state.view !== this.currentView) return;
+    const selector = state.view === 'kanban' ? '.kanban-task' : '.task-card';
+    container.querySelectorAll(selector).forEach(card => {
+      const taskId = card.dataset.taskId;
+      if (!taskId || state.existingIds.has(taskId)) return;
+      card.classList.add('is-entering');
+      const clear = () => card.classList.remove('is-entering');
+      card.addEventListener('animationend', clear, { once: true });
+      setTimeout(clear, 280);
+    });
+  },
+
   // Setup event listeners
   setupEventListeners() {
     // Add task button
@@ -861,13 +887,14 @@ const UI = {
   // Trigger task completion sparkle particles
   triggerSparkles(el) {
     if (!el) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const rect = el.getBoundingClientRect();
-    const count = 8;
+    const count = 5;
     for (let i = 0; i < count; i++) {
       const particle = document.createElement('div');
       particle.className = 'sparkle-particle';
       const angle = (i / count) * 360;
-      const distance = 18 + Math.random() * 14;
+      const distance = 12 + Math.random() * 8;
       const tx = Math.cos(angle * Math.PI / 180) * distance;
       const ty = Math.sin(angle * Math.PI / 180) * distance;
 
@@ -877,25 +904,23 @@ const UI = {
       particle.style.top = `${rect.top + rect.height / 2}px`;
 
       document.body.appendChild(particle);
-      setTimeout(() => particle.remove(), 600);
+      setTimeout(() => particle.remove(), 420);
     }
   },
 
   // Handle toggle complete
   async handleToggleComplete(taskId, taskCard) {
-    const checkbox = taskCard.querySelector('.task-checkbox, .kanban-task-checkbox');
-
-    // Add animation
-    checkbox?.classList.add('just-checked');
-    setTimeout(() => checkbox?.classList.remove('just-checked'), 200);
-
     const task = await TaskManager.toggleComplete(taskId);
+    this.render();
+    const updatedCard = Array.from(document.querySelectorAll('.task-card, .kanban-task'))
+      .find(card => card.dataset.taskId === taskId);
+    const checkbox = updatedCard?.querySelector('.task-checkbox, .kanban-task-checkbox');
+    checkbox?.classList.add('just-checked');
+    setTimeout(() => checkbox?.classList.remove('just-checked'), 220);
 
     if (task && task.completed) {
       this.triggerSparkles(checkbox);
     }
-
-    this.render();
 
     // Update badge
     this.notifyServiceWorker();
@@ -911,7 +936,9 @@ const UI = {
     taskCard?.classList.add('removing');
 
     // Wait for animation
-    await new Promise(resolve => setTimeout(resolve, 150));
+    if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
 
     const deletedTask = await TaskManager.deleteTask(taskId);
     if (!deletedTask) return false;
@@ -1119,9 +1146,10 @@ const UI = {
     this.updateHeaderProgress();
     this.updateSidebarFilterCounts();
     this.updateCategorySelect();
+    const motionState = this.captureTaskMotionState();
 
     if (this.currentView === 'kanban') {
-      this.renderKanban();
+      this.renderKanban(motionState);
       return;
     }
 
@@ -1146,6 +1174,7 @@ const UI = {
         const dateTasks = TaskManager.getFilteredTasks({ ...filters, date: selectedDate });
         const sorted = TaskManager.getSortedTasks(dateTasks, 'dueDate');
         this.renderDateFilterResults(sorted, selectedDate);
+        this.applyTaskEntryMotion(document.getElementById('task-list'), motionState);
         return;
       }
     }
@@ -1178,6 +1207,7 @@ const UI = {
           emptyMsg.textContent = '还没有任务';
         }
       }
+      this.applyTaskEntryMotion(container, motionState);
       return;
     }
 
@@ -1226,10 +1256,11 @@ const UI = {
     container.querySelectorAll('.task-card').forEach(card => {
       DragDrop.makeDraggable(card);
     });
+    this.applyTaskEntryMotion(container, motionState);
   },
 
   // Render kanban view
-  renderKanban() {
+  renderKanban(motionState = this.captureTaskMotionState()) {
     const kanbanData = TaskManager.getKanbanTasks({ search: this.currentSearch,
       priority: this.currentPriorityFilter, category: this.currentCategoryFilter,
       status: this.currentFilter === 'date' ? 'all' : this.currentFilter,
@@ -1275,6 +1306,7 @@ const UI = {
     container.querySelectorAll('.kanban-task').forEach(card => {
       DragDrop.makeKanbanDraggable(card);
     });
+    this.applyTaskEntryMotion(container, motionState);
   },
 
   // Create kanban task HTML
@@ -1308,7 +1340,7 @@ const UI = {
     return `
       <div class="kanban-task ${task.completed ? 'completed' : ''} ${isAcademic ? 'task-academic-kanban' : ''}" data-task-id="${Utils.escapeHtml(task.id)}">
         <div class="kanban-task-header-row">
-          <div class="kanban-task-checkbox ${task.completed ? 'checked' : ''}" data-task-id="${Utils.escapeHtml(task.id)}" title="${task.completed ? '标记为未完成' : '标记为已完成'}"></div>
+          <button type="button" class="kanban-task-checkbox ${task.completed ? 'checked' : ''}" role="checkbox" aria-checked="${Boolean(task.completed)}" aria-label="${task.completed ? '标记任务为未完成' : '标记任务为已完成'}" data-task-id="${Utils.escapeHtml(task.id)}" title="${task.completed ? '标记为未完成' : '标记为已完成'}"></button>
           <div class="kanban-task-title">${academicBadge}${Utils.escapeHtml(task.title)}</div>
         </div>
         <div class="kanban-task-meta">
@@ -1565,7 +1597,7 @@ const UI = {
 
     const subtaskItems = hasSubtasks ? task.subtasks.map(st => `
       <div class="card-subtask-item ${st.completed ? 'completed' : ''}">
-        <div class="card-subtask-checkbox ${st.completed ? 'checked' : ''}" data-subtask-id="${Utils.escapeHtml(st.id)}"></div>
+        <button type="button" class="card-subtask-checkbox ${st.completed ? 'checked' : ''}" role="checkbox" aria-checked="${Boolean(st.completed)}" aria-label="${st.completed ? '标记子任务为未完成' : '标记子任务为已完成'}" data-subtask-id="${Utils.escapeHtml(st.id)}"></button>
         <span class="card-subtask-text">${this.highlightText(st.title)}</span>
         <button type="button" class="btn-card-delete-subtask" data-subtask-id="${Utils.escapeHtml(st.id)}" title="删除子任务">×</button>
       </div>
@@ -1640,7 +1672,7 @@ const UI = {
     }
 
     card.innerHTML = `
-      <div class="task-checkbox ${task.completed ? 'checked' : ''}"></div>
+      <button type="button" class="task-checkbox ${task.completed ? 'checked' : ''}" role="checkbox" aria-checked="${Boolean(task.completed)}" aria-label="${task.completed ? '标记任务为未完成' : '标记任务为已完成'}" title="${task.completed ? '标记为未完成' : '标记为已完成'}"></button>
       <div class="task-content">
         <div class="task-title">
           ${academicTypeHtml}
@@ -1778,8 +1810,15 @@ const UI = {
       toastAction.classList.add('hidden');
     }
 
+    const alreadyVisible = toast.classList.contains('show') && !toast.classList.contains('hidden');
     toast.classList.remove('hidden');
-    toast.classList.add('show');
+    if (alreadyVisible) {
+      toast.classList.add('show');
+    } else {
+      const reveal = () => toast.classList.add('show');
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(reveal);
+      else setTimeout(reveal, 0);
+    }
 
     // Undo remains visible for exactly the supported recovery window.
     this._toastTimer = setTimeout(() => {

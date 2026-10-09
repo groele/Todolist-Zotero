@@ -69,10 +69,10 @@ Traditional todo apps (like Todoist or TickTick) lack contextual integration wit
 ## 📥 Installation
 
 ### Method 1: Install XPI Package (Recommended)
-1. Download `todolist-zotero-1.0.5.xpi` from [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest);
+1. Download `todolist-zotero-2.0.0.xpi` from [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest);
 2. In Zotero 7+ or 10, navigate to: **Tools → Plugins (or Add-ons)**;
 3. Click the gear icon ⚙️ in the top-right corner and select **"Install Add-on From File..."**;
-4. Select the downloaded `todolist-zotero-1.0.5.xpi` file and confirm installation;
+4. Select the downloaded `todolist-zotero-2.0.0.xpi` file and confirm installation;
 5. Restart Zotero when prompted. The Todolist icon will appear in your toolbar.
 
 ### Method 2: Developer Debugging Mode

@@ -4,11 +4,11 @@
 @keyframes taskEnter {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(6px) scale(0.99);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -20,7 +20,7 @@
   }
   to {
     opacity: 0;
-    transform: translateX(20px);
+    transform: translateY(-4px) scale(0.985);
   }
 }
 
@@ -29,8 +29,8 @@
   0% {
     transform: scale(1);
   }
-  50% {
-    transform: scale(1.2);
+  45% {
+    transform: scale(1.06);
   }
   100% {
     transform: scale(1);
@@ -56,7 +56,7 @@
   border-radius: 50%;
   pointer-events: none;
   z-index: 9999;
-  animation: sparkleBurst 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: sparkleBurst 0.42s var(--ease-enter) forwards;
 }
 
 @keyframes sparkleBurst {
@@ -126,43 +126,31 @@
   }
 }
 
-/* Apply Animations */
-.task-card {
-  animation: taskEnter var(--transition-normal) ease-out;
+/* Apply motion only to cards that have just appeared. */
+.task-card.is-entering,
+.kanban-task.is-entering {
+  animation: taskEnter var(--motion-normal) var(--ease-enter) both;
 }
 
-.task-card.removing {
-  animation: taskExit var(--transition-fast) ease-in forwards;
-}
-
-/* Overdue cards get pulse only after enter animation completes */
-.task-card.overdue {
-  animation: taskEnter var(--transition-normal) ease-out;
-}
-
-.task-card.overdue:not(.removing) {
-  animation: taskEnter var(--transition-normal) ease-out,
-             pulse 2s ease-in-infinite 0.2s;
+.task-card.removing,
+.kanban-task.removing {
+  animation: taskExit var(--motion-fast) var(--ease-standard) both;
 }
 
 .task-card.overdue.removing {
-  animation: taskExit var(--transition-fast) ease-in forwards;
+  animation: taskExit var(--motion-fast) var(--ease-standard) both;
 }
 
 .task-checkbox.just-checked {
-  animation: checkboxPop var(--transition-normal) ease-out;
+  animation: checkboxPop var(--motion-normal) var(--ease-enter) both;
 }
 
 .modal[open] {
-  animation: scaleIn var(--transition-normal) ease-out;
+  animation: scaleIn var(--motion-normal) var(--ease-enter) both;
 }
 
 .modal[open]::backdrop {
-  animation: backdropFadeIn var(--transition-normal) ease-out;
-}
-
-.toast.show {
-  animation: toastSlideUp var(--transition-slow) ease-out;
+  animation: backdropFadeIn var(--motion-normal) var(--ease-standard) both;
 }
 
 /* Reduced Motion */
@@ -207,17 +195,7 @@
     var(--bg) 80px
   );
   background-size: 200px 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-
-/* Pulse for overdue tasks */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
+  animation: shimmer 1.8s var(--ease-standard) infinite;
 }
 
 /* Calendar Day Hover */
@@ -227,7 +205,7 @@
 }
 
 .calendar-day:hover {
-  transform: scale(1.05);
+  transform: translateY(-1px);
 }
 
 /* Button Press Effect - combine with hover transform */
@@ -252,17 +230,5 @@
 input:focus,
 textarea:focus,
 select:focus {
-  animation: focusRing var(--transition-fast) ease-out;
-}
-
-/* Toast Slide Up */
-@keyframes toastSlideUp {
-  from {
-    transform: translateX(-50%) translateY(100px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1;
-  }
+  animation: none;
 }

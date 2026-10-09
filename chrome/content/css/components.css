@@ -349,18 +349,6 @@
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  animation: slideIn 0.2s ease;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .task-card::before {
@@ -703,6 +691,27 @@
   .task-actions { max-width: 100%; margin-left: auto; }
 }
 
+@media (max-width: 400px) {
+  .header {
+    gap: var(--space-sm);
+    padding-inline: var(--space-md);
+  }
+
+  .header-left {
+    min-width: 0;
+    gap: var(--space-xs);
+  }
+
+  .header-left .header-progress-widget {
+    display: none;
+  }
+
+  .header-right {
+    flex-shrink: 0;
+    gap: 2px;
+  }
+}
+
 /* Empty State */
 .empty-state {
   display: flex;
@@ -718,27 +727,12 @@
 .empty-state svg {
   margin-bottom: var(--space-lg);
   color: var(--border);
-  animation: bounce 2s ease infinite;
 }
 
 .empty-state p {
   font-size: var(--font-size-lg);
   margin-bottom: var(--space-lg);
   color: var(--text-secondary);
-}
-
-.empty-state .btn-primary {
-  animation: pulse 2s ease infinite;
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-  50% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
 }
 
 /* Filter Tabs */
@@ -1316,7 +1310,7 @@
   position: fixed;
   bottom: var(--space-lg);
   left: 50%;
-  transform: translateX(-50%) translateY(100px);
+  transform: translateX(-50%) translateY(12px);
   background-color: var(--text);
   color: white;
   padding: var(--space-md) var(--space-lg);
@@ -1328,12 +1322,14 @@
   box-shadow: var(--shadow-xl);
   z-index: var(--z-toast);
   opacity: 0;
-  transition: opacity var(--transition-slow);
+  visibility: hidden;
+  transition: transform var(--transition-slow), opacity var(--transition-slow), visibility var(--transition-slow);
 }
 
 .toast.show {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
+  visibility: visible;
 }
 
 .toast-action {
@@ -1654,7 +1650,7 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   pointer-events: none;
   z-index: 9999;
-  animation: fadeInDown 0.2s ease;
+  animation: slideDown var(--motion-normal) var(--ease-standard) both;
 }
 
 /* ==========================================================================
@@ -2255,5 +2251,3 @@
   height: 16px;
   display: block;
 }
-
-
