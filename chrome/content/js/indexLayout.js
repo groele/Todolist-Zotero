@@ -63,20 +63,72 @@
     });
 
     const sidebar = document.getElementById('sidebar');
+    const appLayout = document.querySelector('.app-layout');
+    const sidebarToggle = document.getElementById('btn-sidebar-toggle');
     const menuToggle = document.getElementById('btn-menu-toggle');
     const closeSidebar = document.getElementById('btn-close-sidebar');
+
+    if (sidebarToggle && sidebar && appLayout && !sidebarToggle.dataset.indexLayoutBound) {
+      let expanded = false;
+      const applyExpanded = value => {
+        expanded = Boolean(value);
+        appLayout.classList.toggle('sidebar-expanded', expanded);
+        sidebarToggle.setAttribute('aria-expanded', String(expanded));
+        const label = expanded ? '收起侧边工具栏' : '展开侧边工具栏';
+        sidebarToggle.setAttribute('aria-label', label);
+        sidebarToggle.title = label;
+        sidebarToggle.querySelector('path')?.setAttribute('d', expanded
+          ? 'M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z'
+          : 'M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z');
+      };
+
+      sidebarToggle.disabled = true;
+      sidebarToggle.addEventListener('click', async () => {
+        const previous = expanded;
+        const next = !expanded;
+        applyExpanded(next);
+        sidebarToggle.disabled = true;
+        try {
+          await Storage.saveSettings({ sidebarExpanded: next });
+        } catch (error) {
+          console.error('Failed to save sidebar layout preference:', error);
+          applyExpanded(previous);
+          if (typeof UI !== 'undefined') UI.showToast('侧边栏设置保存失败，已恢复原状态');
+        } finally {
+          sidebarToggle.disabled = false;
+        }
+      });
+
+      Storage.subscribe(data => {
+        if (typeof data.settings?.sidebarExpanded === 'boolean') {
+          applyExpanded(data.settings.sidebarExpanded);
+        }
+      });
+      Storage.getSettings()
+        .then(settings => applyExpanded(settings.sidebarExpanded))
+        .catch(error => console.error('Failed to load sidebar layout preference:', error))
+        .finally(() => { sidebarToggle.disabled = false; });
+      sidebarToggle.dataset.indexLayoutBound = 'true';
+    }
+
+    const setMobileSidebarOpen = open => {
+      sidebar?.classList.toggle('open', open);
+      menuToggle?.setAttribute('aria-expanded', String(open));
+      menuToggle?.setAttribute('aria-label', open ? '关闭侧边栏' : '展开侧边栏');
+      if (menuToggle) menuToggle.title = open ? '关闭侧边栏' : '展开侧边栏';
+    };
 
     if (menuToggle && sidebar && !menuToggle.dataset.indexLayoutBound) {
       menuToggle.addEventListener('click', e => {
         e.stopPropagation();
-        sidebar.classList.add('open');
+        setMobileSidebarOpen(true);
       });
       menuToggle.dataset.indexLayoutBound = 'true';
     }
 
     if (closeSidebar && sidebar && !closeSidebar.dataset.indexLayoutBound) {
       closeSidebar.addEventListener('click', () => {
-        sidebar.classList.remove('open');
+        setMobileSidebarOpen(false);
       });
       closeSidebar.dataset.indexLayoutBound = 'true';
     }
@@ -85,11 +137,21 @@
       document.addEventListener('click', e => {
         if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('open')) {
           if (!sidebar.contains(e.target) && (!menuToggle || !menuToggle.contains(e.target))) {
-            sidebar.classList.remove('open');
+            setMobileSidebarOpen(false);
           }
         }
       });
       document.documentElement.dataset.indexLayoutOutsideBound = 'true';
+    }
+
+    if (!document.documentElement.dataset.indexLayoutEscapeBound) {
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && window.innerWidth <= 768 && sidebar?.classList.contains('open')) {
+          setMobileSidebarOpen(false);
+          menuToggle?.focus();
+        }
+      });
+      document.documentElement.dataset.indexLayoutEscapeBound = 'true';
     }
 
     const mobileAdd = document.getElementById('btn-mobile-add');

@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/groele/Todolist-Zotero/releases/latest"><img src="https://img.shields.io/github/v/release/groele/Todolist-Zotero?style=flat-square&color=6366f1" alt="Release" /></a>
-  <img src="https://img.shields.io/badge/Zotero-10%20%7C%207%2B-059669?style=flat-square" alt="Zotero Compatibility" />
+  <img src="https://img.shields.io/badge/Zotero-10%2B-059669?style=flat-square" alt="Zotero 10+" />
   <img src="https://img.shields.io/badge/Platform-Win%20%7C%20macOS%20%7C%20Linux-blue?style=flat-square" alt="Platform" />
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License" />
 </p>
@@ -69,10 +69,10 @@ Traditional todo apps (like Todoist or TickTick) lack contextual integration wit
 ## 📥 Installation
 
 ### Method 1: Install XPI Package (Recommended)
-1. Download `todolist-zotero-2.0.0.xpi` from [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest);
-2. In Zotero 7+ or 10, navigate to: **Tools → Plugins (or Add-ons)**;
+1. Download `todolist-zotero-3.0.0.xpi` from [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest);
+2. In Zotero 10 or newer, navigate to: **Tools → Plugins**;
 3. Click the gear icon ⚙️ in the top-right corner and select **"Install Add-on From File..."**;
-4. Select the downloaded `todolist-zotero-2.0.0.xpi` file and confirm installation;
+4. Select the downloaded `todolist-zotero-3.0.0.xpi` file and confirm installation;
 5. Restart Zotero when prompted. The Todolist icon will appear in your toolbar.
 
 ### Method 2: Developer Debugging Mode

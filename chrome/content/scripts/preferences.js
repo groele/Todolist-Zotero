@@ -1,4 +1,4 @@
-/* Todolist settings pane script for Zotero 7+ */
+/* Todolist settings pane script for Zotero 10+ */
 window.Todolist_Preferences = (() => {
   const PREFIX = 'extensions.todolist.';
   const HTML = 'http://www.w3.org/1999/xhtml';

@@ -278,7 +278,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-/* Kanban Empty State - Clean Native Zotero 7/10 styling (No dashed borders) */
+/* Kanban Empty State - Clean Native Zotero styling (No dashed borders) */
 .kanban-empty {
   display: flex;
   flex-direction: column;

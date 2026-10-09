@@ -1,6 +1,6 @@
 /**
  * Todolist for Zotero - Bootstrap Entry
- * Supports Zotero 7+ (Gecko 102/115/128+ bootstrap architecture)
+ * Requires Zotero 10+ (Gecko bootstrap architecture)
  */
 
 if (typeof Zotero === 'undefined') {

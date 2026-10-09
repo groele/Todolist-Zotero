@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/groele/Todolist-Zotero/releases/latest"><img src="https://img.shields.io/github/v/release/groele/Todolist-Zotero?style=flat-square&color=6366f1" alt="Release" /></a>
-  <img src="https://img.shields.io/badge/Zotero-10%20%7C%207%2B-059669?style=flat-square" alt="Zotero Compatibility" />
+  <img src="https://img.shields.io/badge/Zotero-10%2B-059669?style=flat-square" alt="Zotero 10+" />
   <img src="https://img.shields.io/badge/Platform-Win%20%7C%20macOS%20%7C%20Linux-blue?style=flat-square" alt="Platform" />
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License" />
 </p>
@@ -70,10 +70,10 @@
 ## 📥 安装指南
 
 ### 方式一：直接安装 XPI 安装包 (推荐)
-1. 从 [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest) 下载最新的 `todolist-zotero-2.0.0.xpi` 安装包；
-2. 打开 Zotero 7+ 或 10 客户端，点击菜单栏：**“工具 (Tools)” → “插件 (Plugins / Add-ons)”**；
+1. 从 [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest) 下载 `todolist-zotero-3.0.0.xpi` 安装包；
+2. 打开 Zotero 10 或更新版本，点击菜单栏：**“工具 (Tools)” → “插件 (Plugins / Add-ons)”**；
 3. 点击插件管理窗口右上角的齿轮 ⚙️ 图标，选择 **“Install Add-on From File... (从文件安装扩展)”**；
-4. 选中下载的 `todolist-zotero-2.0.0.xpi` 文件确认安装；
+4. 选中下载的 `todolist-zotero-3.0.0.xpi` 文件确认安装；
 5. 重启 Zotero 后，即可在顶部工具栏或右下角看到 Todolist 图标。
 
 ### 方式二：开发者调试模式 (无需打包)
@@ -104,10 +104,10 @@
 Todolist-Zotero/
 ├── bootstrap.js                      # Gecko 插件生命周期与资源映射
 ├── chrome.manifest                   # 协议资源注册
-├── manifest.json                     # 扩展清单与版本声明 (v2.0.0)
+├── manifest.json                     # 扩展清单与版本声明 (v3.0.0, Zotero 10+)
 ├── prefs.js                          # 插件默认偏好配置
 ├── update.json                       # 自动更新配置元数据
-├── todolist-zotero-2.0.0.xpi         # 发布安装包产物
+├── todolist-zotero-3.0.0.xpi         # 发布安装包产物
 ├── locale/                           # 多语言国际化 (zh-CN, en-US)
 │   ├── en-US/todolist.ftl
 │   └── zh-CN/todolist.ftl

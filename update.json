@@ -3,17 +3,17 @@
     "todolist@groele.org": {
       "updates": [
         {
-          "version": "2.0.0",
-          "update_link": "https://github.com/groele/Todolist-Zotero/releases/download/v2.0.0/todolist-zotero-2.0.0.xpi",
+          "version": "3.0.0",
+          "update_link": "https://github.com/groele/Todolist-Zotero/releases/download/v3.0.0/todolist-zotero-3.0.0.xpi",
           "applications": {
             "zotero": {
-              "strict_min_version": "6.999",
+              "strict_min_version": "10.0.0",
               "strict_max_version": "15.*"
             }
           },
           "browser_specific_settings": {
             "zotero": {
-              "strict_min_version": "6.999",
+              "strict_min_version": "10.0.0",
               "strict_max_version": "15.*"
             }
           }

@@ -1,6 +1,6 @@
 /**
  * Todolist for Zotero - Host Runtime Script
- * Seamlessly integrates Todolist with Zotero 7+ desktop:
+ * Seamlessly integrates Todolist with Zotero 10+ desktop:
  * - Native Zotero Tab & Standalone Companion Window
  * - Tools menu, context menus, and main toolbar icon
  * - Item Pane Section (Literature detail inspector)

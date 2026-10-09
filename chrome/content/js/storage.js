@@ -3,7 +3,7 @@ const Storage = {
   defaultSettings: {
     defaultView: 'list', showCompleted: true, sortOrder: 'dueDate', theme: 'light',
     dailySummary: false, summaryTime: '09:00', academicPresets: true,
-    defaultTaskType: 'literature_reading'
+    defaultTaskType: 'literature_reading', sidebarExpanded: false
   },
   _zoteroCache: null,
   _taskSnapshot: [],
