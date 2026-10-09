@@ -154,6 +154,7 @@
         time: new Date().toISOString(), version: typeof version !== 'undefined' ? version : 'unknown',
         action: String(record?.action || 'unknown').slice(0, 160),
         message: String(record?.message || '').slice(0, 2000),
+        cause: String(record?.cause || '').slice(0, 2000),
         stack: String(record?.stack || '').slice(0, 8000),
         page: String(record?.page || '').slice(0, 300)
       };

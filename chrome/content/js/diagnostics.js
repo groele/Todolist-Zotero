@@ -6,6 +6,7 @@ const Diagnostics = {
     const record = {
       time: new Date().toISOString(), action: String(action).slice(0, 160),
       message: String(error?.message || error || '未知错误').slice(0, 2000),
+      cause: String(error?.cause?.message || error?.cause || '').slice(0, 2000),
       stack: String(error?.stack || '').slice(0, 8000),
       page: window.location.pathname
     };

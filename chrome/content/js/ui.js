@@ -63,7 +63,7 @@ const UI = {
     await Templates.loadCustomTemplates();
 
     // Check for pending task from context menu
-    this.checkPendingTask();
+    await this.checkPendingTask();
 
     // Listen for context menu task messages
     chrome.runtime.onMessage.addListener((message) => {
@@ -75,19 +75,23 @@ const UI = {
 
   // Check for pending task from context menu
   async checkPendingTask() {
-    const result = await new Promise(resolve => {
-      chrome.storage.local.get('pendingTask', resolve);
-    });
+    // Zotero context-menu commands arrive through host navigation, not Chrome storage.
+    if (Storage.isZotero()) return;
+    try {
+      const result = await chrome.storage.local.get('pendingTask');
 
-    if (result.pendingTask) {
-      // Clear the pending task
-      await chrome.storage.local.remove('pendingTask');
+      if (result.pendingTask) {
+        // Clear the pending task
+        await chrome.storage.local.remove('pendingTask');
 
-      // Open modal with the task data
-      Modal.openAdd({
-        title: result.pendingTask.title,
-        description: result.pendingTask.description || ''
-      });
+        // Open modal with the task data
+        Modal.openAdd({
+          title: result.pendingTask.title,
+          description: result.pendingTask.description || ''
+        });
+      }
+    } catch (error) {
+      Diagnostics.report('读取浏览器临时任务', error);
     }
   },
 

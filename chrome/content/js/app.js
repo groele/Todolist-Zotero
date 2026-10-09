@@ -45,7 +45,7 @@
       if (mainEl) mainEl.style.opacity = '1';
 
       // Show first-time tips
-      showFirstTimeTips();
+      await showFirstTimeTips();
 
       console.log('Todolist extension initialized successfully');
     } catch (error) {
@@ -72,20 +72,18 @@
 
   async function showFirstTimeTips() {
     try {
-      const result = await new Promise(resolve => {
-        chrome.storage.local.get('firstTimeShown', resolve);
-      });
+      const result = await Storage.getAll();
 
       if (!result.firstTimeShown) {
-        // Show welcome tip
-        setTimeout(() => {
-          UI.showToast('💡 按 ? 键查看快捷键帮助');
+        await Storage.saveAll({ firstTimeShown: true });
+        // Only announce a persisted welcome flag, and never touch a closed page.
+        const timer = setTimeout(() => {
+          if (window.document) UI.showToast('💡 按 ? 键查看快捷键帮助');
         }, 2000);
-
-        await chrome.storage.local.set({ firstTimeShown: true });
+        window.addEventListener('unload', () => clearTimeout(timer), { once: true });
       }
     } catch (e) {
-      // Ignore errors
+      Diagnostics.report('读取或保存首次提示标记', e);
     }
   }
 

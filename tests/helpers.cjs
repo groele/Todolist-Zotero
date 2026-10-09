@@ -12,7 +12,7 @@ async function waitFor(predicate, message = 'condition', timeout = 2000) {
     await new Promise(resolve => setTimeout(resolve, 5));
   }
 }
-async function page(file = 'index.html', data = null, host = null) {
+async function page(file = 'index.html', data = null, host = null, options = {}) {
   const errors = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', error => errors.push(String(error)));
@@ -24,6 +24,9 @@ async function page(file = 'index.html', data = null, host = null) {
   win.HTMLDialogElement.prototype.showModal = function() { this.open = true; };
   win.HTMLDialogElement.prototype.close = function() { this.open = false; };
   if (data) for (const [key, value] of Object.entries(data)) win.localStorage.setItem('todolist_' + key, JSON.stringify(value));
+  if (options.blockLocalStorage) Object.defineProperty(win, 'localStorage', {
+    get() { throw new win.DOMException('Local storage is unavailable for this page', 'SecurityError'); }
+  });
   if (host) win.Zotero = { Todolist: host, getMainWindow: () => null };
   const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map(match => read('chrome/content/' + match[1]));
   win.eval(scripts.join('\n;\n') + '\nwindow.__test = {Storage, TaskManager, Modal, UI, Utils, Recurring, Tags, Templates, TimeTracking, DataManager, Advanced, ZoteroBridge, TaskRules, Notifications};');

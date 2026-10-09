@@ -2,6 +2,37 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { page, makeHost, waitFor, read, JSDOM } = require('./helpers.cjs');
 
+for (const file of ['index.html', 'sidepanel.html']) test(file + ': Zotero startup and tasks work with browser storage forbidden', async t => {
+  const native = makeHost({ tasks: [{ id: 'original', title: 'preserved', completed: false, subtasks: [] }], settings: {}, customTags: [] });
+  const p = await page(file, null, native.host, { blockLocalStorage: true }); t.after(p.close);
+  await waitFor(() => native.disk().firstTimeShown === true);
+  await p.UI.checkPendingTask();
+  assert.equal(p.Modal.dialog.open, false);
+  await p.TaskManager.addTask({ title: 'works without browser storage' });
+  assert.deepEqual(native.disk().tasks.map(task => task.title), ['preserved', 'works without browser storage']);
+  assert.equal(p.win.TodolistDiagnostics.records.length, 0);
+  assert.deepEqual(p.errors, []);
+  const reopened = await page(file, null, native.host, { blockLocalStorage: true }); t.after(reopened.close);
+  const writes = native.writes();
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.equal(native.writes(), writes, 'persisted welcome flag must not be written again');
+  assert.deepEqual(reopened.errors, []);
+});
+
+test('a failed welcome-flag write is caught without blocking task operations', async t => {
+  const native = makeHost();
+  const save = native.host.saveData.bind(native.host);
+  native.host.saveData = patch => patch.firstTimeShown ? Promise.reject(new Error('welcome flag denied')) : save(patch);
+  const p = await page('index.html', null, native.host, { blockLocalStorage: true }); t.after(p.close);
+  await waitFor(() => p.win.TodolistDiagnostics.records.length > 0);
+  assert.equal(p.win.TodolistDiagnostics.records[0].action, '读取或保存首次提示标记');
+  assert.match(p.win.TodolistDiagnostics.records[0].message, /welcome flag denied/);
+  await p.TaskManager.addTask({ title: 'task still works' });
+  assert.equal(native.disk().tasks.length, 1);
+  assert.equal(native.disk().firstTimeShown, undefined);
+  assert(!p.doc.getElementById('loading-state') || p.doc.getElementById('loading-state').classList.contains('hidden'));
+});
+
 test('quick add preserves a failed draft and retries without duplicate Enter submissions', async t => {
   const native = makeHost();
   const p = await page('index.html', null, native.host); t.after(p.close);
