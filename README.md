@@ -76,6 +76,12 @@
 4. 选中下载的 `.xpi` 文件确认安装；
 5. 重启 Zotero 后，即可在顶部工具栏或右下角看到 Todolist 图标。
 
+### 更新与错误诊断
+
+- 插件更新地址指向本仓库的 `zotero` 分支。启用 Zotero 插件自动更新后，可通过更新检查获取已发布的 XPI。
+- v11.0.1 自动启用错误诊断。控制台和 Zotero 数据目录中的 `todolist-debug.json` 会记录操作名称、错误原因、堆栈、版本与时间；文件仅保留最近 50 条记录。
+- 保存失败时，快捷添加和行内编辑会保留草稿，可在解决错误原因后重试。诊断日志与 `todolist-data.json` 分开存储。
+
 ### 方式二：开发者调试模式 (无需打包)
 1. 进入 Zotero 个人配置文件目录下的 `extensions/` 文件夹：
    - **Windows**: `%APPDATA%\Zotero\Zotero\Profiles\<profile>\extensions\`
@@ -104,10 +110,10 @@
 Todolist-Zotero/
 ├── bootstrap.js                      # Gecko 插件生命周期与资源映射
 ├── chrome.manifest                   # 协议资源注册
-├── manifest.json                     # 扩展清单与版本声明 (v11.0.0, Zotero 10+)
+├── manifest.json                     # 扩展清单与版本声明 (v11.0.1, Zotero 10+)
 ├── prefs.js                          # 插件默认偏好配置
 ├── update.json                       # 自动更新配置元数据
-├── todolist-zotero-11.0.0.xpi        # 发布安装包产物
+├── todolist-zotero-11.0.1.xpi        # 发布安装包产物
 ├── locale/                           # 多语言国际化 (zh-CN, en-US)
 │   ├── en-US/todolist.ftl
 │   └── zh-CN/todolist.ftl

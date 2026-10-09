@@ -19,6 +19,7 @@ REQUIRED_FILES = (
     "prefs.js",
     "chrome/content/scripts/index.js",
     "chrome/content/js/taskRules.js",
+    "chrome/content/js/diagnostics.js",
     "chrome/content/index.html",
     "locale/en-US/todolist.ftl",
     "locale/zh-CN/todolist.ftl",

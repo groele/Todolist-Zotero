@@ -13,6 +13,7 @@ const ZoteroBridge = {
     if (this.isZotero) {
       this._readyPromise = new Promise((resolve, reject) => {
         this._resolveReady = resolve;
+        this._rejectReady = reject;
         this._readyTimer = setTimeout(() => reject(new Error('无法连接 Zotero 数据，请重新打开待办窗口')), 5000);
       });
       this._readyPromise.catch(() => {});
@@ -82,6 +83,10 @@ const ZoteroBridge = {
       }
 
       // Handle initial data handshake
+      if (data.type === 'TODOLIST_INIT_ERROR') {
+        clearTimeout(this._readyTimer);
+        this._rejectReady?.(new Error(data.error || 'Zotero 数据初始化失败'));
+      }
       if (data.type === 'TODOLIST_INIT_DATA') {
         if (data.data && typeof Storage !== 'undefined') {
           Storage.acceptData(data.data);
@@ -118,7 +123,8 @@ const ZoteroBridge = {
         const mainWin = window.Zotero.getMainWindow ? window.Zotero.getMainWindow() : null;
         switch (msg.type) {
           case 'TODOLIST_READY': {
-            todolist.loadData?.().then((storedData) => {
+            this.runHostAction(msg, async () => {
+              const storedData = await todolist.loadData();
               window.postMessage({
                 type: 'TODOLIST_INIT_DATA',
                 data: storedData,
@@ -128,43 +134,44 @@ const ZoteroBridge = {
             break;
           }
           case 'TODOLIST_SWITCH_WINDOW_MODE':
-            todolist.switchWindowMode?.(msg.mode, window);
+            this.runHostAction(msg, () => todolist.switchWindowMode?.(msg.mode, window));
             break;
           case 'TODOLIST_OPEN_PREFERENCES':
-            todolist.openPreferencesPane?.(mainWin || window);
+            this.runHostAction(msg, () => todolist.openPreferencesPane?.(mainWin || window));
             break;
           case 'TODOLIST_LOCATE_ITEM': {
             const item = todolist.resolveItemReference?.(msg.key, msg.libraryID);
             if (item) {
               const pane = mainWin?.ZoteroPane || window.Zotero.getActiveZoteroPane?.();
-              pane?.selectItem?.(item.id);
+              this.runHostAction(msg, () => pane?.selectItem?.(item.id));
             }
             break;
           }
           case 'TODOLIST_OPEN_PDF': {
             const item = todolist.resolveItemReference?.(msg.key, msg.libraryID);
-            if (item) todolist.openPdfAttachment?.(item, msg.page);
+            if (item) this.runHostAction(msg, () => todolist.openPdfAttachment?.(item, msg.page));
             break;
           }
           case 'TODOLIST_EXPORT_DATA':
-            todolist.exportData?.(msg.format || 'json');
+            this.runHostAction(msg, () => todolist.exportData?.(msg.format || 'json'));
             break;
           case 'TODOLIST_IMPORT_DATA':
-            todolist.importDataFile?.(msg.mode || 'merge', mainWin || window);
+            this.runHostAction(msg, () => todolist.importDataFile?.(msg.mode || 'merge', mainWin || window));
             break;
           case 'TODOLIST_CLEAR_DATA':
-            todolist.clearAllData?.(mainWin || window);
+            this.runHostAction(msg, () => todolist.clearAllData?.(mainWin || window));
             break;
           case 'TODOLIST_COPY_SUMMARY':
-            todolist.copyTasksSummary?.(mainWin || window);
+            this.runHostAction(msg, () => todolist.copyTasksSummary?.(mainWin || window));
             break;
           case 'TODOLIST_PRINT':
-            todolist.printTasks?.(mainWin || window);
+            this.runHostAction(msg, () => todolist.printTasks?.(mainWin || window));
             break;
           case 'TODOLIST_SYNC_NOTE': {
             const item = todolist.resolveItemReference?.(msg.key, msg.libraryID);
             if (item) {
-              todolist.syncTasksToChildNote?.(item).then((note) => {
+              this.runHostAction(msg, async () => {
+                const note = await todolist.syncTasksToChildNote(item);
                 if (msg.requestId && this._requestCallbacks.has(msg.requestId)) {
                   const cb = this._requestCallbacks.get(msg.requestId);
                   this._requestCallbacks.delete(msg.requestId);
@@ -195,8 +202,26 @@ const ZoteroBridge = {
         }
       }
     } catch (e) {
-      console.warn('[ZoteroBridge] sendToHost failed:', e);
+      this.failHostAction(msg, e);
     }
+  },
+
+  runHostAction(msg, callback) {
+    return Promise.resolve().then(callback).catch(error => this.failHostAction(msg, error));
+  },
+
+  failHostAction(msg, error) {
+    if (msg.type === 'TODOLIST_READY') {
+      clearTimeout(this._readyTimer);
+      this._rejectReady?.(error);
+    }
+    const callback = this._requestCallbacks.get(msg.requestId);
+    if (callback) {
+      this._requestCallbacks.delete(msg.requestId);
+      callback({ success: false, error: String(error?.message || error) });
+    }
+    if (typeof Diagnostics !== 'undefined') Diagnostics.report('Zotero 桥接 ' + msg.type, error);
+    else console.error('[Todolist] Zotero bridge ' + msg.type, error);
   },
 
   whenReady() { return this._readyPromise || Promise.resolve(); },

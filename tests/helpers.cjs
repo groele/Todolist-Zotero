@@ -35,6 +35,7 @@ async function page(file = 'index.html', data = null, host = null) {
 }
 function makeHost(seed = { tasks: [], settings: {}, customTags: [] }) {
   let disk = copy(seed);
+  let diagnostics = [];
   let writes = 0;
   let failWrite = false;
   let readError = null;
@@ -43,11 +44,12 @@ function makeHost(seed = { tasks: [], settings: {}, customTags: [] }) {
   const context = vm.createContext({ console, setTimeout, clearTimeout, Promise,
     PathUtils: { join: (...parts) => parts.join('/'), profileDir: '/test' },
     IOUtils: { exists: async () => true,
-      readUTF8: async () => { if (readError) throw readError; return JSON.stringify(disk); },
+      readUTF8: async file => { if (file.endsWith('todolist-debug.json')) return JSON.stringify(diagnostics); if (readError) throw readError; return JSON.stringify(disk); },
       writeUTF8: async (file, text, options) => {
         if (!options?.tmpPath) throw new Error('atomic write required');
         await new Promise(resolve => setTimeout(resolve, 2));
         if (failWrite) throw new Error('simulated disk full');
+        if (file.endsWith('todolist-debug.json')) { diagnostics = JSON.parse(text); return; }
         writes++; disk = JSON.parse(text);
       } },
     Zotero: { DataDirectory: { dir: '/test' }, logError: message => logs.push(String(message)),
@@ -59,7 +61,7 @@ function makeHost(seed = { tasks: [], settings: {}, customTags: [] }) {
   vm.runInContext(runtime, context);
   const host = context.Zotero.Todolist;
   host.showNotice = () => {};
-  return { host, context, disk: () => copy(disk), logs, writes: () => writes,
+  return { host, context, disk: () => copy(disk), diagnostics: () => copy(diagnostics), logs, writes: () => writes,
     failWrites: value => { failWrite = value; }, failReads: value => { readError = value; },
     pane: () => pane };
 }

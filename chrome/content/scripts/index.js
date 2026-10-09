@@ -149,6 +149,31 @@
     _cachedData: null,
     _dataListeners: new Set(),
 
+    recordDiagnostic(record) {
+      const entry = {
+        time: new Date().toISOString(), version: typeof version !== 'undefined' ? version : 'unknown',
+        action: String(record?.action || 'unknown').slice(0, 160),
+        message: String(record?.message || '').slice(0, 2000),
+        stack: String(record?.stack || '').slice(0, 8000),
+        page: String(record?.page || '').slice(0, 300)
+      };
+      const run = async () => {
+        const file = PathUtils.join(Zotero.DataDirectory?.dir || PathUtils.profileDir, 'todolist-debug.json');
+        if (!this._diagnosticRecords) {
+          try {
+            const existing = await IOUtils.exists(file) ? JSON.parse(await IOUtils.readUTF8(file)) : [];
+            this._diagnosticRecords = Array.isArray(existing) ? existing.slice(-49) : [];
+          } catch (_) { this._diagnosticRecords = []; }
+        }
+        this._diagnosticRecords.push(entry);
+        this._diagnosticRecords = this._diagnosticRecords.slice(-50);
+        await IOUtils.writeUTF8(file, JSON.stringify(this._diagnosticRecords, null, 2), { tmpPath: file + '.tmp' });
+      };
+      const result = (this._diagnosticQueue || Promise.resolve()).then(run);
+      this._diagnosticQueue = result.catch(error => Zotero.logError?.('[Todolist] Diagnostic log write failed: ' + error));
+      return this._diagnosticQueue;
+    },
+
     ensureLocalization(doc) {
       if (!doc || this.localizedDocs.has(doc)) return;
       const existing = doc.querySelector('link[rel="localization"][href="todolist.ftl"]');
@@ -671,6 +696,7 @@
         return this._cachedData;
       } catch (error) {
         Zotero.logError?.('[Todolist] 数据读取失败，保留原文件: ' + error);
+        this.recordDiagnostic({ action: '读取待办数据', message: String(error?.message || error), stack: error?.stack });
         throw error;
       }
     },
@@ -729,6 +755,7 @@
           await IOUtils.writeUTF8(filePath, JSON.stringify(next, null, 2), { tmpPath: filePath + '.tmp' });
         } catch (error) {
           Zotero.logError?.('[Todolist] 数据保存失败: ' + error);
+          this.recordDiagnostic({ action: '保存待办数据', message: String(error?.message || error), stack: error?.stack });
           throw error;
         }
         this._cachedData = next;
@@ -957,6 +984,7 @@
         return targetNote;
       } catch (err) {
         Zotero.logError?.('[Todolist] syncTasksToChildNote error: ' + err);
+        this.recordDiagnostic({ action: '同步文献子笔记', message: String(err?.message || err), stack: err?.stack });
         return null;
       }
     },
@@ -1311,6 +1339,7 @@
         }
       } catch (err) {
         Zotero.logError?.('[Todolist] exportData error: ' + err);
+        this.recordDiagnostic({ action: '导出待办数据', message: String(err?.message || err), stack: err?.stack });
         this.showNotice('导出失败', String(err.message || err));
       }
       return null;
@@ -1346,6 +1375,7 @@
         }
       } catch (err) {
         Zotero.logError?.('[Todolist] importDataFile error: ' + err);
+        this.recordDiagnostic({ action: '导入待办数据', message: String(err?.message || err), stack: err?.stack });
         this.showNotice('导入失败', String(err.message || err));
         return { success: false, error: err.message };
       }
@@ -1527,6 +1557,7 @@
     },
 
     init() {
+      this.recordDiagnostic({ action: 'debug-session', message: 'Error diagnostics enabled' });
       this.initWindowListener();
 
       // Register modern MenuManager if available (Zotero 8+)
@@ -2244,7 +2275,7 @@
       });
 
       // 6. Host-level listener for Todolist iframe and window postMessages
-      const handleHostMessage = (event) => {
+      const handleHostMessage = async (event) => {
         try {
           const data = event.data;
           if (!data || typeof data !== 'object') return;
@@ -2252,6 +2283,11 @@
 
           const sourceWin = event.source;
           const iframe = window.document.getElementById('todolist-tab-iframe');
+
+          if (data.type === 'TODOLIST_DIAGNOSTIC' && data.record) {
+            this.recordDiagnostic(data.record);
+            return;
+          }
 
           if (iframe && (event.source === iframe.contentWindow || !sourceWin)) {
             iframe._todolistReady = true;
@@ -2280,6 +2316,9 @@
                 data: storedData,
                 pending: pendingNav
               });
+            }).catch(error => {
+              this.recordDiagnostic({ action: '初始化 Zotero 数据', message: String(error), stack: error?.stack });
+              replyResult({ type: 'TODOLIST_INIT_ERROR', error: String(error?.message || error) });
             });
             return;
           }
@@ -2314,7 +2353,7 @@
             }
             const item = resolveItemReference(data.key, data.libraryID);
             if (item && window.ZoteroPane) {
-              window.ZoteroPane.selectItem(item.id);
+              await window.ZoteroPane.selectItem(item.id);
             }
             return;
           }
@@ -2328,14 +2367,14 @@
                 const match = String(data.pdfUri).match(/[?&]page=(\d+)/);
                 if (match) page = Number(match[1]);
               }
-              this.openPdfAttachment(item, page);
+              await this.openPdfAttachment(item, page);
             }
             return;
           }
 
           // E. Open Zotero Preferences pane
           if (data.type === 'TODOLIST_OPEN_PREFERENCES') {
-            this.openPreferencesPane(window);
+            await this.openPreferencesPane(window);
             return;
           }
 
@@ -2354,16 +2393,15 @@
           if (data.type === 'TODOLIST_SYNC_NOTE' && data.key) {
             const item = resolveItemReference(data.key, data.libraryID);
             if (item) {
-              this.syncTasksToChildNote(item).then((note) => {
-                if (data.requestId) {
-                  replyResult({
-                    type: 'TODOLIST_SYNC_NOTE_RESULT',
-                    requestId: data.requestId,
-                    success: Boolean(note),
-                    noteId: note?.id
-                  });
-                }
-              });
+              const note = await this.syncTasksToChildNote(item);
+              if (data.requestId) {
+                replyResult({
+                  type: 'TODOLIST_SYNC_NOTE_RESULT',
+                  requestId: data.requestId,
+                  success: Boolean(note),
+                  noteId: note?.id
+                });
+              }
             }
             return;
           }
@@ -2385,49 +2423,51 @@
           if (data.type === 'TODOLIST_CREATE_COLLECTION_PLAN' && data.collectionID) {
             const col = Zotero.Collections?.get?.(data.collectionID);
             if (col) {
-              this.createCollectionReadingPlan(col, window);
+              await this.createCollectionReadingPlan(col, window);
             }
             return;
           }
 
           // J. Switch Window Mode (tab / window / subwindow)
           if (data.type === 'TODOLIST_SWITCH_WINDOW_MODE' && data.mode) {
-            this.switchWindowMode(data.mode, window);
+            await this.switchWindowMode(data.mode, window);
             return;
           }
 
           // K. Export Data
           if (data.type === 'TODOLIST_EXPORT_DATA') {
-            this.exportData(data.format || 'json');
+            await this.exportData(data.format || 'json');
             return;
           }
 
           // L. Import Data
           if (data.type === 'TODOLIST_IMPORT_DATA') {
-            this.importDataFile(data.mode || 'merge', window);
+            await this.importDataFile(data.mode || 'merge', window);
             return;
           }
 
           // M. Clear All Data
           if (data.type === 'TODOLIST_CLEAR_DATA') {
-            this.clearAllData(window);
+            await this.clearAllData(window);
             return;
           }
 
           // N. Copy Tasks Summary
           if (data.type === 'TODOLIST_COPY_SUMMARY') {
-            this.copyTasksSummary(window);
+            await this.copyTasksSummary(window);
             return;
           }
 
           // O. Print Tasks
           if (data.type === 'TODOLIST_PRINT') {
-            this.printTasks(window);
+            await this.printTasks(window);
             return;
           }
 
         } catch (e) {
           Zotero.logError?.('[Todolist] Host message processing error: ' + e);
+          this.recordDiagnostic({ action: 'Zotero 主窗口 ' + event.data?.type, message: String(e?.message || e), stack: e?.stack });
+          try { event.source?.postMessage({ requestId: event.data?.requestId, success: false, error: String(e?.message || e) }, '*'); } catch (_) {}
         }
       };
 

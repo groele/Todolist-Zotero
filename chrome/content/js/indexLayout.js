@@ -29,6 +29,7 @@
       const originalSwitchView = UI.switchView.bind(UI);
       UI.switchView = async function(view) {
         const result = await originalSwitchView(view);
+        if (!window.document || UI.currentView !== view) return result;
 
         document.querySelectorAll('.sidebar-view-btn').forEach(btn => {
           btn.classList.toggle('active', btn.dataset.view === view);

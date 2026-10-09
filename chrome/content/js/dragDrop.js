@@ -130,7 +130,7 @@ const DragDrop = {
     const after = rect ? e.clientY >= rect.top + rect.height / 2 : false;
     try {
       await TaskManager.moveTaskInList(taskId, targetCard?.dataset.taskId, after, targetSection?.dataset.section);
-    } catch (error) { UI.showToast('移动失败，请重试'); }
+    } catch (error) { Diagnostics.showFailure('移动任务', error); }
     UI.render();
   },
 

@@ -46,8 +46,8 @@ const UI = {
       this.render();
       this.updateBatchBar();
     });
-    chrome.storage.onChanged?.addListener(async (changes, area) => {
-      if (area === 'local' && !TaskManager._mutating) Storage.acceptData(await Storage.getAll());
+    chrome.storage.onChanged?.addListener((changes, area) => {
+      if (area === 'local' && !TaskManager._mutating) Diagnostics.run('刷新任务数据', async () => Storage.acceptData(await Storage.getAll()));
     });
     const sortSelect = document.getElementById('sort-select');
     if (sortSelect) sortSelect.value = this.currentSortOrder;
@@ -288,7 +288,7 @@ const UI = {
         }
       });
 
-      viewsContainer.addEventListener('drop', async (e) => {
+      viewsContainer.addEventListener('drop', (e) => Diagnostics.run('创建文献研读待办', async () => {
         clearDragHighlight();
         if (typeof DragDrop !== 'undefined' && (DragDrop.draggedTaskId || DragDrop.draggedElement)) {
           return;
@@ -314,7 +314,7 @@ const UI = {
             this.showToast(`已为《${activeItem.title.slice(0, 20)}...》创建研读待办`);
           }
         }
-      });
+      }));
 
       window.addEventListener('dragend', clearDragHighlight);
       window.addEventListener('drop', clearDragHighlight);
@@ -333,11 +333,11 @@ const UI = {
       this.updateSearchSuggestions(e.target.value);
     }, 300));
 
-    searchInput.addEventListener('keypress', async (e) => {
+    searchInput.addEventListener('keypress', (e) => Diagnostics.run('保存搜索历史', async () => {
       if (e.key === 'Enter' && searchInput.value.trim()) {
         await Advanced.addToSearchHistory(searchInput.value.trim());
       }
-    });
+    }));
 
     // Filter select
     document.getElementById('filter-select')?.addEventListener('change', (e) => {
@@ -385,8 +385,15 @@ const UI = {
         const input = e.target;
         const title = input.value.trim();
         const taskId = input.dataset.taskId;
-        if (title && taskId) {
-          await TaskManager.addSubtask(taskId, title);
+        if (title && taskId && !input.disabled) {
+          input.disabled = true;
+          try { await TaskManager.addSubtask(taskId, title); }
+          catch (error) {
+            Diagnostics.showFailure('添加子任务', error);
+            const current = [...document.querySelectorAll('.card-add-subtask-input')].find(el => el.dataset.taskId === taskId);
+            if (current) { current.value = title; current.disabled = false; current.focus(); }
+            return;
+          }
           this.render();
           const card = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
           const newInput = card?.querySelector('.card-add-subtask-input');
@@ -425,10 +432,17 @@ const UI = {
         if (saved) return;
         saved = true;
         const val = input.value.trim();
-        if (val && val !== currentTitle) {
-          await TaskManager.updateSubtask(taskId, subtaskId, val);
+        try {
+          if (val && val !== currentTitle) await TaskManager.updateSubtask(taskId, subtaskId, val);
+          this.render();
+        } catch (error) {
+          Diagnostics.showFailure('编辑子任务', error);
+          const card = [...document.querySelectorAll('.task-card')].find(el => el.dataset.taskId === taskId);
+          const item = [...(card?.querySelectorAll('.card-subtask-item') || [])].find(el => el.querySelector('.card-subtask-checkbox')?.dataset.subtaskId === subtaskId);
+          item?.querySelector('.card-subtask-text')?.replaceWith(input);
+          saved = false;
+          input.focus();
         }
-        this.render();
       };
 
       input.addEventListener('keydown', (evt) => {
@@ -472,10 +486,16 @@ const UI = {
         if (saved) return;
         saved = true;
         const val = input.value.trim();
-        if (val && val !== currentTitle) {
-          await TaskManager.updateTask(taskId, { title: val });
+        try {
+          if (val && val !== currentTitle) await TaskManager.updateTask(taskId, { title: val });
+          this.render();
+        } catch (error) {
+          Diagnostics.showFailure('编辑任务标题', error);
+          const card = [...document.querySelectorAll('.task-card')].find(el => el.dataset.taskId === taskId);
+          card?.querySelector('.task-title')?.replaceWith(input);
+          saved = false;
+          input.focus();
         }
-        this.render();
       };
 
       input.addEventListener('keydown', (evt) => {
@@ -519,10 +539,16 @@ const UI = {
         if (saved) return;
         saved = true;
         const val = input.value.trim();
-        if (val !== currentDesc) {
-          await TaskManager.updateTask(taskId, { description: val });
+        try {
+          if (val !== currentDesc) await TaskManager.updateTask(taskId, { description: val });
+          this.render();
+        } catch (error) {
+          Diagnostics.showFailure('编辑任务描述', error);
+          const card = [...document.querySelectorAll('.task-card')].find(el => el.dataset.taskId === taskId);
+          card?.querySelector('.task-description')?.replaceWith(input);
+          saved = false;
+          input.focus();
         }
-        this.render();
       };
 
       input.addEventListener('keydown', (evt) => {
@@ -568,19 +594,19 @@ const UI = {
     });
 
     // Batch operations
-    document.getElementById('btn-batch-complete')?.addEventListener('click', async () => {
+    document.getElementById('btn-batch-complete')?.addEventListener('click', () => Diagnostics.run('批量完成任务', async () => {
       const count = await TaskManager.batchComplete();
       this.showToast(`已完成 ${count} 个任务`);
       this.render();
       this.updateBatchBar();
-    });
+    }));
 
-    document.getElementById('btn-batch-delete')?.addEventListener('click', async () => {
+    document.getElementById('btn-batch-delete')?.addEventListener('click', () => Diagnostics.run('批量删除任务', async () => {
       const count = await TaskManager.batchDelete();
       this.showToast(`已删除 ${count} 个任务`, count > 0);
       this.render();
       this.updateBatchBar();
-    });
+    }));
 
     document.getElementById('btn-batch-cancel')?.addEventListener('click', () => {
       TaskManager.clearSelection();
@@ -1046,7 +1072,7 @@ const UI = {
     } else if (view === 'kanban') {
       this.renderKanban();
     } else if (view === 'stats') {
-      this.showStats();
+      await this.showStats();
     } else {
       this.render();
     }
@@ -1226,8 +1252,17 @@ const UI = {
     const quickAddInput = document.getElementById('quick-add-input');
     if (quickAddInput) {
       quickAddInput.addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter' && quickAddInput.value.trim()) {
-          await TaskManager.addTask({ title: quickAddInput.value.trim() });
+        if (e.key === 'Enter' && quickAddInput.value.trim() && !quickAddInput.disabled) {
+          e.preventDefault();
+          const title = quickAddInput.value.trim();
+          quickAddInput.disabled = true;
+          try { await TaskManager.addTask({ title }); }
+          catch (error) {
+            Diagnostics.showFailure('快速添加任务', error);
+            const current = document.getElementById('quick-add-input');
+            if (current) { current.value = title; current.disabled = false; current.focus(); }
+            return;
+          }
           quickAddInput.value = '';
           this.render();
           this.notifyServiceWorker();
@@ -1418,6 +1453,8 @@ const UI = {
   // Show statistics
   async showStats() {
     this.currentView = 'stats';
+    const renderId = this._statsRenderId = (this._statsRenderId || 0) + 1;
+    const doc = document;
     const container = document.getElementById('stats-view');
     if (!container) return;
 
@@ -1434,10 +1471,12 @@ const UI = {
     container.classList.remove('hidden');
 
     // Render stats
-    container.innerHTML = await DataManager.renderStats();
+    const html = await DataManager.renderStats();
+    if (!container.isConnected || !window.document || this.currentView !== 'stats' || renderId !== this._statsRenderId) return;
+    container.innerHTML = html;
 
     // Add close button handler
-    document.getElementById('btn-close-stats')?.addEventListener('click', () => {
+    doc.getElementById('btn-close-stats')?.addEventListener('click', () => {
       this.switchView('list');
     });
   },
@@ -1799,13 +1838,13 @@ const UI = {
 
     if (showUndo) {
       toastAction.classList.remove('hidden');
-      toastAction.onclick = async () => {
+      toastAction.onclick = () => Diagnostics.run('撤销删除', async () => {
         const restored = await TaskManager.undoDelete();
         if (restored) {
           this.showToast('任务已恢复');
           this.render();
         }
-      };
+      });
     } else {
       toastAction.classList.add('hidden');
     }
@@ -1833,10 +1872,15 @@ const UI = {
   }
 };
 
-for (const name of ['handleTaskListClick', 'handleKanbanClick', 'handleToggleComplete', 'handleDuplicateTask']) {
+const uiActionNames = {
+  handleTaskListClick: '列表任务操作', handleKanbanClick: '看板任务操作',
+  handleToggleComplete: '更新任务状态', handleDuplicateTask: '复制任务',
+  showStats: '显示统计', switchView: '切换视图', toggleTheme: '切换主题'
+};
+for (const name of Object.keys(uiActionNames)) {
   const handler = UI[name];
   UI[name] = async function(...args) {
     try { return await handler.apply(this, args); }
-    catch (error) { console.error(error); this.showToast('操作失败，请重试'); }
+    catch (error) { Diagnostics.showFailure(uiActionNames[name], error); }
   };
 }

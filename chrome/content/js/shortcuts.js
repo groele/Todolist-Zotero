@@ -40,7 +40,7 @@ const Shortcuts = {
     // Ctrl/Cmd + E: Export data
     if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
       e.preventDefault();
-      DataManager.exportData().then(() => UI.showToast('数据已导出'));
+      Diagnostics.run('导出待办数据', async () => { await DataManager.exportData(); UI.showToast('数据已导出'); });
       return;
     }
 

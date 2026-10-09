@@ -5,14 +5,13 @@
 
   // Global error handler
   window.onerror = function(message, source, lineno, colno, error) {
-    console.error('Global error:', { message, source, lineno, colno, error });
+    Diagnostics.report('页面异常', error || new Error(`${message} (${source}:${lineno}:${colno})`));
     showErrorUI('应用发生错误，请刷新页面重试');
     return false;
   };
 
   window.addEventListener('unhandledrejection', function(event) {
-    console.error('Unhandled promise rejection:', event.reason);
-    if (typeof UI !== 'undefined') UI.showToast('部分操作未完成，错误详情已记录到控制台');
+    Diagnostics.showFailure('异步操作', event.reason);
   });
 
   if (document.readyState === 'loading') {
@@ -50,8 +49,8 @@
 
       console.log('Todolist extension initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize Todolist extension:', error);
-      showErrorUI('初始化失败，请刷新页面重试');
+      Diagnostics.report('初始化应用', error);
+      showErrorUI('初始化失败：' + Utils.escapeHtml(String(error?.message || error).slice(0, 160)));
     }
   }
 

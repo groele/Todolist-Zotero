@@ -117,7 +117,7 @@ const Notifications = {
   checkScheduled() {
     if (this._checking) return this._checking;
     this._checking = Promise.allSettled([this.checkReminders(), this.checkDailySummary()])
-      .then(results => { for (const result of results) if (result.status === 'rejected') console.error('Notification check failed:', result.reason); })
+      .then(results => { for (const result of results) if (result.status === 'rejected') Diagnostics.report('检查任务提醒', result.reason); })
       .finally(() => { this._checking = null; });
     return this._checking;
   },
