@@ -3,8 +3,8 @@
     "todolist@groele.org": {
       "updates": [
         {
-          "version": "3.0.0",
-          "update_link": "https://github.com/groele/Todolist-Zotero/releases/download/v3.0.0/todolist-zotero-3.0.0.xpi",
+          "version": "3.1.0",
+          "update_link": "https://github.com/groele/Todolist-Zotero/releases/download/v3.1.0/todolist-zotero-3.1.0.xpi",
           "applications": {
             "zotero": {
               "strict_min_version": "10.0.0",

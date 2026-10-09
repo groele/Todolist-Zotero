@@ -1663,7 +1663,7 @@
             const done = total - uncompletedTasks.length;
             const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-            setSectionSummary?.(total ? `${done}/${total} (${pct}%)` : '');
+            setSectionSummary?.(total ? `${total} 项待办 · ${done}/${total} 完成` : '展开后快速新建');
 
             const wrapper = createEl('div', 'td-pane-wrap');
 
@@ -1700,6 +1700,108 @@
               headerCard.appendChild(track);
             }
             wrapper.appendChild(headerCard);
+
+            // Keep quick creation in the first screen so it remains easy to
+            // reach even when this literature already has a long task list.
+            const quickBox = createEl('div', 'td-quick-box');
+
+            const prioSelect = createEl('select', 'td-prio-select');
+            prioSelect.setAttribute('aria-label', '新待办优先级');
+            const defaultPrio = this.getPref('defaultPriority', 'medium');
+            const priorities = [
+              { val: 'medium', label: '🟡 中' },
+              { val: 'high', label: '🔴 高' },
+              { val: 'low', label: '🟢 低' }
+            ];
+            for (const p of priorities) {
+              const opt = createEl('option', '', p.label);
+              opt.value = p.val;
+              if (p.val === defaultPrio) opt.selected = true;
+              prioSelect.appendChild(opt);
+            }
+
+            const quickInput = createEl('input', 'td-quick-input');
+            quickInput.type = 'text';
+            quickInput.setAttribute('aria-label', '新待办事项');
+            quickInput.placeholder = '+ 快速新建待办 (Enter 保存)';
+
+            const quickBtn = createEl('button', 'td-quick-submit', '+');
+            quickBtn.type = 'button';
+            quickBtn.title = '添加待办任务';
+            quickBtn.setAttribute('aria-label', '添加待办任务');
+
+            const handleQuickAdd = async () => {
+              if (quickBtn.disabled) return;
+              const text = quickInput.value.trim();
+              if (!text) {
+                quickInput.focus();
+                return;
+              }
+              const meta = serializeLiteratureItem(target);
+              const selectedPrio = prioSelect.value || defaultPrio;
+              const defaultType = this.getPref('defaultTaskType', 'literature_reading');
+              const inheritTags = this.getPref('autoTagFromItem', true);
+              const newTask = {
+                id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                title: text,
+                description: `文献研读待办：${meta.title} (${meta.authors} ${meta.year})`,
+                dueDate: null,
+                dueTime: null,
+                priority: selectedPrio,
+                category: '论文研读',
+                completed: false,
+                createdAt: new Date().toISOString(),
+                completedAt: null,
+                subtasks: [],
+                tags: inheritTags ? (meta.tags || []) : [],
+                reminder: { enabled: false, before: 15, notified: false },
+                order: (data.tasks || []).length,
+                zoteroItemKey: meta.key,
+                zoteroItemTitle: meta.title,
+                zoteroAuthors: meta.authors,
+                zoteroLibraryID: meta.libraryID,
+                zoteroPublication: meta.publication,
+                zoteroYear: meta.year,
+                zoteroUri: meta.zoteroUri,
+                zoteroPdfUri: meta.pdfUri,
+                academicType: defaultType
+              };
+              quickBtn.disabled = true;
+              quickInput.disabled = true;
+              prioSelect.disabled = true;
+              try {
+                await this.saveData({ taskChanges: { added: [newTask] } });
+              } catch (error) {
+                this.showNotice('保存失败', String(error));
+                return;
+              } finally {
+                quickBtn.disabled = false;
+                quickInput.disabled = false;
+                prioSelect.disabled = false;
+              }
+              quickInput.value = '';
+              await this.tagItemOnTaskEvent(target.key, 'create', target.libraryID);
+              if (this.getPref('autoSyncChildNote', true)) {
+                await this.syncTasksToChildNote(target);
+              }
+              state?.refresh?.();
+            };
+
+            quickInput.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleQuickAdd();
+              }
+            });
+            quickBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              handleQuickAdd();
+            });
+
+            quickBox.appendChild(prioSelect);
+            quickBox.appendChild(quickInput);
+            quickBox.appendChild(quickBtn);
+            wrapper.appendChild(quickBox);
 
             // 2. Empty State Card
             if (total === 0) {
@@ -1881,93 +1983,7 @@
               wrapper.appendChild(undoBtn);
             }
 
-            // 4. Compound Quick Add Row
-            const quickBox = createEl('div', 'td-quick-box');
-
-            const prioSelect = createEl('select', 'td-prio-select');
-            const defaultPrio = this.getPref('defaultPriority', 'medium');
-            const priorities = [
-              { val: 'medium', label: '🟡 中' },
-              { val: 'high', label: '🔴 高' },
-              { val: 'low', label: '🟢 低' }
-            ];
-            for (const p of priorities) {
-              const opt = createEl('option', '', p.label);
-              opt.value = p.val;
-              if (p.val === defaultPrio) opt.selected = true;
-              prioSelect.appendChild(opt);
-            }
-
-            const quickInput = createEl('input', 'td-quick-input');
-            quickInput.type = 'text';
-            quickInput.placeholder = '+ 添加研读待办 (Enter 保存)...';
-
-            const quickBtn = createEl('button', 'td-quick-submit', '+');
-            quickBtn.type = 'button';
-            quickBtn.title = '添加待办任务';
-
-            const handleQuickAdd = async () => {
-              const text = quickInput.value.trim();
-              if (!text) return;
-              const meta = serializeLiteratureItem(target);
-              const selectedPrio = prioSelect.value || defaultPrio;
-              const defaultType = this.getPref('defaultTaskType', 'literature_reading');
-              const inheritTags = this.getPref('autoTagFromItem', true);
-              const newTask = {
-                id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                title: text,
-                description: `文献研读待办：${meta.title} (${meta.authors} ${meta.year})`,
-                dueDate: null,
-                dueTime: null,
-                priority: selectedPrio,
-                category: '论文研读',
-                completed: false,
-                createdAt: new Date().toISOString(),
-                completedAt: null,
-                subtasks: [],
-                tags: inheritTags ? (meta.tags || []) : [],
-                reminder: { enabled: false, before: 15, notified: false },
-                order: (data.tasks || []).length,
-                zoteroItemKey: meta.key,
-                zoteroItemTitle: meta.title,
-                zoteroAuthors: meta.authors,
-            zoteroLibraryID: meta.libraryID,
-            zoteroPublication: meta.publication,
-                zoteroYear: meta.year,
-                zoteroUri: meta.zoteroUri,
-                zoteroPdfUri: meta.pdfUri,
-                academicType: defaultType
-              };
-              if (quickBtn.disabled) return;
-              quickBtn.disabled = true;
-              try { await this.saveData({ taskChanges: { added: [newTask] } }); }
-              catch (error) { this.showNotice('保存失败', String(error)); return; }
-              finally { quickBtn.disabled = false; }
-              quickInput.value = '';
-              await this.tagItemOnTaskEvent(target.key, 'create', target.libraryID);
-              if (this.getPref('autoSyncChildNote', true)) {
-                await this.syncTasksToChildNote(target);
-              }
-              state?.refresh?.();
-            };
-
-            quickInput.addEventListener('keydown', (e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleQuickAdd();
-              }
-            });
-            quickBtn.addEventListener('click', (e) => {
-              e.preventDefault();
-              handleQuickAdd();
-            });
-
-            quickBox.appendChild(prioSelect);
-            quickBox.appendChild(quickInput);
-            quickBox.appendChild(quickBtn);
-            wrapper.appendChild(quickBox);
-
-            // 5. Action Buttons Grid (2 Columns, perfectly aligned, no overflow)
+            // 4. Action Buttons Grid (2 Columns, perfectly aligned, no overflow)
             const actionGrid = createEl('div', 'td-action-grid');
 
             const btnOpenBoard = createEl('button', 'td-action-btn', '📋 待办看板');

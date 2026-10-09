@@ -107,7 +107,14 @@ test('native side-pane quick-add suppresses a double click while saving', async 
   const doc = dom.window.document, body = doc.getElementById('pane');
   native.host.registerItemPaneSection(); const pane = native.pane();
   pane.onInit({ doc, body, item: target, refresh: () => {} }); t.after(() => pane.onDestroy({ body }));
-  await pane.onRender({ doc, body, item: target });
+  let sectionSummary = '';
+  await pane.onRender({ doc, body, item: target, setSectionSummary: value => { sectionSummary = value; } });
+  const paneContent = body.querySelector('.td-pane-wrap');
+  assert.equal(paneContent.children[0].className, 'td-header-card');
+  assert.equal(paneContent.children[1].className, 'td-quick-box');
+  assert.equal(sectionSummary, '展开后快速新建');
+  assert.equal(body.querySelector('.td-quick-input').getAttribute('aria-label'), '新待办事项');
+  assert.equal(body.querySelector('.td-quick-submit').getAttribute('aria-label'), '添加待办任务');
   body.querySelector('.td-quick-input').value = 'New Task';
   const button = body.querySelector('.td-quick-submit'); button.click(); button.click();
   await waitFor(() => native.disk().tasks.length > 0);
