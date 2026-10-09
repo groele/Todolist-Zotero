@@ -2,6 +2,19 @@
 window.Todolist_Preferences = (() => {
   const PREFIX = 'extensions.todolist.';
   const HTML = 'http://www.w3.org/1999/xhtml';
+  // These preferences have no runtime consumer yet. Do not offer ineffective controls.
+  const UNAVAILABLE_SETTINGS = new Set([
+    'subwindowCompactMode', 'locateOnTaskClick', 'dragDropFromLibrary', 'academicPresets',
+    'pdfReaderJumpPage', 'enableSound', 'pomodoroFocus', 'pomodoroShortBreak',
+    'pomodoroLongBreak', 'autoArchiveDays'
+  ]);
+
+  function reportOperationError(zot, doc, action, error) {
+    zot?.logError?.('[Todolist] ' + action + ': ' + error);
+    Promise.resolve(zot?.Todolist?.recordDiagnostic?.({ action, message: String(error?.message || error), stack: error?.stack })).catch(() => {});
+    const status = doc.getElementById('todolist-pref-status');
+    if (status) status.textContent = `${action}失败：${String(error?.message || error)}`;
+  }
 
   const DEFAULTS = {
     // Window Modes
@@ -88,7 +101,7 @@ window.Todolist_Preferences = (() => {
       ['showWelcomeOnStartup', '首次启动时显示使用技巧提示', 'check'],
     ],
     literature: [
-      ['enableItemPane', '在文献右侧详情栏中展示“学术待办”区域', 'check'],
+      ['enableItemPane', '在文献右侧详情栏中展示“学术待办”区域（重启 Zotero 后生效）', 'check'],
       ['itemPaneShowProgressBar', '在侧边详情栏中展示研读完成度彩色进度条', 'check'],
       ['itemPaneShowSubtasks', '在侧边详情栏中直接展开子任务里程碑与互动勾选框', 'check'],
       ['locateOnTaskClick', '点击待办卡片或文献徽标时，在 Zotero 文献库中高亮定位对应条目', 'check'],
@@ -180,22 +193,49 @@ window.Todolist_Preferences = (() => {
     }
   }
 
-  function setPref(key, val) {
-    if (typeof Zotero === 'undefined' || !Zotero.Prefs) return;
-    try {
-      Zotero.Prefs.set(PREFIX + key, val, true);
-      // Persist only this key. Reading and writing the complete settings object
-      // here could overwrite a different preference changed by another window.
-      const saveSettings = Zotero.Todolist?.saveData;
-      if (typeof saveSettings === 'function') {
-        Promise.resolve()
-          .then(() => saveSettings.call(Zotero.Todolist, { settings: { [key]: val } }))
-          .catch((error) => {
-            Zotero.logError?.(`[Todolist] Failed to persist preference ${key}: ${error}`);
-          });
+  let preferenceQueue = Promise.resolve();
+  function setPrefs(values) {
+    const run = async () => {
+      if (typeof Zotero === 'undefined' || !Zotero.Prefs) throw new Error('Zotero 设置服务尚未就绪');
+      const previous = Object.fromEntries(Object.keys(values).map(key => [key, getPref(key)]));
+      const changed = [];
+      try {
+        for (const [key, val] of Object.entries(values)) {
+          Zotero.Prefs.set(PREFIX + key, val, true);
+          changed.push(key);
+        }
+        const saveSettings = Zotero.Todolist?.saveData;
+        if (typeof saveSettings !== 'function') throw new Error('待办数据服务尚未就绪');
+        await saveSettings.call(Zotero.Todolist, { settings: values });
+      } catch (error) {
+        for (const key of changed) {
+          try {
+            if (Zotero.Prefs.get(PREFIX + key, true) === values[key]) Zotero.Prefs.set(PREFIX + key, previous[key], true);
+          } catch (rollbackError) { Zotero.logError?.('[Todolist] Failed to restore preference: ' + rollbackError); }
+        }
+        throw error;
       }
-    } catch (e) {
-      Zotero.logError?.('[Todolist] Failed to set preference ' + key + ': ' + e);
+    };
+    const result = preferenceQueue.then(run);
+    preferenceQueue = result.catch(() => {});
+    return result;
+  }
+
+  function setPref(key, val) { return setPrefs({ [key]: val }); }
+
+  async function saveControl(doc, key, control, value) {
+    control.disabled = true;
+    try {
+      await setPref(key, value);
+      const status = doc.getElementById('todolist-pref-status');
+      if (status) status.textContent = '设置已保存。';
+    } catch (error) {
+      reportOperationError(window.Zotero, doc, '保存设置', error);
+    } finally {
+      if (control.type === 'checkbox') control.checked = Boolean(getPref(key));
+      else control.value = String(getPref(key));
+      control.disabled = UNAVAILABLE_SETTINGS.has(key);
+      if (key === 'windowMode') updateHeaderModeButtons(doc, getPref(key));
     }
   }
 
@@ -234,6 +274,8 @@ window.Todolist_Preferences = (() => {
 
     for (const [key, labelText, type, options] of items) {
       const currentVal = getPref(key);
+      const unavailable = UNAVAILABLE_SETTINGS.has(key);
+      const visibleLabel = unavailable ? `${labelText}（此设置尚未接入，当前不可用）` : labelText;
 
       if (type === 'check') {
         const row = doc.createElementNS(HTML, 'label');
@@ -241,15 +283,17 @@ window.Todolist_Preferences = (() => {
 
         const input = doc.createElementNS(HTML, 'input');
         input.type = 'checkbox';
+        input.id = `pref-${key}`;
+        input.disabled = unavailable;
         input.className = 'todolist-control';
         input.checked = Boolean(currentVal);
         input.addEventListener('change', () => {
-          setPref(key, input.checked);
+          saveControl(doc, key, input, input.checked);
         });
 
         const span = doc.createElementNS(HTML, 'span');
         span.className = 'todolist-control-label';
-        span.textContent = labelText;
+        span.textContent = visibleLabel;
 
         row.appendChild(input);
         row.appendChild(span);
@@ -260,11 +304,13 @@ window.Todolist_Preferences = (() => {
 
         const label = doc.createElementNS(HTML, 'label');
         label.className = 'todolist-control-label';
-        label.textContent = labelText;
+        label.textContent = visibleLabel;
+        label.htmlFor = `pref-${key}`;
 
         const select = doc.createElementNS(HTML, 'select');
         select.className = 'todolist-control';
         select.id = `pref-${key}`;
+        select.disabled = unavailable;
 
         for (const [optVal, optLabel] of (options || [])) {
           const option = doc.createElementNS(HTML, 'option');
@@ -278,10 +324,7 @@ window.Todolist_Preferences = (() => {
 
         select.addEventListener('change', () => {
           const typedVal = typeof DEFAULTS[key] === 'number' ? Number(select.value) : select.value;
-          setPref(key, typedVal);
-          if (key === 'windowMode') {
-            updateHeaderModeButtons(doc, select.value);
-          }
+          saveControl(doc, key, select, typedVal);
         });
 
         row.appendChild(label);
@@ -293,15 +336,18 @@ window.Todolist_Preferences = (() => {
 
         const label = doc.createElementNS(HTML, 'label');
         label.className = 'todolist-control-label';
-        label.textContent = labelText;
+        label.textContent = visibleLabel;
+        label.htmlFor = `pref-${key}`;
 
         const input = doc.createElementNS(HTML, 'input');
         input.type = 'text';
+        input.id = `pref-${key}`;
+        input.disabled = unavailable;
         input.className = 'todolist-control';
         input.value = String(currentVal ?? '');
 
         input.addEventListener('change', () => {
-          setPref(key, input.value.trim());
+          saveControl(doc, key, input, input.value.trim());
         });
 
         row.appendChild(label);
@@ -357,17 +403,20 @@ window.Todolist_Preferences = (() => {
         delBtn.title = `删除标签 "${tag.name}"`;
         delBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          const current = await zot.Todolist.loadData();
-          const updatedTags = (current.customTags || []).filter((t) => t.id !== tag.id);
-          await zot.Todolist.saveData({ customTags: updatedTags });
-          renderCustomTagsManager(doc, win);
+          if (delBtn.disabled) return;
+          delBtn.disabled = true;
+          try {
+            await zot.Todolist.saveData({ customTagChanges: { deleted: [tag.id] } });
+            await renderCustomTagsManager(doc, win);
+          } catch (error) { reportOperationError(zot, doc, '删除自定义标签', error); }
+          finally { delBtn.disabled = false; }
         });
         badge.appendChild(delBtn);
 
         listEl.appendChild(badge);
       }
     } catch (err) {
-      zot?.logError?.('[Todolist] renderCustomTagsManager error: ' + err);
+      reportOperationError(zot, doc, '刷新自定义标签', err);
     }
   }
 
@@ -380,6 +429,10 @@ window.Todolist_Preferences = (() => {
         pane._todolistInited = true;
       }
       const statusEl = doc.getElementById('todolist-pref-status');
+      const runOperation = async (action, callback) => {
+        try { return await callback(); }
+        catch (error) { reportOperationError(win?.Zotero || window.Zotero, doc, action, error); }
+      };
 
       try {
         renderGroup(doc, 'todolist-pref-window', FIELDS.window);
@@ -411,23 +464,33 @@ window.Todolist_Preferences = (() => {
         // Add Tag Action
         const addTagBtn = doc.getElementById('todolist-btn-add-tag');
         const tagInput = doc.getElementById('todolist-new-tag-name');
+        let addingTag = false;
         const handleAddTag = async () => {
+          if (addingTag) return;
           const name = tagInput?.value?.trim();
           if (!name) return;
           const zot = win?.Zotero || window.Zotero || (typeof Zotero !== 'undefined' ? Zotero : null);
           if (!zot?.Todolist) return;
 
-          const current = await zot.Todolist.loadData();
-          const tags = current.customTags || [];
-          tags.push({
-            id: 'tag_' + Date.now(),
-            name: name,
-            color: activeTagColor || '#3b82f6',
-            icon: '🏷️'
-          });
-          await zot.Todolist.saveData({ customTags: tags });
-          if (tagInput) tagInput.value = '';
-          renderCustomTagsManager(doc, win);
+          addingTag = true;
+          if (addTagBtn) addTagBtn.disabled = true;
+          if (tagInput) tagInput.disabled = true;
+          try {
+            const tag = {
+              id: 'tag_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+              name: name,
+              color: activeTagColor || '#3b82f6',
+              icon: '🏷️'
+            };
+            await zot.Todolist.saveData({ customTagChanges: { added: [tag] } });
+            if (tagInput) tagInput.value = '';
+            await renderCustomTagsManager(doc, win);
+          } catch (error) { reportOperationError(zot, doc, '添加自定义标签', error); }
+          finally {
+            addingTag = false;
+            if (addTagBtn) addTagBtn.disabled = false;
+            if (tagInput) tagInput.disabled = false;
+          }
         };
 
         addTagBtn?.addEventListener('click', handleAddTag);
@@ -438,17 +501,17 @@ window.Todolist_Preferences = (() => {
           }
         });
 
-        const handleSwitchMode = (targetMode) => {
-          setPref('windowMode', targetMode);
+        const handleSwitchMode = (targetMode) => runOperation('切换窗口模式', async () => {
+          await setPref('windowMode', targetMode);
           updateHeaderModeButtons(doc, targetMode);
           const zot = win?.Zotero || window.Zotero || (typeof Zotero !== 'undefined' ? Zotero : null);
           const mainWin = zot?.getMainWindow?.() || (typeof Services !== 'undefined' ? Services.wm?.getMostRecentWindow('navigator:browser') : null);
           if (zot?.Todolist?.switchWindowMode) {
-            zot.Todolist.switchWindowMode(targetMode, mainWin);
+            await zot.Todolist.switchWindowMode(targetMode, mainWin);
           } else if (zot?.Todolist?.openTodolist) {
-            zot.Todolist.openTodolist({ targetMode }, mainWin);
+            await zot.Todolist.openTodolist({ targetMode }, mainWin);
           }
-        };
+        });
 
         // Open Internal Tab
         const openTabBtn = doc.getElementById('todolist-btn-open-workspace');
@@ -479,26 +542,26 @@ window.Todolist_Preferences = (() => {
 
         // Export JSON
         doc.getElementById('todolist-btn-export-json')?.addEventListener('click', () => {
-          Zotero?.Todolist?.exportData?.('json');
+          runOperation('导出 JSON', () => Zotero?.Todolist?.exportData?.('json'));
         });
 
         // Export CSV
         doc.getElementById('todolist-btn-export-csv')?.addEventListener('click', () => {
-          Zotero?.Todolist?.exportData?.('csv');
+          runOperation('导出 CSV', () => Zotero?.Todolist?.exportData?.('csv'));
         });
 
         // Export Markdown
         doc.getElementById('todolist-btn-export-markdown')?.addEventListener('click', () => {
-          Zotero?.Todolist?.exportData?.('markdown');
+          runOperation('导出 Markdown', () => Zotero?.Todolist?.exportData?.('markdown'));
         });
 
         // Export TXT
         doc.getElementById('todolist-btn-export-txt')?.addEventListener('click', () => {
-          Zotero?.Todolist?.exportData?.('txt');
+          runOperation('导出 TXT', () => Zotero?.Todolist?.exportData?.('txt'));
         });
 
         // Import JSON
-        doc.getElementById('todolist-btn-import-file')?.addEventListener('click', async () => {
+        doc.getElementById('todolist-btn-import-file')?.addEventListener('click', () => runOperation('导入数据', async () => {
           const mode = doc.getElementById('todolist-import-mode')?.value || 'merge';
           const status = doc.getElementById('todolist-import-status');
           if (status) {
@@ -517,42 +580,48 @@ window.Todolist_Preferences = (() => {
           } else {
             if (status) status.textContent = '';
           }
-        });
+        }));
 
         // Print Tasks
         doc.getElementById('todolist-btn-print')?.addEventListener('click', () => {
-          Zotero?.Todolist?.printTasks?.(win);
+          runOperation('打印任务', () => Zotero?.Todolist?.printTasks?.(win));
         });
 
         // Copy Tasks Summary
         doc.getElementById('todolist-btn-copy-summary')?.addEventListener('click', () => {
-          Zotero?.Todolist?.copyTasksSummary?.(win);
+          runOperation('复制任务摘要', () => Zotero?.Todolist?.copyTasksSummary?.(win));
         });
 
         // Clear All Data
-        doc.getElementById('todolist-btn-clear-all')?.addEventListener('click', async () => {
-          if (win.confirm('⚠️ 警告：确定要清空所有待办任务、历史记录与自定义标签吗？此操作无法撤销！')) {
-            await Zotero?.Todolist?.clearAllData?.(win);
-            renderCustomTagsManager(doc, win);
-            if (statusEl) statusEl.textContent = '所有数据已清空。';
+        doc.getElementById('todolist-btn-clear-all')?.addEventListener('click', () => runOperation('清空数据', async () => {
+          if (!win.confirm('⚠️ 警告：确定要清空所有待办任务、历史记录与自定义标签吗？此操作无法撤销！')) {
+            if (statusEl) statusEl.textContent = '数据未清空。';
+            return;
           }
-        });
+          const cleared = await Zotero?.Todolist?.clearAllData?.(win);
+          if (cleared) {
+            await renderCustomTagsManager(doc, win);
+            if (statusEl) statusEl.textContent = '所有数据已清空。';
+          } else if (statusEl) statusEl.textContent = '数据未清空。';
+        }));
 
         // Reset button
         const resetBtn = doc.getElementById('todolist-btn-reset-defaults');
         if (resetBtn) {
-          resetBtn.addEventListener('click', () => {
-            if (win.confirm('确定要恢复 Todolist 默认设置吗？')) {
-              for (const [key, val] of Object.entries(DEFAULTS)) {
-                setPref(key, val);
-              }
-              this.init(win);
-            }
-          });
+          resetBtn.addEventListener('click', () => runOperation('恢复默认设置', async () => {
+            if (resetBtn.disabled || !win.confirm('确定要恢复 Todolist 默认设置吗？')) return;
+            resetBtn.disabled = true;
+            try {
+              await setPrefs(DEFAULTS);
+              for (const [group, fields] of Object.entries(FIELDS)) renderGroup(doc, `todolist-pref-${group}`, fields);
+              updateHeaderModeButtons(doc);
+              if (statusEl) statusEl.textContent = '默认设置已恢复。';
+            } finally { resetBtn.disabled = false; }
+          }));
         }
 
         if (statusEl) {
-          statusEl.textContent = '所有设置项均已加载并与 Zotero 配置中心实时同步。';
+          statusEl.textContent = '设置已加载；标注为尚未接入的选项当前不可用。';
         }
       } catch (err) {
         if (statusEl) {

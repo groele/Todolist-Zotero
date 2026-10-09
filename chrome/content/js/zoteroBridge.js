@@ -71,6 +71,7 @@ const ZoteroBridge = {
 
   setupMessageListener() {
     window.addEventListener('message', (event) => {
+      if (event.source && event.source !== window && event.source !== window.parent && event.source !== window.opener) return;
       const data = event.data;
       if (!data || typeof data !== 'object') return;
 
@@ -310,7 +311,7 @@ const ZoteroBridge = {
       });
     } else if (options.mode === 'view_task' && options.taskId) {
       this.executeWhenReady(() => {
-        const card = document.querySelector(`.task-card[data-task-id="${options.taskId}"]`);
+        const card = [...document.querySelectorAll('.task-card')].find(el => el.dataset.taskId === options.taskId);
         if (card) {
           card.scrollIntoView({ behavior: 'smooth', block: 'center' });
           card.style.outline = '2px solid var(--primary, #059669)';

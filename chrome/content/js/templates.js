@@ -239,14 +239,11 @@ const Templates = {
     this.customTemplates = result.customTemplates || [];
   },
 
-  // Save custom templates
-  async saveCustomTemplates() {
-    await Storage.saveAll({ customTemplates: this.customTemplates });
-  },
-
   // Get all templates (builtin + custom)
   getAllTemplates() {
-    return [...this.builtinTemplates, ...this.customTemplates];
+    return [...this.builtinTemplates, ...this.customTemplates].map(template => ({
+      ...template, task: { ...template.task, subtasks: template.task?.subtasks || [] }
+    }));
   },
 
   // Add custom template from current task
@@ -262,31 +259,22 @@ const Templates = {
         description: task.description || '',
         priority: task.priority || 'medium',
         category: task.category || '',
+        academicType: task.academicType || 'general',
+        tags: [...(task.tags || [])],
+        repeat: task.repeat || null,
         subtasks: (task.subtasks || []).map(st => ({ title: st.title }))
       }
     };
 
-    const previous = this.customTemplates;
-    this.customTemplates = [...previous, template];
-    try {
-      await this.saveCustomTemplates();
-    } catch (error) {
-      this.customTemplates = previous;
-      throw error;
-    }
+    const saved = await Storage.saveAll({ customTemplateChanges: { added: [template] } });
+    this.customTemplates = (Storage._zoteroCache || saved).customTemplates || [];
     return template;
   },
 
   // Delete custom template
   async deleteCustomTemplate(templateId) {
-    const previous = this.customTemplates;
-    this.customTemplates = previous.filter(t => t.id !== templateId);
-    try {
-      await this.saveCustomTemplates();
-    } catch (error) {
-      this.customTemplates = previous;
-      throw error;
-    }
+    const saved = await Storage.saveAll({ customTemplateChanges: { deleted: [templateId] } });
+    this.customTemplates = (Storage._zoteroCache || saved).customTemplates || [];
   },
 
   // Apply template (create task from template)
@@ -296,10 +284,7 @@ const Templates = {
 
     // Open modal with prefilled data
     Modal.openAdd({
-      title: template.task.title,
-      description: template.task.description,
-      priority: template.task.priority,
-      category: template.task.category,
+      ...template.task,
       subtasks: template.task.subtasks.map(st => ({
         id: Utils.generateId(),
         title: st.title,

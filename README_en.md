@@ -29,7 +29,7 @@ Traditional todo apps (like Todoist or TickTick) lack contextual integration wit
 - ❌ **Cross-device sync barrier**: Mobile or tablet reading cannot access literature-specific checklists;
 - ❌ **No academic workflow abstractions**: Lack structured stages for literature surveys, methodology, experiments, and review deadlines.
 
-**Todolist for Zotero** bridges this gap seamlessly, integrating four versatile task boards, a Pomodoro timer, fluid animations, and **two-way native linkage** with Zotero items, PDF reader, and cloud note syncing!
+**Todolist for Zotero** provides four task views, task time tracking, and integration with Zotero items, the PDF reader, child notes, and the item details pane.
 
 ---
 
@@ -56,7 +56,7 @@ Traditional todo apps (like Todoist or TickTick) lack contextual integration wit
 - 📈 **Statistics View**: Completion rates, time tracking analytics, and category breakdowns.
 
 ### 4. Time & Focus Management
-- ⏱️ **Built-in Pomodoro Timer**: Track reading time per paper with analytics;
+- ⏱️ **Task Time Tracking**: Track reading time per paper with analytics. Focus countdowns and break cycles are not implemented yet;
 - ⏰ **Time Capsule Quick Presets**: Quick deadline selection (`09:00`, `12:00`, `14:00`, `18:00`, `20:00`);
 - 🔔 **Desktop & Audio Reminders**: Gentle alerts before deadlines.
 

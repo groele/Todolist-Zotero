@@ -171,7 +171,7 @@ test('a pending statistics render completes safely after its window closes', asy
 test('host message failures return the original error and persist a diagnostic', async t => {
   const native = makeHost();
   const main = new JSDOM('<html><body><div id="zotero-pane"><toolbar id="zotero-items-toolbar"></toolbar></div></body></html>');
-  const child = new JSDOM('<body></body>');
+  const child = new JSDOM('<body></body>', { url: 'chrome://todolist/content/index.html' });
   t.after(() => { main.window.close(); child.window.close(); });
   main.window.ZoteroPane = {};
   native.host.addToWindow(main.window);

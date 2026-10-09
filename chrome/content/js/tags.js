@@ -39,11 +39,6 @@ const Tags = {
     this.customTags = result.customTags || [];
   },
 
-  // Save custom tags
-  async saveCustomTags() {
-    await Storage.saveAll({ customTags: this.customTags });
-  },
-
   // Get all tags
   getAllTags() {
     return [...this.predefinedTags, ...this.customTags];
@@ -63,27 +58,15 @@ const Tags = {
       color: this.safeColor(color),
       icon: '🏷️'
     };
-    const previous = this.customTags;
-    this.customTags.push(tag);
-    try {
-      await this.saveCustomTags();
-    } catch (error) {
-      this.customTags = previous.filter(item => item.id !== tag.id);
-      throw error;
-    }
+    const saved = await Storage.saveAll({ customTagChanges: { added: [tag] } });
+    this.customTags = (Storage._zoteroCache || saved).customTags || [];
     return tag;
   },
 
   // Delete custom tag
   async deleteCustomTag(tagId) {
-    const previous = this.customTags;
-    this.customTags = previous.filter(t => t.id !== tagId);
-    try {
-      await this.saveCustomTags();
-    } catch (error) {
-      this.customTags = previous;
-      throw error;
-    }
+    const saved = await Storage.saveAll({ customTagChanges: { deleted: [tagId] } });
+    this.customTags = (Storage._zoteroCache || saved).customTags || [];
   },
 
   // Get tag by ID

@@ -80,6 +80,7 @@ const Storage = {
   mergeData(current, patch) {
     const merged = { ...current, ...patch };
     TaskRules.applyTaskGeneration(current, merged, patch);
+    TaskRules.applyCollectionChanges(current, merged, patch);
     if (patch.settings) merged.settings = patch.replaceSettings ? { ...this.defaultSettings, ...patch.settings } : { ...current.settings, ...patch.settings };
     delete merged.replaceSettings;
     if (patch.taskChanges) {

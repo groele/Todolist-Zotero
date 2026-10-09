@@ -199,8 +199,9 @@ test('preference changes persist only their own key and log async host failures'
   const win = dom.window;
   const writes = [];
   const logs = [];
+  const preferences = new Map();
   win.Zotero = {
-    Prefs: { get: () => undefined, set: () => {} },
+    Prefs: { get: key => preferences.get(key), set: (key, value) => preferences.set(key, value) },
     logError: message => logs.push(String(message)),
     Todolist: { saveData: async patch => { writes.push(patch); } }
   };
@@ -225,5 +226,8 @@ test('preference changes persist only their own key and log async host failures'
   includesQuotes.checked = true;
   includesQuotes.dispatchEvent(new win.Event('change'));
   await new Promise(resolve => setTimeout(resolve, 0));
-  assert(logs.some(message => message.includes('Failed to persist preference childNoteIncludeQuotes')));
+  assert(logs.some(message => message.includes('保存设置') && message.includes('simulated write failure')));
+  assert.equal(includesQuotes.checked, false);
+  assert.equal(preferences.get('extensions.todolist.childNoteIncludeQuotes'), false);
+  assert.match(win.document.getElementById('todolist-pref-status').textContent, /保存设置失败/);
 });

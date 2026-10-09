@@ -16,27 +16,12 @@ const Advanced = {
     this.searchHistory = result.searchHistory || [];
   },
 
-  // Save search history
-  async saveSearchHistory() {
-    await Storage.saveAll({ searchHistory: this.searchHistory });
-  },
-
   // Add to search history
   async addToSearchHistory(query) {
     if (!query || query.trim().length < 2) return;
 
-    // Remove if already exists
-    this.searchHistory = this.searchHistory.filter(h => h !== query);
-
-    // Add to beginning
-    this.searchHistory.unshift(query);
-
-    // Limit size
-    if (this.searchHistory.length > this.maxHistorySize) {
-      this.searchHistory = this.searchHistory.slice(0, this.maxHistorySize);
-    }
-
-    await this.saveSearchHistory();
+    const saved = await Storage.saveAll({ searchHistoryAdd: query.trim() });
+    this.searchHistory = (Storage._zoteroCache || saved).searchHistory || [];
   },
 
   // Get search suggestions

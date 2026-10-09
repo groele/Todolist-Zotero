@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Todolist - 学术日程与研读待办",
-  "version": "11.0.2",
+  "version": "11.0.3",
   "description": "Todolist for Zotero: 专为 Zotero 10+ 打造的学术任务与文献研读管理插件",
   "homepage_url": "https://github.com/groele/Todolist-Zotero",
   "author": "groele",

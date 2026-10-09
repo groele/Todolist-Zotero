@@ -710,6 +710,7 @@
         const patch = prepared ? { ...prepared.patch, syncLinkedItems: request.syncLinkedItems } : request;
         const next = { ...current, ...patch };
         TaskRules.applyTaskGeneration(current, next, patch);
+        TaskRules.applyCollectionChanges(current, next, patch);
         delete next.syncLinkedItems;
         if (patch.settings) next.settings = patch.replaceSettings ? patch.settings : { ...current.settings, ...patch.settings };
         delete next.replaceSettings;
@@ -1621,6 +1622,7 @@
     },
 
     registerItemPaneSection() {
+      if (!this.getPref('enableItemPane', true)) return;
       if (typeof Zotero.ItemPaneManager?.registerSection !== 'function') return;
       try {
         const sectionStates = new WeakMap();
@@ -2284,6 +2286,12 @@
 
           const sourceWin = event.source;
           const iframe = window.document.getElementById('todolist-tab-iframe');
+          if (sourceWin && sourceWin !== iframe?.contentWindow) {
+            let sourceURL;
+            try { sourceURL = String(sourceWin.location?.href || ''); } catch (_) { return; }
+            if (!/^chrome:\/\/todolist\/content\/(?:index|sidepanel)\.html(?:[?#]|$)/.test(sourceURL)) return;
+          }
+          if (!sourceWin && !iframe?.contentWindow) return;
 
           if (data.type === 'TODOLIST_DIAGNOSTIC' && data.record) {
             this.recordDiagnostic(data.record);

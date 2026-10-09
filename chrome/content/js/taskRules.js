@@ -1,5 +1,29 @@
 // Pure rules shared by the Gecko host and task windows.
 var TaskRules = {
+  applyCollectionChanges(current, next, patch) {
+    for (const [key, command] of [['customTags', 'customTagChanges'], ['customTemplates', 'customTemplateChanges']]) {
+      const changes = patch[command];
+      delete next[command];
+      if (!changes) continue;
+      const { added = [], deleted = [] } = changes;
+      if (!Array.isArray(added) || !Array.isArray(deleted) || deleted.some(id => typeof id !== 'string')) throw new Error('标签或模板修改格式无效');
+      const removed = new Set(deleted);
+      const entries = (current[key] || []).filter(entry => !removed.has(entry.id));
+      const ids = new Set(entries.map(entry => entry.id));
+      for (const entry of added) {
+        if (!entry || typeof entry.id !== 'string' || !entry.id || typeof entry.name !== 'string' || !entry.name.trim()) throw new Error('标签或模板内容无效');
+        if (key === 'customTemplates' && (!entry.task || typeof entry.task.title !== 'string' || !entry.task.title.trim())) throw new Error('模板标题不能为空');
+        if (!ids.has(entry.id)) { entries.push(entry); ids.add(entry.id); }
+      }
+      next[key] = entries;
+    }
+    delete next.searchHistoryAdd;
+    if (patch.searchHistoryAdd != null) {
+      const query = patch.searchHistoryAdd;
+      if (typeof query !== 'string' || query.trim().length < 2) throw new Error('搜索记录无效');
+      next.searchHistory = [query.trim(), ...(current.searchHistory || []).filter(value => value !== query.trim())].slice(0, 10);
+    }
+  },
   applyTaskGeneration(current, next, patch) {
     if (patch.expectedTasksGeneration != null && patch.expectedTasksGeneration !== (current.tasksGeneration || 0)) {
       throw new Error('任务已被清空或替换，请重新加载后重试');
@@ -138,7 +162,7 @@ var TaskRules = {
     } else patch.taskChanges = { added };
     for (const key of ['customTags', 'customTemplates']) {
       if (source[key] != null && !Array.isArray(source[key])) throw new Error('标签或模板格式无效');
-      const entries = source[key] || [];
+      const entries = JSON.parse(JSON.stringify(source[key] || []));
       const seen = new Set();
       for (const entry of entries) {
         if (!entry || typeof entry.id !== 'string' || !entry.id || seen.has(entry.id) ||
@@ -148,8 +172,10 @@ var TaskRules = {
         }
         seen.add(entry.id);
         if (key === 'customTemplates') {
+          if (typeof entry.task.title !== 'string' || !entry.task.title.trim()) throw new Error('模板标题不能为空');
           if (entry.task.subtasks != null && (!Array.isArray(entry.task.subtasks) ||
               entry.task.subtasks.some(st => !st || typeof st.title !== 'string'))) throw new Error('模板子任务格式无效');
+          entry.task.subtasks = entry.task.subtasks || [];
         }
       }
       if (mode === 'replace') patch[key] = entries;

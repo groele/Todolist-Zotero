@@ -320,12 +320,14 @@ const Modal = {
 
     this.form.reset();
     this.currentTaskId = null;
+    this._editSnapshot = null;
     this._creationState = { completed: Boolean(prefill?.completed), status: prefill?.status || 'todo' };
     document.getElementById('btn-delete-task')?.classList.add('hidden');
     this.currentSubtasks = [];
     this.currentTags = [];
 
-    const activeType = prefill?.academicType || (this.isZotero() ? 'literature_reading' : 'general');
+    const activeType = prefill?.academicType || (this.isZotero()
+      ? Storage._zoteroCache?.settings?.defaultTaskType || 'literature_reading' : 'general');
     this.setAcademicType(activeType);
 
     this.currentZoteroLiterature = prefill?.zoteroItemKey ? {
@@ -355,10 +357,12 @@ const Modal = {
       if (prefill.description) document.getElementById('task-description').value = prefill.description;
       if (prefill.dueDate) document.getElementById('task-due-date').value = prefill.dueDate;
       if (prefill.priority) {
-        const radio = this.form.querySelector(`input[name="priority"][value="${prefill.priority}"]`);
+        const radio = [...this.form.querySelectorAll('input[name="priority"]')].find(el => el.value === prefill.priority);
         if (radio) radio.checked = true;
       }
       if (prefill.category) document.getElementById('task-category').value = prefill.category;
+      const repeatSelect = document.getElementById('task-repeat');
+      if (repeatSelect) repeatSelect.value = prefill.repeat || '';
       if (prefill.tags) this.currentTags = [...prefill.tags];
       if (prefill.subtasks) {
         this.currentSubtasks = prefill.subtasks.map(st => ({
@@ -466,6 +470,7 @@ const Modal = {
       this.dialog.showModal();
     }
     document.getElementById('task-title')?.focus();
+    this._editSnapshot = Storage.clone(this.getFormData());
   },
 
   // Render subtasks list
@@ -675,9 +680,7 @@ const Modal = {
   },
 
   // Handle form submission
-  async handleSubmit() {
-    if (this._isSubmitting) return;
-
+  getFormData() {
     const repeatSelect = document.getElementById('task-repeat');
     const reminderBefore = document.getElementById('task-reminder-before');
 
@@ -716,6 +719,13 @@ const Modal = {
       formData.reminder.notified = Boolean(old.reminder?.notified);
     }
 
+    return formData;
+  },
+
+  async handleSubmit() {
+    if (this._isSubmitting) return;
+    const formData = this.getFormData();
+
     if (!formData.title) {
       document.getElementById('task-title').focus();
       return;
@@ -724,29 +734,34 @@ const Modal = {
     const submitBtn = this.form.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.disabled = true;
     this._isSubmitting = true;
+    let committed = false;
 
     try {
       if (this.currentTaskId) {
         // Update existing task
-        const updated = await TaskManager.updateTask(this.currentTaskId, formData);
+        const changes = Object.fromEntries(Object.entries(formData).filter(([key, value]) =>
+          !this._editSnapshot || JSON.stringify(value) !== JSON.stringify(this._editSnapshot[key])));
+        const updated = await TaskManager.updateTask(this.currentTaskId, changes);
         if (!updated) throw new Error('任务已在其他窗口中删除');
+        committed = true;
         UI.showToast('任务已更新');
       } else {
         // Add new task
         await TaskManager.addTask(formData);
+        committed = true;
         UI.showToast('任务已添加');
       }
 
       this._isSubmitting = false;
       this.close();
-      await this.loadCategories();
+      try { await this.loadCategories(); }
+      catch (error) { Diagnostics.report('刷新任务分类（任务已保存）', error); }
       UI.render();
 
       // Notify service worker to update badge
       UI.notifyServiceWorker();
     } catch (error) {
-      console.error('Failed to save task:', error);
-      UI.showToast('保存失败，请重试');
+      Diagnostics.showFailure(committed ? '刷新任务界面（任务已保存）' : '保存任务', error);
     } finally {
       this._isSubmitting = false;
       if (submitBtn) submitBtn.disabled = false;

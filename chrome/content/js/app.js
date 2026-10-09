@@ -73,6 +73,7 @@
   async function showFirstTimeTips() {
     try {
       const result = await Storage.getAll();
+      if (result.settings?.showWelcomeOnStartup === false) return;
 
       if (!result.firstTimeShown) {
         await Storage.saveAll({ firstTimeShown: true });

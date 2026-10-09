@@ -22,14 +22,15 @@ const UI = {
     await TaskManager.loadTasks();
     this._storageReady = true;
     Storage.subscribe(data => {
+      if (typeof Tags !== 'undefined') Tags.customTags = data.customTags || [];
+      if (typeof Templates !== 'undefined') Templates.customTemplates = data.customTemplates || [];
+      if (typeof Advanced !== 'undefined') Advanced.searchHistory = data.searchHistory || [];
       if (!this._storageReady || TaskManager._mutating) return;
       TaskManager._tasks = Storage.clone(data.tasks || []);
       TaskManager._baseline = Storage.clone(TaskManager._tasks);
       const ids = new Set(TaskManager._tasks.map(t => t.id));
       TaskManager._selectedTasks = new Set([...TaskManager._selectedTasks].filter(id => ids.has(id)));
       if (typeof TimeTracking !== 'undefined') TimeTracking.activeTimers = data.activeTimers || {};
-      if (typeof Tags !== 'undefined' && data.customTags) Tags.customTags = data.customTags;
-      if (typeof Templates !== 'undefined' && data.customTemplates) Templates.customTemplates = data.customTemplates;
       if (data.settings) {
         this.currentSortOrder = data.settings.sortOrder || 'dueDate';
         this.showCompleted = data.settings.showCompleted !== false;
@@ -399,7 +400,7 @@ const UI = {
             return;
           }
           this.render();
-          const card = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+          const card = [...document.querySelectorAll('.task-card')].find(el => el.dataset.taskId === taskId);
           const newInput = card?.querySelector('.card-add-subtask-input');
           if (newInput) newInput.focus();
         }
@@ -1165,7 +1166,7 @@ const UI = {
       <option value="all" ${currentValue === 'all' ? 'selected' : ''}>全部分类</option>
       ${allCategories.map(cat => `
         <option value="${Utils.escapeHtml(cat)}" ${currentValue === cat ? 'selected' : ''}>
-          ${icons[cat] || '🏷️'} ${Utils.escapeHtml(cat)}
+          ${Object.hasOwn(icons, cat) ? icons[cat] : '🏷️'} ${Utils.escapeHtml(cat)}
         </option>
       `).join('')}
     `;

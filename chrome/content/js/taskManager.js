@@ -739,7 +739,10 @@ for (const name of ['addTask', 'updateTask', 'deleteTask', 'undoDelete', 'toggle
         }
       } finally {
         this._mutating = false;
-        if (typeof UI !== 'undefined' && UI._storageReady) UI.render();
+        if (typeof UI !== 'undefined' && UI._storageReady) {
+          try { UI.render(); }
+          catch (error) { Diagnostics.report('刷新任务列表', error); }
+        }
       }
     };
     const result = this._mutationQueue.then(run);

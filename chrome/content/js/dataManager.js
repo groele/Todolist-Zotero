@@ -45,10 +45,12 @@ const DataManager = {
           if (mode === 'replace') TaskManager.clearUndo();
 
           // Reload in-memory modules
-          await TaskManager.loadTasks();
-          if (typeof Tags !== 'undefined' && Tags.loadCustomTags) await Tags.loadCustomTags();
-          if (typeof Templates !== 'undefined' && Templates.loadCustomTemplates) await Templates.loadCustomTemplates();
-          if (typeof Advanced !== 'undefined') await Advanced.loadSearchHistory();
+          try {
+            await TaskManager.loadTasks();
+            if (typeof Tags !== 'undefined' && Tags.loadCustomTags) await Tags.loadCustomTags();
+            if (typeof Templates !== 'undefined' && Templates.loadCustomTemplates) await Templates.loadCustomTemplates();
+            if (typeof Advanced !== 'undefined') await Advanced.loadSearchHistory();
+          } catch (error) { Diagnostics.report('刷新导入结果（备份已导入）', error); }
 
           resolve({
             imported,
@@ -71,7 +73,8 @@ const DataManager = {
   async clearAllTasks() {
     await Storage.saveAll({ tasks: [], activeTimers: {} });
     TaskManager.clearUndo();
-    await TaskManager.loadTasks();
+    try { await TaskManager.loadTasks(); }
+    catch (error) { Diagnostics.report('刷新任务列表（任务已清空）', error); }
     return true;
   },
 
@@ -92,7 +95,7 @@ const DataManager = {
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     // Category distribution
-    const categories = {};
+    const categories = Object.create(null);
     tasks.forEach(t => {
       const cat = t.category || '未分类';
       categories[cat] = (categories[cat] || 0) + 1;
@@ -101,7 +104,7 @@ const DataManager = {
     // Priority distribution
     const priorities = { high: 0, medium: 0, low: 0 };
     tasks.forEach(t => {
-      if (priorities[t.priority] !== undefined) {
+      if (Object.hasOwn(priorities, t.priority)) {
         priorities[t.priority]++;
       }
     });
