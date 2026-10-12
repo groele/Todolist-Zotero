@@ -11,3 +11,10 @@ Desktop.ini
 
 # Logs
 *.log
+
+# Dependencies and builds
+node_modules/
+*.xpi
+.playwright-cli/
+artifacts/
+scripts/repair-*.py

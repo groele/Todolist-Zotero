@@ -1,0 +1,1566 @@
+/* ==========================================================================
+   Todolist for Zotero - Zotero Native Academic Design System (v11.x)
+   Systematic UI Redesign: Native Desktop Clean Aesthetics for Zotero 7+
+   ========================================================================== */
+
+/* 1. Global Reset & Desktop Typography */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: var(--font-family) !important;
+  color: var(--text) !important;
+  background-color: var(--bg) !important;
+  background-image: none !important;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Remove awkward pseudo-element tooltip duplication */
+.btn-icon[title]:hover::after {
+  display: none !important;
+}
+
+/* Clean Desktop Focus States */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="checkbox"]:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 1px !important;
+  box-shadow: 0 0 0 3px var(--focus-ring) !important;
+}
+
+/* Accessible High-Contrast Placeholder */
+::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.85;
+}
+
+/* Clean Desktop Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-muted);
+}
+
+/* ==========================================================================
+   2. Desktop Left Sidebar (Integrated with Zotero Collection Tree Aesthetics)
+   ========================================================================== */
+.app-layout {
+  background-color: var(--bg);
+}
+
+.sidebar {
+  width: 64px;
+  background: var(--surface-subtle) !important;
+  border-right: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  padding: 14px 8px 12px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: width var(--motion-medium) var(--ease-spring), padding var(--motion-medium) var(--ease-spring), background-color var(--transition-normal);
+}
+
+.sidebar-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px !important;
+  padding: 0 4px;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-logo {
+  width: 24px !important;
+  height: 24px !important;
+  display: block;
+  filter: none !important;
+}
+
+.sidebar-title {
+  font-family: var(--font-family) !important;
+  font-size: var(--font-size-md) !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: currentColor !important;
+  letter-spacing: -0.02em;
+}
+
+.sidebar-toggle {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.sidebar-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Add Task Button */
+.sidebar-add-btn {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  box-shadow: var(--shadow-sm) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 16px !important;
+  transition: background-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.sidebar-add-btn:hover {
+  background: var(--primary-dark) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md) !important;
+}
+
+.sidebar-add-btn:active {
+  transform: translateY(0);
+}
+
+.sidebar-add-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.sidebar-divider {
+  width: 28px !important;
+  height: 1px !important;
+  background-color: var(--border) !important;
+  margin: 6px 0 14px !important;
+  border: none;
+}
+
+/* Sidebar Menu Navigation */
+.sidebar-section {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+
+.sidebar-menu-btn,
+.sidebar .sidebar-menu-btn.tab {
+  width: 44px !important;
+  height: 38px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: all var(--transition-fast);
+  box-shadow: none !important;
+}
+
+.sidebar-menu-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-menu-icon svg {
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+  transition: color var(--transition-fast);
+}
+
+.sidebar-menu-btn:hover,
+.sidebar .sidebar-menu-btn.tab:hover {
+  background: var(--surface-hover) !important;
+  color: var(--text) !important;
+}
+
+.sidebar-menu-btn.active,
+.sidebar .sidebar-menu-btn.tab.active {
+  background: var(--primary-bg) !important;
+  color: var(--primary) !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.sidebar-menu-btn.active .sidebar-menu-icon svg,
+.sidebar .sidebar-menu-btn.tab.active .sidebar-menu-icon svg {
+  color: var(--primary) !important;
+}
+
+/* Sidebar Filter Badge / Dots */
+.sidebar-filter-count {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all var(--transition-fast);
+}
+
+.sidebar-filter-count.has-count {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.sidebar-filter-count.has-overdue {
+  background: var(--danger) !important;
+}
+
+/* Sidebar Expanded State (Desktop) */
+@media (min-width: 769px) {
+  .app-layout.sidebar-expanded .sidebar {
+    width: 216px !important;
+    align-items: stretch !important;
+    padding: 14px 12px 12px !important;
+  }
+
+  .app-layout.sidebar-expanded .sidebar-header {
+    padding: 0 4px;
+    margin-bottom: 14px !important;
+  }
+
+  .app-layout.sidebar-expanded .sidebar-title {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    clip: auto !important;
+    font-size: 15px !important;
+  }
+
+  .app-layout.sidebar-expanded .sidebar-add-btn {
+    width: 100% !important;
+    height: 36px !important;
+    border-radius: var(--radius-md) !important;
+    padding: 0 12px !important;
+    gap: 8px !important;
+    font-size: var(--font-size-md) !important;
+    font-weight: 500 !important;
+  }
+
+  .app-layout.sidebar-expanded .sidebar-menu-btn,
+  .app-layout.sidebar-expanded .sidebar .sidebar-menu-btn.tab {
+    width: 100% !important;
+    height: 34px !important;
+    padding: 0 10px !important;
+    justify-content: flex-start !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .app-layout.sidebar-expanded .sidebar-menu-btn-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .app-layout.sidebar-expanded .sidebar-menu-text {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    clip: auto !important;
+    font-size: 13px;
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+    animation: sidebarTextFadeIn var(--motion-normal) var(--ease-spring) both;
+  }
+
+  @keyframes sidebarTextFadeIn {
+    0% {
+      opacity: 0;
+      transform: translateX(-6px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .app-layout.sidebar-expanded .sidebar-filter-count {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 1px 7px !important;
+    border-radius: var(--radius-full) !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    line-height: 1.3 !important;
+    background: var(--border-light) !important;
+    color: var(--text-secondary) !important;
+    box-shadow: none !important;
+  }
+
+  .app-layout.sidebar-expanded .sidebar-filter-count.has-count {
+    background: var(--surface-hover) !important;
+    color: var(--text) !important;
+  }
+
+  .app-layout.sidebar-expanded .sidebar-filter-count.has-overdue {
+    background: var(--danger-bg) !important;
+    color: var(--danger) !important;
+  }
+
+  .app-layout.sidebar-expanded .sidebar-divider {
+    width: 100% !important;
+  }
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--border) !important;
+  gap: 4px;
+}
+
+.sidebar-footer .btn-icon {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.sidebar-footer .btn-icon:hover {
+  background: var(--surface-hover) !important;
+  color: var(--text) !important;
+}
+
+/* ==========================================================================
+   3. Main Header & Workbench Toolbar
+   ========================================================================== */
+.main-content-layout {
+  background-color: var(--bg);
+}
+
+.main-header {
+  height: 52px;
+  min-height: 52px;
+  padding: 0 clamp(16px, 2.5vw, 32px) !important;
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.main-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.current-view-title {
+  font-family: var(--font-family) !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.header-progress-widget {
+  padding: 3px 8px !important;
+  background: var(--surface-subtle) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.header-progress-widget:hover {
+  border-color: var(--border) !important;
+  background: var(--surface-hover) !important;
+}
+
+.header-progress-text {
+  font-size: 10.5px !important;
+  font-weight: 500 !important;
+  color: var(--text-secondary) !important;
+}
+
+.header-progress-bar {
+  height: 4px !important;
+  width: 70px !important;
+  background: var(--border) !important;
+  border-radius: var(--radius-full) !important;
+}
+
+.header-progress-fill {
+  background: var(--primary) !important;
+  border-radius: var(--radius-full) !important;
+}
+
+.main-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px !important;
+}
+
+.main-header-right .search-box {
+  position: relative;
+  width: 220px !important;
+  transition: width var(--transition-normal);
+}
+
+.main-header-right .search-box:focus-within {
+  width: 280px !important;
+}
+
+.search-box input {
+  height: 32px !important;
+  min-height: 32px !important;
+  background: var(--surface-subtle) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 0 10px 0 32px !important;
+  font-size: 12.5px !important;
+  color: var(--text) !important;
+  transition: all var(--transition-fast);
+}
+
+.search-box input:focus {
+  background: var(--surface) !important;
+  border-color: var(--primary) !important;
+}
+
+.search-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.main-header-right select,
+.filter-select {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 24px 0 9px !important;
+  background-color: var(--surface-subtle) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  font-size: 12px !important;
+  font-weight: 450 !important;
+  color: var(--text-secondary) !important;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.main-header-right select:hover,
+.filter-select:hover {
+  background-color: var(--surface-hover) !important;
+  color: var(--text) !important;
+}
+
+.main-header-right select:focus,
+.filter-select:focus {
+  border-color: var(--primary) !important;
+  background-color: var(--surface) !important;
+}
+
+/* ==========================================================================
+   4. Views Container & Center-Aligned List View
+   ========================================================================== */
+.views-container {
+  padding: 20px clamp(16px, 3vw, 40px) 36px !important;
+  background-color: var(--bg) !important;
+}
+
+#list-view {
+  max-width: 880px !important;
+  margin: 0 auto;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px !important;
+}
+
+.task-section {
+  margin-bottom: 22px !important;
+}
+
+.task-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px !important;
+  padding: 0 2px 6px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.task-section-title {
+  font-family: var(--font-family) !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.task-section-count {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  padding: 1px 7px !important;
+  border-radius: var(--radius-full) !important;
+  background: var(--surface-hover) !important;
+  color: var(--text-muted) !important;
+}
+
+/* ==========================================================================
+   5. Task Card - Clean Academic Precision
+   ========================================================================== */
+.task-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px 12px 16px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-xs) !important;
+  position: relative;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.task-card::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 12px;
+  bottom: 12px;
+  width: 3px !important;
+  border-radius: var(--radius-full) !important;
+  background-color: var(--priority-color, var(--border));
+  transition: width var(--transition-fast);
+}
+
+.task-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border)) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transform: translateY(-1px);
+}
+
+.task-card:hover::before {
+  width: 4px !important;
+}
+
+.task-card.completed {
+  opacity: 0.72;
+  background: color-mix(in srgb, var(--surface) 96%, var(--bg)) !important;
+}
+
+/* Task Checkbox */
+.task-checkbox {
+  flex-shrink: 0;
+  width: 17px !important;
+  height: 17px !important;
+  margin-top: 2px !important;
+  border-radius: var(--radius-xs) !important;
+  border: 1.5px solid var(--border) !important;
+  background: var(--surface) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0;
+}
+
+.task-checkbox:hover {
+  border-color: var(--primary) !important;
+  background: var(--primary-bg) !important;
+}
+
+.task-checkbox.checked {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+.task-checkbox.checked::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-0.5px, -1px);
+}
+
+/* Task Content */
+.task-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-title {
+  font-family: var(--font-family) !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+  color: var(--text) !important;
+  letter-spacing: 0;
+  word-break: break-word;
+}
+
+.task-card.completed .task-title {
+  text-decoration: line-through;
+  color: var(--text-muted) !important;
+}
+
+.task-description {
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  color: var(--text-secondary) !important;
+  margin-top: 2px;
+  word-break: break-word;
+}
+
+/* Academic Type Badges */
+.task-academic-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  padding: 1px 6px !important;
+  border-radius: var(--radius-xs) !important;
+  vertical-align: middle;
+  margin-right: 5px;
+  line-height: 1.35;
+}
+
+.task-academic-pill.reading {
+  background: var(--academic-blue-bg) !important;
+  color: var(--academic-blue) !important;
+  border: 1px solid var(--academic-blue-border);
+}
+
+.task-academic-pill.writing {
+  background: var(--academic-purple-bg) !important;
+  color: var(--academic-purple) !important;
+  border: 1px solid rgba(124, 58, 237, 0.22);
+}
+
+.task-academic-pill.experiment {
+  background: var(--academic-cyan-bg) !important;
+  color: var(--academic-cyan) !important;
+  border: 1px solid rgba(8, 145, 178, 0.22);
+}
+
+.task-academic-pill.submission {
+  background: var(--warning-bg) !important;
+  color: var(--warning) !important;
+  border: 1px solid var(--warning-border);
+}
+
+.task-academic-pill.review {
+  background: var(--academic-teal-bg) !important;
+  color: var(--academic-teal) !important;
+  border: 1px solid rgba(13, 148, 136, 0.22);
+}
+
+.task-academic-pill.general {
+  background: var(--surface-hover) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border);
+}
+
+/* Zotero Literature Badge - Integrated Literature Card */
+.task-zotero-badge-card {
+  margin: 6px 0 3px !important;
+  padding: 6px 10px !important;
+  background: var(--academic-blue-bg) !important;
+  border: 1px solid var(--academic-blue-border) !important;
+  border-radius: var(--radius-md) !important;
+  font-size: 12px;
+}
+
+.task-zotero-badge-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.zotero-badge-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.zotero-badge-title {
+  font-weight: 600;
+  color: var(--text) !important;
+  transition: color var(--transition-fast);
+}
+
+.task-zotero-badge-main:hover .zotero-badge-title {
+  color: var(--academic-blue) !important;
+  text-decoration: underline;
+}
+
+.zotero-badge-page {
+  padding: 1px 5px;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--academic-blue);
+  border-radius: var(--radius-xs);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.zotero-badge-author-year,
+.zotero-badge-pub {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.btn-card-open-pdf {
+  margin-left: auto;
+  padding: 2px 7px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--academic-blue-border) !important;
+  color: var(--academic-blue) !important;
+  border-radius: var(--radius-xs) !important;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-card-open-pdf:hover {
+  background: var(--academic-blue) !important;
+  color: #ffffff !important;
+  border-color: var(--academic-blue) !important;
+}
+
+.task-lit-quote {
+  margin: 5px 0 0 16px;
+  padding: 2px 0 2px 8px;
+  border-left: 2px solid var(--academic-blue-border);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-style: italic;
+  line-height: 1.45;
+}
+
+/* Subtasks inside task card */
+.subtask-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 2px;
+}
+
+.subtask-progress-text {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.subtask-progress-bar {
+  flex: 1;
+  max-width: 120px;
+  height: 4px;
+  background: var(--border-light);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.subtask-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+}
+
+.card-subtasks-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 3px;
+  padding-left: 4px;
+}
+
+.card-subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.card-subtask-checkbox {
+  width: 13px;
+  height: 13px;
+  border: 1.2px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-subtask-checkbox.checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.card-subtask-checkbox.checked::after {
+  content: '';
+  width: 3px;
+  height: 6px;
+  border: solid #ffffff;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg) translate(-0.5px, -0.5px);
+}
+
+.card-subtask-text {
+  flex: 1;
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+
+.card-subtask-item.completed .card-subtask-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.btn-card-delete-subtask {
+  color: var(--text-muted);
+  font-size: 13px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.card-subtask-item:hover .btn-card-delete-subtask {
+  opacity: 1;
+}
+
+.btn-card-delete-subtask:hover {
+  color: var(--danger);
+}
+
+.card-add-subtask-row {
+  margin-top: 2px;
+}
+
+.card-add-subtask-input {
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 11.5px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-xs);
+  color: var(--text);
+  transition: all var(--transition-fast);
+}
+
+.card-add-subtask-input:focus {
+  background: var(--surface);
+  border-style: solid;
+  border-color: var(--primary);
+  outline: none;
+}
+
+/* Task Meta Badges */
+.task-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.task-due-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-light);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.task-due-date.today {
+  background: var(--academic-blue-bg);
+  color: var(--academic-blue);
+  border-color: var(--academic-blue-border);
+}
+
+.task-due-date.overdue {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+.task-priority {
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.task-priority.high {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.task-priority.medium {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.task-priority.low {
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+}
+
+.task-category {
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-subtle);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Task Action Buttons */
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0.25;
+  transition: opacity var(--transition-fast);
+}
+
+.task-card:hover .task-actions {
+  opacity: 1;
+}
+
+.task-action {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: var(--radius-xs) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.task-action:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.task-action.delete:hover {
+  background: var(--danger-bg) !important;
+  color: var(--danger) !important;
+}
+
+.task-action.timer:hover {
+  background: var(--primary-bg) !important;
+  color: var(--primary) !important;
+}
+
+/* ==========================================================================
+   6. Kanban View - Native Academic Card Board
+   ========================================================================== */
+#kanban-view {
+  height: 100%;
+  gap: 16px !important;
+  padding-bottom: 12px;
+}
+
+.kanban-column {
+  background-color: var(--surface-subtle) !important;
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+
+.kanban-column-header {
+  padding: 10px 14px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.kanban-column-title {
+  font-family: var(--font-family) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+}
+
+.kanban-column-count {
+  background-color: var(--surface) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-full) !important;
+  font-size: 11px !important;
+  padding: 0 6px !important;
+  min-width: 20px;
+  height: 18px;
+}
+
+.kanban-column-content {
+  padding: 10px !important;
+  gap: 8px !important;
+}
+
+.kanban-column-content.drag-over {
+  background-color: var(--primary-bg) !important;
+  outline: 2px dashed var(--primary) !important;
+  outline-offset: -2px;
+}
+
+.kanban-task {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-xs) !important;
+  padding: 10px 12px !important;
+  transition: all var(--transition-fast);
+}
+
+.kanban-task:hover {
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border)) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transform: translateY(-1px);
+}
+
+.kanban-task-checkbox {
+  width: 15px !important;
+  height: 15px !important;
+  border-radius: var(--radius-xs) !important;
+  border: 1.5px solid var(--border) !important;
+  background: var(--surface) !important;
+}
+
+.kanban-task-checkbox.checked {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+.kanban-task-title {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--text) !important;
+}
+
+.kanban-task.completed .kanban-task-title {
+  text-decoration: line-through;
+  color: var(--text-muted) !important;
+}
+
+.kanban-task-page {
+  padding: 1px 5px !important;
+  border-radius: var(--radius-xs) !important;
+  background: var(--academic-blue-bg) !important;
+  color: var(--academic-blue) !important;
+  border: 1px solid var(--academic-blue-border) !important;
+  font-size: 10.5px !important;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   7. Calendar View - Clean Precision Grid
+   ========================================================================== */
+#calendar-view {
+  background-color: var(--surface) !important;
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  padding: 16px !important;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px !important;
+}
+
+.calendar-header h2 {
+  font-family: var(--font-family) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  margin-bottom: 4px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 6px 0;
+}
+
+.calendar-days {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  background-color: var(--border) !important;
+}
+
+.calendar-day {
+  background-color: var(--surface) !important;
+  padding: 6px !important;
+}
+
+.calendar-day-number {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: var(--text-secondary);
+}
+
+.calendar-day.today .calendar-day-number {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: var(--radius-full) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-day.other-month {
+  background-color: var(--bg) !important;
+  opacity: 0.55;
+}
+
+.calendar-task-indicator {
+  font-size: 10.5px !important;
+  padding: 2px 5px !important;
+  border-radius: var(--radius-xs) !important;
+  background-color: var(--surface-subtle) !important;
+  border-left: 2.5px solid var(--priority-color, var(--border)) !important;
+  color: var(--text) !important;
+}
+
+/* ==========================================================================
+   8. Stats View - Academic Dashboard
+   ========================================================================== */
+#stats-view {
+  max-width: 960px !important;
+}
+
+.stats-card,
+.stats-chart,
+.stats-info,
+.stats-distribution {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: none !important;
+  padding: 16px !important;
+}
+
+.stats-card-value {
+  font-family: var(--font-family) !important;
+  color: var(--text) !important;
+  font-weight: 700 !important;
+}
+
+.stats-card-label {
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+}
+
+/* ==========================================================================
+   9. Dialogs & Modals (Task Modal, Templates Modal)
+   ========================================================================== */
+.modal {
+  border-radius: var(--radius-xl) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-xl) !important;
+  background: var(--surface) !important;
+  max-width: 620px !important;
+}
+
+.modal-header {
+  padding: 14px 18px !important;
+  border-bottom: 1px solid var(--border) !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-header h2 {
+  font-family: var(--font-family) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+}
+
+.modal-body {
+  padding: 18px !important;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+
+.form-control,
+.modal input[type="text"],
+.modal input[type="date"],
+.modal textarea,
+.modal select {
+  width: 100%;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  font-size: 13px !important;
+  padding: 6px 10px !important;
+}
+
+/* Academic Type Segmented Bar */
+#academic-type-segmented {
+  display: flex;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+
+.academic-seg-btn {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-radius: var(--radius-xs);
+  text-align: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.academic-seg-btn:hover {
+  color: var(--text);
+}
+
+.academic-seg-btn.active {
+  background: var(--surface) !important;
+  color: var(--primary) !important;
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+}
+
+.btn-inject-milestones {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--academic-blue-bg);
+  border: 1px solid var(--academic-blue-border);
+  color: var(--academic-blue);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all var(--transition-fast);
+}
+
+.btn-inject-milestones:hover {
+  background: var(--academic-blue);
+  color: #ffffff;
+}
+
+.modal-actions {
+  padding: 12px 18px !important;
+  border-top: 1px solid var(--border) !important;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-actions .btn-secondary {
+  padding: 6px 14px !important;
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+}
+
+.modal-actions .btn-secondary:hover {
+  background: var(--surface-hover) !important;
+}
+
+.modal-actions .btn-primary {
+  padding: 6px 16px !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+}
+
+.modal-actions .btn-primary:hover {
+  background: var(--primary-dark) !important;
+}
+
+/* ==========================================================================
+   10. Compact Sidepanel (Zotero Subwindow / Reader Companion View)
+   ========================================================================== */
+.header {
+  min-height: 48px !important;
+  padding: 0 14px !important;
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.header h1 {
+  font-family: var(--font-family) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: currentColor !important;
+  letter-spacing: -0.02em;
+}
+
+.logo {
+  filter: none !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.header-right .btn-icon {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-secondary) !important;
+}
+
+.header-right .btn-icon:hover {
+  background: var(--surface-hover) !important;
+  color: var(--text) !important;
+  transform: none !important;
+}
+
+.toolbar {
+  padding: 8px 12px !important;
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+  gap: 6px !important;
+}
+
+.main-content {
+  padding: 10px 12px 14px !important;
+  background: var(--bg) !important;
+}
+
+.filter-tabs {
+  padding: 6px 10px calc(6px + env(safe-area-inset-bottom, 0px)) !important;
+  background: var(--surface) !important;
+  border-top: 1px solid var(--border) !important;
+  gap: 3px !important;
+}
+
+.filter-tabs .tab {
+  padding: 6px 8px !important;
+  border-radius: var(--radius-sm) !important;
+  font-size: 11.5px !important;
+  color: var(--text-secondary) !important;
+}
+
+.filter-tabs .tab:hover {
+  background: var(--surface-hover) !important;
+  color: var(--text) !important;
+}
+
+.filter-tabs .tab.active {
+  background: var(--primary-bg) !important;
+  color: var(--primary) !important;
+  font-weight: 600 !important;
+}
+
+/* Empty State */
+.empty-state {
+  padding: 48px 20px !important;
+  text-align: center;
+}
+
+.empty-state p {
+  font-family: var(--font-family) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--text-muted) !important;
+  margin-top: 8px;
+}
+
+/* Batch Bar Floating Pill */
+.batch-bar {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  background: var(--surface) !important;
+}
+
+/* ==========================================================================
+   11. Toast Notifications & Responsive Tweaks
+   ========================================================================== */
+.toast {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border: 1px solid var(--border) !important;
+  font-size: 12.5px !important;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    background: var(--surface) !important;
+    border-right: 1px solid var(--border) !important;
+  }
+
+  .main-header {
+    height: auto !important;
+    min-height: 48px !important;
+    padding: 10px 14px !important;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .current-view-title {
+    font-size: 16px !important;
+  }
+
+  .views-container {
+    padding: 12px !important;
+  }
+
+  .main-header-right {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .main-header-right .search-box {
+    width: 100% !important;
+  }
+
+  .main-header-right .search-box:focus-within {
+    width: 100% !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -78,7 +78,7 @@
 
 ### 更新与错误诊断
 
-- 插件更新地址指向本仓库的 `zotero` 分支。启用 Zotero 插件自动更新后，可通过更新检查获取已发布的 XPI。
+- v11.0.4 全面系统性重构 UI 风格，深度对齐 Zotero 7 原生桌面美学（浅色/深色模式），升级流畅弹性动效，修复子任务编辑异常并增强模板健壮性。详见 [v11.0.4 发行说明](docs/releases/v11.0.4.md)。
 - v11.0.3 自动启用错误诊断。控制台和 Zotero 数据目录中的 `todolist-debug.json` 会记录操作名称、错误原因、堆栈、版本与时间；文件仅保留最近 50 条记录。
 - 保存失败时，快捷添加和行内编辑会保留草稿，可在解决错误原因后重试。诊断日志与 `todolist-data.json` 分开存储。
 - 设置页中尚未接入执行逻辑的选项已标注并禁用；番茄钟与自动归档属于待实现功能。详见 [v11.0.3 审计报告](docs/audits/v11.0.3-audit.md)。
@@ -111,10 +111,10 @@
 Todolist-Zotero/
 ├── bootstrap.js                      # Gecko 插件生命周期与资源映射
 ├── chrome.manifest                   # 协议资源注册
-├── manifest.json                     # 扩展清单与版本声明 (v11.0.3, Zotero 10+)
+├── manifest.json                     # 扩展清单与版本声明 (v11.0.4, Zotero 10+)
 ├── prefs.js                          # 插件默认偏好配置
 ├── update.json                       # 自动更新配置元数据
-├── todolist-zotero-11.0.3.xpi        # 发布安装包产物
+├── todolist-zotero-11.0.4.xpi        # 发布安装包产物
 ├── locale/                           # 多语言国际化 (zh-CN, en-US)
 │   ├── en-US/todolist.ftl
 │   └── zh-CN/todolist.ftl

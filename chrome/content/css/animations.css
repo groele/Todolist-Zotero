@@ -1,62 +1,139 @@
-/* Animations and Transitions */
+/* ==========================================================================
+   Todolist for Zotero - Modern Fluid Motion & Desktop Micro-interactions
+   Apple / Fluent / Zotero 7 Fluid Motion Design System
+   ========================================================================== */
 
-/* Task Card Enter Animation */
-@keyframes taskEnter {
-  from {
+/* 1. View Switching Transitions - Fluid Workbench Navigation */
+@keyframes viewFadeIn {
+  0% {
     opacity: 0;
-    transform: translateY(6px) scale(0.99);
+    transform: translateY(6px);
   }
-  to {
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.view.active {
+  animation: viewFadeIn var(--motion-normal) var(--ease-spring) both;
+}
+
+/* 2. Task Card Entrance (Smooth Spring Drop-in) */
+@keyframes taskEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  60% {
+    opacity: 0.9;
+    transform: translateY(-1px) scale(1.002);
+  }
+  100% {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
 
-/* Task Card Exit Animation */
+.task-card.is-entering,
+.kanban-task.is-entering {
+  animation: taskEnter var(--motion-normal) var(--ease-spring) both;
+}
+
+/* 3. Task Card Exit & Height Collapse (Eliminates jarring jumps) */
 @keyframes taskExit {
-  from {
+  0% {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
+    max-height: 260px;
+    margin-bottom: 8px;
+    padding-top: 12px;
+    padding-bottom: 12px;
   }
-  to {
+  35% {
     opacity: 0;
-    transform: translateY(-4px) scale(0.985);
+    transform: translateX(12px) scale(0.98);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(16px) scale(0.96);
+    max-height: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    overflow: hidden;
   }
 }
 
-/* Checkbox Animation */
+.task-card.removing,
+.kanban-task.removing {
+  animation: taskExit 180ms var(--ease-smooth) both !important;
+  pointer-events: none;
+}
+
+/* 4. Checkbox Spring Feedback (Snappy & Satisfying Complete State) */
 @keyframes checkboxPop {
   0% {
     transform: scale(1);
   }
-  45% {
-    transform: scale(1.06);
+  35% {
+    transform: scale(0.82);
+  }
+  70% {
+    transform: scale(1.18);
   }
   100% {
     transform: scale(1);
   }
 }
 
-/* Fade In */
-@keyframes fadeIn {
-  from {
+.task-checkbox.just-checked,
+.card-subtask-checkbox.just-checked,
+.kanban-task-checkbox.just-checked {
+  animation: checkboxPop var(--motion-normal) var(--ease-bounce) both;
+}
+
+.task-card.completed {
+  transition: opacity var(--motion-normal) var(--ease-smooth),
+              background-color var(--motion-normal) var(--ease-smooth),
+              border-color var(--motion-normal) var(--ease-smooth);
+}
+
+.task-card.completed .task-title {
+  transition: color var(--motion-normal) var(--ease-smooth);
+}
+
+/* 5. Checkmark Pop in Checkbox */
+@keyframes checkmarkAppear {
+  0% {
     opacity: 0;
+    transform: rotate(45deg) scale(0.4) translate(-1px, -2px);
   }
-  to {
+  60% {
+    transform: rotate(45deg) scale(1.15) translate(-0.5px, -1px);
+  }
+  100% {
     opacity: 1;
+    transform: rotate(45deg) scale(1) translate(-0.5px, -1px);
   }
 }
 
-/* Sparkle Particle Animation */
+.task-checkbox.checked::after {
+  animation: checkmarkAppear var(--motion-fast) var(--ease-spring) both;
+}
+
+/* 6. Sparkle Particle Animation */
 .sparkle-particle {
   position: fixed;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   background-color: var(--primary);
   border-radius: 50%;
   pointer-events: none;
   z-index: 9999;
-  animation: sparkleBurst 0.42s var(--ease-enter) forwards;
+  animation: sparkleBurst 0.45s var(--ease-spring) forwards;
+  box-shadow: 0 0 6px var(--primary);
 }
 
 @keyframes sparkleBurst {
@@ -70,90 +147,124 @@
   }
 }
 
-/* Fade Out */
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
+/* 7. Modal Dialog Spring Transition (macOS / Win11 Desktop Polish) */
+@keyframes modalEnter {
+  0% {
     opacity: 0;
+    transform: translateY(12px) scale(0.965);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
-/* Slide Up */
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Slide Down */
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Scale In */
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Modal Backdrop Animation */
 @keyframes backdropFadeIn {
   from {
     opacity: 0;
+    backdrop-filter: blur(0px);
   }
   to {
     opacity: 1;
+    backdrop-filter: blur(4px);
   }
 }
 
-/* Apply motion only to cards that have just appeared. */
-.task-card.is-entering,
-.kanban-task.is-entering {
-  animation: taskEnter var(--motion-normal) var(--ease-enter) both;
-}
-
-.task-card.removing,
-.kanban-task.removing {
-  animation: taskExit var(--motion-fast) var(--ease-standard) both;
-}
-
-.task-card.overdue.removing {
-  animation: taskExit var(--motion-fast) var(--ease-standard) both;
-}
-
-.task-checkbox.just-checked {
-  animation: checkboxPop var(--motion-normal) var(--ease-enter) both;
-}
-
 .modal[open] {
-  animation: scaleIn var(--motion-normal) var(--ease-enter) both;
+  animation: modalEnter var(--motion-medium) var(--ease-spring) both !important;
 }
 
 .modal[open]::backdrop {
-  animation: backdropFadeIn var(--motion-normal) var(--ease-standard) both;
+  animation: backdropFadeIn var(--motion-normal) var(--ease-smooth) both !important;
 }
 
-/* Reduced Motion */
+/* 8. Micro-interactions: Tactile Button & Card Hover Transitions */
+.task-card {
+  transition: transform var(--motion-fast) var(--ease-spring),
+              border-color var(--motion-fast) ease,
+              box-shadow var(--motion-fast) ease,
+              opacity var(--motion-fast) ease;
+}
+
+.kanban-task {
+  transition: transform var(--motion-fast) var(--ease-spring),
+              border-color var(--motion-fast) ease,
+              box-shadow var(--motion-fast) ease;
+}
+
+.task-checkbox {
+  transition: background-color var(--motion-fast) ease,
+              border-color var(--motion-fast) ease,
+              transform var(--motion-fast) var(--ease-spring);
+}
+
+.task-checkbox:active {
+  transform: scale(0.9);
+}
+
+/* Buttons Tactile Press Feedback */
+.btn-primary,
+.btn-secondary,
+.sidebar-add-btn,
+.academic-seg-btn,
+.btn-card-open-pdf {
+  transition: transform var(--motion-fast) var(--ease-spring),
+              background-color var(--motion-fast) ease,
+              border-color var(--motion-fast) ease,
+              box-shadow var(--motion-fast) ease,
+              color var(--motion-fast) ease;
+}
+
+.btn-primary:active,
+.sidebar-add-btn:active {
+  transform: scale(0.96) translateY(0) !important;
+}
+
+.btn-secondary:active,
+.academic-seg-btn:active,
+.btn-card-open-pdf:active {
+  transform: scale(0.96) !important;
+}
+
+.task-action {
+  transition: background-color var(--motion-fast) ease,
+              color var(--motion-fast) ease,
+              transform var(--motion-fast) var(--ease-spring);
+}
+
+.task-action:active {
+  transform: scale(0.9);
+}
+
+/* 9. Floating Batch Bar Animation */
+.batch-bar {
+  transition: transform var(--motion-medium) var(--ease-spring),
+              opacity var(--motion-normal) ease,
+              visibility var(--motion-medium) ease !important;
+}
+
+/* 10. Shimmer Loading Skeleton Effect */
+@keyframes shimmer {
+  0% {
+    background-position: -240px 0;
+  }
+  100% {
+    background-position: calc(240px + 100%) 0;
+  }
+}
+
+.loading-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-subtle) 0px,
+    var(--surface-hover) 40px,
+    var(--surface-subtle) 80px
+  );
+  background-size: 240px 100%;
+  animation: shimmer 1.6s var(--ease-smooth) infinite;
+}
+
+/* 11. Reduced Motion Accessibility */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -161,74 +272,6 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-}
-
-/* Hover Effects - use specific properties instead of 'all' */
-.task-card {
-  transition: transform var(--transition-fast),
-              border-color var(--transition-fast),
-              box-shadow var(--transition-fast);
-}
-
-.task-checkbox {
-  transition: background-color var(--transition-fast),
-              border-color var(--transition-fast),
-              transform var(--transition-fast);
-}
-
-/* Loading State */
-@keyframes shimmer {
-  0% {
-    background-position: -200px 0;
-  }
-  100% {
-    background-position: calc(200px + 100%) 0;
-  }
-}
-
-.loading {
-  background: linear-gradient(
-    90deg,
-    var(--bg) 0px,
-    var(--border-light) 40px,
-    var(--bg) 80px
-  );
-  background-size: 200px 100%;
-  animation: shimmer 1.8s var(--ease-standard) infinite;
-}
-
-/* Calendar Day Hover */
-.calendar-day {
-  transition: background-color var(--transition-fast),
-              transform var(--transition-fast);
-}
-
-.calendar-day:hover {
-  transform: translateY(-1px);
-}
-
-/* Button Press Effect - combine with hover transform */
-.btn-primary:active {
-  transform: translateY(0) scale(0.98);
-}
-
-.btn-secondary:active {
-  transform: scale(0.98);
-}
-
-/* Focus Ring Animation */
-@keyframes focusRing {
-  0% {
-    box-shadow: 0 0 0 0 var(--primary-bg);
-  }
-  100% {
-    box-shadow: 0 0 0 3px var(--primary-bg);
-  }
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  animation: none;
 }

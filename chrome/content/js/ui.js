@@ -1416,7 +1416,7 @@ const UI = {
           <div class="template-card" data-template-id="${Utils.escapeHtml(t.id)}">
             <div class="template-icon">${Utils.escapeHtml(t.icon || '📋')}</div>
             <div class="template-name">${Utils.escapeHtml(t.name || '')}</div>
-            <div class="template-desc">${t.task.subtasks.length} 个子任务</div>
+            <div class="template-desc">${(t.task?.subtasks || []).length} 个子任务</div>
           </div>
         `).join('');
       }

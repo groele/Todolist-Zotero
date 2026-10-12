@@ -1,11 +1,15 @@
+/* Todolist for Zotero - Preferences Panel Styling
+ * Aligned with Zotero 7 native Preferences dialog standards.
+ */
+
 .todolist-prefs-container {
   box-sizing: border-box;
   width: 100%;
   max-width: 760px;
   min-width: 0;
-  padding: 0 10px 24px 0;
+  padding: 4px 10px 24px 0;
   color: inherit;
-  font: inherit;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
   line-height: 1.45;
 }
 
@@ -20,15 +24,17 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  margin: 2px 0 10px;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
 }
 
 .todolist-pref-header h1 {
   margin: 0;
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.35;
-  color: #059669;
+  color: inherit;
 }
 
 .todolist-pref-status {
@@ -51,10 +57,10 @@
 }
 
 .todolist-group-title {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   color: inherit;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.4;
   border-bottom: 1px solid var(--border-color, #e2e8f0);
   padding-bottom: 4px;
@@ -79,8 +85,8 @@
 .todolist-control-label {
   min-width: 0;
   color: inherit;
-  font-size: 12px;
-  font-weight: 400;
+  font-size: 12.5px;
+  font-weight: 450;
 }
 
 .todolist-control {
@@ -90,9 +96,17 @@
   min-height: 28px;
   margin: 0;
   font: inherit;
-  padding: 2px 6px;
+  font-size: 12px;
+  padding: 3px 8px;
   border-radius: 4px;
   border: 1px solid var(--border-color, #cbd5e1);
+  background-color: var(--surface-bg, #ffffff);
+  color: inherit;
+}
+
+.todolist-control:focus {
+  outline: 2px solid #c5282a;
+  outline-offset: 1px;
 }
 
 .todolist-check-row {
@@ -105,6 +119,7 @@
 
 .todolist-check-row .todolist-control-label {
   cursor: default;
+  font-size: 12.5px;
 }
 
 .todolist-check-row .todolist-control {
@@ -115,7 +130,7 @@
 
 .todolist-pref-desc {
   max-width: 680px;
-  margin: 3px 0 5px;
+  margin: 2px 0 6px;
   color: var(--muted-text-color, GrayText);
   font-size: 12px;
   line-height: 1.5;
@@ -125,18 +140,21 @@
 .todolist-pref-header > button {
   justify-self: start;
   font: inherit;
+  font-size: 12px;
   padding: 4px 12px;
   border-radius: 4px;
-  border: 1px solid #10b981;
-  background-color: #ecfdf5;
-  color: #065f46;
+  border: 1px solid var(--border-color, #cbd5e1);
+  background-color: var(--button-bg, #f8fafc);
+  color: inherit;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .todolist-pref-content > button:hover,
 .todolist-pref-header > button:hover {
-  background-color: #d1fae5;
+  background-color: var(--button-hover-bg, #f1f5f9);
+  border-color: #94a3b8;
 }
 
 /* Custom Academic Tags Styling */
@@ -155,7 +173,7 @@
   gap: 6px;
   padding: 3px 10px;
   border-radius: 9999px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
   border: 1px solid transparent;
   transition: all 0.15s ease;
@@ -165,16 +183,15 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
   padding: 0 2px;
   color: inherit;
-  opacity: 0.7;
+  opacity: 0.65;
 }
 
 .todolist-pref-tag-delete:hover {
   opacity: 1;
-  transform: scale(1.15);
 }
 
 .todolist-pref-color-dot {
@@ -192,15 +209,15 @@
 }
 
 .todolist-pref-color-dot.active {
-  border-color: #0f172a;
-  transform: scale(1.2);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+  border-color: #c5282a;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px rgba(197, 40, 42, 0.35);
 }
 
 .todolist-pref-btn {
   font: inherit;
-  padding: 5px 12px;
-  border-radius: 5px;
+  padding: 4px 12px;
+  border-radius: 4px;
   border: 1px solid var(--border-color, #cbd5e1);
   background-color: #ffffff;
   color: #1e293b;
@@ -221,16 +238,15 @@
 }
 
 .todolist-pref-btn-primary {
-  background-color: #ecfdf5 !important;
-  border-color: #059669 !important;
-  color: #065f46 !important;
+  background-color: #fef2f2 !important;
+  border-color: #c5282a !important;
+  color: #991b1b !important;
   font-weight: 600 !important;
-  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.2);
 }
 
 .todolist-pref-btn-primary:hover {
-  background-color: #d1fae5 !important;
-  border-color: #047857 !important;
+  background-color: #fee2e2 !important;
+  border-color: #a81c1e !important;
 }
 
 .todolist-pref-btn-danger {
@@ -246,27 +262,45 @@
 
 .todolist-export-grid button {
   text-align: left;
-  padding: 7px 12px;
+  padding: 6px 12px;
 }
 
 @media (prefers-color-scheme: dark) {
+  .todolist-group-title,
+  .todolist-pref-header {
+    border-color: #38383e;
+  }
+  .todolist-control {
+    background-color: #242427;
+    border-color: #38383e;
+    color: #f4f4f6;
+  }
   .todolist-pref-btn {
-    background-color: #1e293b;
-    border-color: #334155;
-    color: #f1f5f9;
+    background-color: #242427;
+    border-color: #38383e;
+    color: #f4f4f6;
   }
   .todolist-pref-btn:hover {
-    background-color: #334155;
-    border-color: #475569;
+    background-color: #2d2d33;
+    border-color: #4e4e58;
   }
   .todolist-pref-btn-primary {
-    background-color: #064e3b !important;
-    border-color: #10b981 !important;
-    color: #a7f3d0 !important;
-    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.25);
+    background-color: rgba(223, 56, 58, 0.15) !important;
+    border-color: #df383a !important;
+    color: #fca5a5 !important;
   }
   .todolist-pref-btn-primary:hover {
-    background-color: #047857 !important;
-    border-color: #34d399 !important;
+    background-color: rgba(223, 56, 58, 0.25) !important;
+  }
+  .todolist-pref-content > button,
+  .todolist-pref-header > button {
+    background-color: #242427;
+    border-color: #38383e;
+    color: #f4f4f6;
+  }
+  .todolist-pref-content > button:hover,
+  .todolist-pref-header > button:hover {
+    background-color: #2d2d33;
+    border-color: #4e4e58;
   }
 }

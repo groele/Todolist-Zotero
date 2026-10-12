@@ -285,7 +285,7 @@ const Templates = {
     // Open modal with prefilled data
     Modal.openAdd({
       ...template.task,
-      subtasks: template.task.subtasks.map(st => ({
+      subtasks: (template.task?.subtasks || []).map(st => ({
         id: Utils.generateId(),
         title: st.title,
         completed: false
@@ -312,7 +312,7 @@ const Templates = {
             <div class="template-card" data-template-id="${Utils.escapeHtml(t.id)}">
               <div class="template-icon">${Utils.escapeHtml(t.icon || '📋')}</div>
               <div class="template-name">${Utils.escapeHtml(t.name || '')}</div>
-              <div class="template-desc">${t.task.subtasks.length} 个子任务</div>
+              <div class="template-desc">${(t.task?.subtasks || []).length} 个子任务</div>
             </div>
           `).join('')}
         </div>

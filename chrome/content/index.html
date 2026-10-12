@@ -47,14 +47,14 @@
 
     /* Left Sidebar */
     .sidebar {
-      width: 76px;
+      width: 64px;
       height: 100%;
-      background: linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 92%, var(--primary-bg)) 100%);
+      background: var(--surface-subtle);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 18px 10px 14px;
+      padding: 14px 8px 12px;
       flex-shrink: 0;
       z-index: 100;
       transition: width var(--transition-normal), transform var(--transition-normal), padding var(--transition-normal);
@@ -118,10 +118,10 @@
       cursor: pointer;
     }
 
-    /* Large Add Task Button */
+    /* Add Task Button */
     .sidebar-add-btn {
-      width: 46px;
-      height: 46px;
+      width: 40px;
+      height: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -129,20 +129,20 @@
       padding: 0;
       background-color: var(--primary);
       color: white !important;
-      border-radius: var(--radius-lg);
-      font-weight: 600;
+      border-radius: var(--radius-md);
+      font-weight: 500;
       font-size: 0;
-      margin-bottom: 24px;
+      margin-bottom: 16px;
       transition: background-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
-      box-shadow: 0 4px 12px var(--primary-bg);
+      box-shadow: var(--shadow-sm);
       border: none;
       flex-shrink: 0;
     }
 
     .sidebar-add-btn:hover {
       background-color: var(--primary-dark);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
     }
 
     .sidebar-add-btn:active {
@@ -869,11 +869,9 @@
 
       .sidebar-title {
         font-size: var(--font-size-2xl);
-        font-weight: 700;
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: -0.02em;
       }
 
       .sidebar-add-btn {
@@ -1038,6 +1036,7 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="css/redesign.css">
 </head>
 
 <body>
