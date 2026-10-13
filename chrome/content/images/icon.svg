@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient: Crisp Tech Mist -->
+    <linearGradient id="bgGrad4B" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="60%" stop-color="#F8FAFC" />
+      <stop offset="100%" stop-color="#EEF2FF" />
+    </linearGradient>
+
+    <!-- Cyan Sky Bookmark Gradient -->
+    <linearGradient id="cyanRibbon4B" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+
+    <!-- Drop Shadow -->
+    <filter id="softShadow4B" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#1E1B4B" flood-opacity="0.1" />
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#1E1B4B" flood-opacity="0.06" />
+    </filter>
+
+    <filter id="ribbonShadow4B" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0369A1" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Container Squircle (Tech Mist) -->
+  <rect x="32" y="32" width="448" height="448" rx="108" fill="url(#bgGrad4B)" />
+  <rect x="34" y="34" width="444" height="444" rx="106" fill="none" stroke="#DBEAFE" stroke-width="2.5" />
+
+  <!-- Hanging Bookmark Ribbon (Cyan Sky with Top Tab & Bottom Split Tail) -->
+  <g filter="url(#ribbonShadow4B)">
+    <!-- Top protruding tab -->
+    <path d="M 244 134 H 268 V 164 H 244 Z" fill="url(#cyanRibbon4B)" />
+    <!-- Bottom hanging ribbon with chevron cut -->
+    <path d="M 244 340 H 268 V 412 L 256 398 L 244 412 Z" fill="url(#cyanRibbon4B)" />
+  </g>
+
+  <!-- Open Academic Book Spread (Deep Royal Indigo Lines) -->
+  <g filter="url(#softShadow4B)">
+    <!-- Left Page Outline -->
+    <path d="M 256 164 C 206 148 140 148 96 168 V 368 C 140 348 206 348 256 364 Z"
+          fill="#FFFFFF"
+          stroke="#1E1B4B"
+          stroke-width="20"
+          stroke-linecap="round"
+          stroke-linejoin="round" />
+
+    <!-- Right Page Outline -->
+    <path d="M 256 164 C 306 148 372 148 416 168 V 368 C 372 348 306 348 256 364 Z"
+          fill="#FFFFFF"
+          stroke="#1E1B4B"
+          stroke-width="20"
+          stroke-linecap="round"
+          stroke-linejoin="round" />
+
+    <!-- Center Spine Seam -->
+    <line x1="256" y1="170" x2="256" y2="390" stroke="#1E1B4B" stroke-width="20" stroke-linecap="round" />
+  </g>
+
+  <!-- LEFT PAGE: Electric Indigo Monogram "Z" -->
+  <path d="M 144 206 H 208 L 144 294 H 208"
+        stroke="#6366F1"
+        stroke-width="20"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none" />
+
+  <!-- Left Page Metadata Note Line -->
+  <line x1="144" y1="324" x2="196" y2="324" stroke="#818CF8" stroke-width="12" stroke-linecap="round" opacity="0.6" />
+
+  <!-- RIGHT PAGE: Checklist Completion Items (Todolist) -->
+  <!-- Row 1: Checkmark 1 (Vibrant Mint Emerald) -->
+  <path d="M 296 214 L 312 230 L 338 200"
+        stroke="#10B981"
+        stroke-width="17"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none" />
+  <line x1="358" y1="214" x2="388" y2="214" stroke="#475569" stroke-width="12" stroke-linecap="round" />
+
+  <!-- Row 2: Checkmark 2 (Vibrant Mint Emerald) -->
+  <path d="M 296 266 L 312 282 L 338 252"
+        stroke="#10B981"
+        stroke-width="17"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none" />
+  <line x1="358" y1="266" x2="388" y2="266" stroke="#475569" stroke-width="12" stroke-linecap="round" />
+
+  <!-- Row 3: Pending Step (Dashed Circle) -->
+  <circle cx="316" cy="318" r="14" fill="none" stroke="#94A3B8" stroke-width="8" stroke-dasharray="8 6" />
+  <line x1="348" y1="318" x2="388" y2="318" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round" />
+</svg>
