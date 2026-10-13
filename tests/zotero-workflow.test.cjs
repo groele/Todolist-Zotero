@@ -133,6 +133,21 @@ test('item-pane styles keep only the Todolist sidenav icon visible and preserve 
   }
 });
 
+test('native Fluent header localization preserves the collapsible section body and controls', () => {
+  for (const locale of ['zh-CN', 'en-US']) {
+    const ftl = read(`locale/${locale}/todolist.ftl`);
+    for (const [id, attribute] of [['todolist-item-pane-header', 'label'], ['todolist-item-pane-sidenav', 'aria-label']]) {
+      const message = ftl.match(new RegExp(`(?:^|\\n)${id}[ \\t]*=([\\s\\S]*?)(?=\\r?\\ntodolist-|$)`))?.[1];
+      assert(message, `${locale}: missing ${id}`);
+      // Zotero localizes the entire native widget. A Fluent value replaces its
+      // children, including the section header, body and our action buttons.
+      assert.match(message, /^[ \t]*\r?\n/, `${locale}: ${id} must be attribute-only`);
+      assert.match(message, new RegExp(`\\.${attribute}\\s*=`));
+      assert.doesNotMatch(message, /\n[ \t]+[^.\s#]/, `${locale}: ${id} must not have a multiline value`);
+    }
+  }
+});
+
 test('failed sidebar reschedule preserves deadline and leaves controls available for retry', async t => {
   const native = makeHost(); const item = paper(); referenceHost(native, [item]);
   await native.host.addLiteratureReadingTask(item); const { body } = await paneFixture(t, native, item);

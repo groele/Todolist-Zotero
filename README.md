@@ -78,6 +78,8 @@
 
 ### 更新与错误诊断
 
+- v11.2.3 修复原生区块的 Fluent 翻译覆盖内部控件，恢复可折叠标题、“添加到论文研读”与逐条“↗ Zotero”按钮，并修复长标题将按钮挤出侧栏的问题。详见 [v11.2.3 发行说明](docs/releases/v11.2.3.md)。
+
 - v11.2.2 修复 ItemPane 侧栏按钮文字在窄图标栏竖排的问题；添加按钮和逐条 Zotero 跳转按钮在同步渲染阶段即可显示，并保留悬停提示与无障碍名称。详见 [v11.2.2 发行说明](docs/releases/v11.2.2.md)。
 - v11.2.1 修正 ItemPane 研读按钮的可见样式与文案，并在每条关联研读任务旁提供直接跳转 Zotero 条目的按钮。详见 [v11.2.1 发行说明](docs/releases/v11.2.1.md)。
 - v11.2.0 增加右键多选批量加入、侧边栏改期和直接编辑、PDF 批注待办与准确回跳、五类学科研读清单，以及跟随 Zotero 外观和文献元数据更新。详见 [v11.2.0 发行说明](docs/releases/v11.2.0.md)。
@@ -115,10 +117,10 @@
 Todolist-Zotero/
 ├── bootstrap.js                      # Gecko 插件生命周期与资源映射
 ├── chrome.manifest                   # 协议资源注册
-├── manifest.json                     # 扩展清单与版本声明 (v11.2.2, Zotero 10+)
+├── manifest.json                     # 扩展清单与版本声明 (v11.2.3, Zotero 10+)
 ├── prefs.js                          # 插件默认偏好配置
 ├── update.json                       # 自动更新配置元数据
-├── todolist-zotero-11.2.2.xpi        # 本地安装包产物
+├── todolist-zotero-11.2.3.xpi        # 本地安装包产物
 ├── locale/                           # 多语言国际化 (zh-CN, en-US)
 │   ├── en-US/todolist.ftl
 │   └── zh-CN/todolist.ftl

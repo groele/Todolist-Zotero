@@ -4,7 +4,8 @@ todolist-collection-menu-create = 为此分类创建专题研读规划
 todolist-collection-menu-plan = 为此分类所有文献批量生成研读清单
 todolist-toolbar-tooltip = 打开 Todolist 学术任务看板 (Ctrl+Alt+T)
 todolist-reader-add-task = 将选中文本/批注转为研读待办 (Ctrl+Shift+T)
-todolist-item-pane-header = 学术待办
+# 此消息应用到整个原生 collapsible-section。仅设置属性，以保留标题和正文控件。
+todolist-item-pane-header =
     .label = 学术待办
     .tooltiptext = Todolist 学术待办与研读任务
 todolist-item-pane-sidenav =

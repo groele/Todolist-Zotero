@@ -7,7 +7,8 @@ todolist-collection-menu-create = Create Reading Plan for This Collection
 todolist-collection-menu-plan = Batch Generate Reading Plan for All Papers in Collection
 todolist-toolbar-tooltip = Open Todolist Academic Taskboard (Ctrl+Alt+T)
 todolist-reader-add-task = Convert Selection/Annotation to Task (Ctrl+Shift+T)
-todolist-item-pane-header = Academic Tasks
+# This message targets the native collapsible-section. A value would erase its controls.
+todolist-item-pane-header =
     .label = Academic Tasks
     .tooltiptext = Todolist Academic Tasks & Milestones
 todolist-item-pane-sidenav =

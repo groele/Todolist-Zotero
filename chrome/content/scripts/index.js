@@ -198,6 +198,14 @@
           : doc.createElement('style');
         style.id = 'todolist-itempane-styles';
         style.textContent = `
+          item-pane-custom-section[data-pane*="todolist-item-pane"],
+          item-pane-custom-section[data-pane*="todolist-item-pane"] > collapsible-section,
+          item-pane-custom-section[data-pane*="todolist-item-pane"] [data-type="body"] {
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
+          }
+
           /* Zotero's ItemPane sidenav is a narrow icon rail. Keep this
              rule limited to Todolist's own button so core labels stay intact. */
           item-pane-sidenav .btn[data-pane*="todolist-item-pane"] {
@@ -214,6 +222,8 @@
 
           .td-pane-wrap {
             display: flex;
+            /* Prevent long HTML titles from expanding Zotero's XUL ItemPane. */
+            contain: inline-size;
             flex-direction: column;
             gap: 8px;
             padding: 6px 2px 10px 2px;
@@ -221,6 +231,8 @@
             font-size: 12px;
             box-sizing: border-box;
             width: 100%;
+            min-width: 0;
+            max-width: 100%;
           }
 
           /* Header card & Progress bar */
@@ -342,6 +354,9 @@
             gap: 6px;
             max-height: 280px;
             overflow-y: auto;
+            overflow-x: hidden;
+            min-width: 0;
+            max-width: 100%;
             padding-right: 2px;
             box-sizing: border-box;
           }
@@ -356,6 +371,8 @@
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
             transition: border-color 0.15s, box-shadow 0.15s;
             box-sizing: border-box;
+            min-width: 0;
+            max-width: 100%;
           }
           .td-task-card:hover {
             border-color: rgba(5, 150, 105, 0.4);
@@ -369,6 +386,8 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            min-width: 0;
+            width: 100%;
           }
           .td-prio-dot {
             width: 7px;
@@ -389,7 +408,12 @@
             flex-shrink: 0;
           }
           .td-task-title {
-            flex: 1;
+            flex: 1 1 0;
+            min-width: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            text-align: left;
             font-size: 12px;
             font-weight: 500;
             color: #1e293b;
@@ -499,6 +523,7 @@
           .td-add-reading:focus-visible { outline: 2px solid #c5282a; outline-offset: 2px; }
           .td-task-locate {
             flex: 0 0 auto; padding: 3px 7px; border: 1px solid var(--fill-quinary, #cbd5e1);
+            min-width: 0; white-space: nowrap;
             border-radius: 5px; background: var(--material-background, Canvas); color: var(--fill-primary, CanvasText);
             font: inherit; font-size: 11px; cursor: pointer;
           }
@@ -508,7 +533,7 @@
           .td-reading-profile, .td-task-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
           .td-reading-profile select { flex: 1; min-width: 0; font: inherit; padding: 4px; border: 1px solid var(--fill-quinary, #cbd5e1); border-radius: 4px; background: transparent; color: inherit; }
           .td-task-controls { padding-top: 4px; }
-          .td-task-controls button, .td-reschedule summary { font: inherit; font-size: 11px; color: inherit; background: transparent; border: 1px solid var(--fill-quinary, #cbd5e1); border-radius: 4px; padding: 3px 7px; cursor: pointer; }
+          .td-task-controls button, .td-reschedule summary { min-width: 0; font: inherit; font-size: 11px; color: inherit; background: transparent; border: 1px solid var(--fill-quinary, #cbd5e1); border-radius: 4px; padding: 3px 7px; cursor: pointer; }
           .td-task-controls button:focus-visible, .td-reschedule summary:focus-visible { outline: 2px solid #c5282a; outline-offset: 2px; }
           .td-reschedule[open] { width: 100%; }
           .td-reschedule[open] summary { margin-bottom: 4px; }
@@ -2290,6 +2315,9 @@
                 taskCard.dataset.taskId = t.id;
 
                 const row = createEl('div', 'td-task-row');
+                // Keep the title and Zotero jump together; secondary controls
+                // wrap below rather than pushing navigation outside the pane.
+                const controls = createEl('div', 'td-task-controls');
 
                 // Priority dot
                 const prio = t.priority || 'medium';
@@ -2349,7 +2377,7 @@
                   const dateText = (isOverdue ? '⚠️ ' : '📅 ') + (t.dueDate.length > 5 ? t.dueDate.slice(5) : t.dueDate);
                   const dueBadge = createEl('span', `td-badge-date ${isOverdue ? 'is-overdue' : ''}`, dateText);
                   dueBadge.title = isOverdue ? `已逾期！截止日期: ${t.dueDate}` : `截止日期: ${t.dueDate}`;
-                  row.appendChild(dueBadge);
+                  controls.appendChild(dueBadge);
                 }
 
                 // Subtask toggle button if subtasks exist
@@ -2359,7 +2387,7 @@
                   const subToggle = createEl('button', 'td-subtask-toggle', `☑️ ${doneSubs}/${t.subtasks.length}`);
                   subToggle.type = 'button';
                   subToggle.title = '展开/收起子任务清单';
-                  row.appendChild(subToggle);
+                  controls.appendChild(subToggle);
 
                   subList = createEl('div', 'td-subtask-list');
                   if (!showSubtasks) subList.style.display = 'none';
@@ -2426,10 +2454,9 @@
                   }
                   state?.refresh?.();
                 });
-                row.appendChild(delBtn);
+                controls.appendChild(delBtn);
 
                 taskCard.appendChild(row);
-                const controls = createEl('div', 'td-task-controls');
                 const editBtn = createEl('button', 'td-task-edit', '编辑'); editBtn.type = 'button';
                 editBtn.addEventListener('click', () => this.openTodolist({ mode: 'edit_task', taskId: t.id }, Zotero.getMainWindow?.()));
                 controls.appendChild(editBtn);
