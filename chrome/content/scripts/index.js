@@ -483,6 +483,13 @@
           .td-add-reading:hover:not(:disabled) { background: #ae2224; }
           .td-add-reading:disabled { opacity: 0.65; cursor: default; }
           .td-add-reading:focus-visible { outline: 2px solid #c5282a; outline-offset: 2px; }
+          .td-task-locate {
+            flex: 0 0 auto; padding: 3px 7px; border: 1px solid var(--fill-quinary, #cbd5e1);
+            border-radius: 5px; background: var(--material-background, Canvas); color: var(--fill-primary, CanvasText);
+            font: inherit; font-size: 11px; cursor: pointer;
+          }
+          .td-task-locate:hover { border-color: #c5282a; color: #a51f21; }
+          .td-task-locate:focus-visible { outline: 2px solid #c5282a; outline-offset: 2px; }
           .td-add-hint { color: var(--fill-secondary, #64748b); font-size: 11px; line-height: 1.5; }
           .td-reading-profile, .td-task-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
           .td-reading-profile select { flex: 1; min-width: 0; font: inherit; padding: 4px; border: 1px solid var(--fill-quinary, #cbd5e1); border-radius: 4px; background: transparent; color: inherit; }
@@ -2083,13 +2090,16 @@
             const existingReadingTask = uncompletedTasks.find(task =>
               (task.literatureWorkflowId === 'reading' || task.title === `研读：${literatureTitle}`) &&
               (task.academicType || 'literature_reading') === 'literature_reading');
-            const addReadingBtn = createEl('button', 'td-add-reading', existingReadingTask ? '已加入待办事项' : '+ 加入待办事项');
+            const addReadingBtn = createEl('button', 'td-add-reading', existingReadingTask ? '已加入论文研读' : '＋ 添加到论文研读');
             addReadingBtn.type = 'button';
+            addReadingBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:34px;padding:7px 10px;border:1px solid #a91f22;border-radius:6px;background:#c5282a;color:#fff;font:inherit;font-weight:600;cursor:pointer;';
             addReadingBtn.title = `为当前文献创建论文研读待办，默认 ${LiteratureWorkflow.days(this.getPref('defaultDueDays', 7))} 天后截止`;
+            addReadingBtn.setAttribute('aria-label', '添加到论文研读');
             addReadingBtn.disabled = Boolean(existingReadingTask || state?.saving);
+            if (addReadingBtn.disabled) addReadingBtn.style.opacity = '0.65';
             const addHint = createEl('div', 'td-add-hint', existingReadingTask
-              ? `截止日期：${existingReadingTask.dueDate || '未设置'} · 可在待办看板中调整`
-              : `自动关联当前文献 · 默认 ${LiteratureWorkflow.days(this.getPref('defaultDueDays', 7))} 天后截止`);
+              ? `已关联当前文献 · 截止日期：${existingReadingTask.dueDate || '未设置'}`
+              : `点击即可创建待办并关联当前文献 · 默认 ${LiteratureWorkflow.days(this.getPref('defaultDueDays', 7))} 天后截止`);
             addHint.setAttribute('role', 'status');
             addHint.setAttribute('aria-live', 'polite');
             wrapper.appendChild(addReadingBtn);
@@ -2125,6 +2135,7 @@
                 saving = false;
                 if (state) state.saving = false;
                 addReadingBtn.disabled = Boolean(existingReadingTask);
+                addReadingBtn.style.opacity = addReadingBtn.disabled ? '0.65' : '1';
                 quickBtn.disabled = false;
                 quickInput.disabled = false;
                 prioSelect.disabled = false;
@@ -2233,6 +2244,20 @@
                   this.openTodolist({ mode: 'view_task', taskId: t.id }, Zotero.getMainWindow?.());
                 });
                 row.appendChild(titleSpan);
+
+                if (t.zoteroItemKey) {
+                  const locateButton = createEl('button', 'td-task-locate', '↗ Zotero');
+                  locateButton.type = 'button';
+                  locateButton.title = '在 Zotero 文献库中定位这篇文献';
+                  locateButton.setAttribute('aria-label', `跳转到文献：${t.zoteroItemTitle || t.title}`);
+                  locateButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.locateLiteratureItem(t.zoteroUri || t.zoteroItemKey, t.zoteroLibraryID, Zotero.getMainWindow?.())
+                      .catch(error => this.showNotice('无法跳转文献', String(error)));
+                  });
+                  row.appendChild(locateButton);
+                }
 
                 // Due date badge
                 if (t.dueDate) {
