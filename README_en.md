@@ -1,102 +1,116 @@
-# Todolist for Zotero 📚✨
+# Todolist for Zotero
 
 <p align="center">
-  <img src="chrome/content/icons/icon128.png" width="96" height="96" alt="Todolist Logo" />
+  <img src="chrome/content/icons/icon128.png" width="96" height="96" alt="Todolist icon" />
 </p>
+
+<p align="center"><strong>Keep tasks, literature reading, and Zotero reading positions in one workflow</strong></p>
 
 <p align="center">
-  <strong>A premium, full-featured task board & academic schedule management add-on tailored for literature reading, research tracking, and paper writing in Zotero</strong>
+  <a href="https://github.com/groele/Todolist-Zotero/releases/latest"><img src="https://img.shields.io/github/v/release/groele/Todolist-Zotero?style=flat-square&color=6366f1" alt="Latest release" /></a>
+  <img src="https://img.shields.io/badge/Zotero-10%2B-059669?style=flat-square" alt="Zotero 10+ (manifest support through 15.x)" />
+  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue?style=flat-square" alt="Cross-platform" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT License" /></a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/groele/Todolist-Zotero/releases/latest"><img src="https://img.shields.io/github/v/release/groele/Todolist-Zotero?style=flat-square&color=6366f1" alt="Release" /></a>
-  <img src="https://img.shields.io/badge/Zotero-10%2B-059669?style=flat-square" alt="Zotero 10+" />
-  <img src="https://img.shields.io/badge/Platform-Win%20%7C%20macOS%20%7C%20Linux-blue?style=flat-square" alt="Platform" />
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License" />
-</p>
-
-<p align="center">
-  <strong>English</strong> | <a href="README.md"><strong>简体中文</strong></a>
-</p>
+<p align="center"><a href="README.md">简体中文</a> | <strong>English</strong></p>
 
 ---
 
-## 🌟 Why Todolist for Zotero?
+## Overview
 
-Traditional todo apps (like Todoist or TickTick) lack contextual integration with scientific research workflows:
-- ❌ **Disconnected context**: Papers live in Zotero while tasks live in third-party apps without paper links;
-- ❌ **Lost reading positions**: Cannot jump directly to the exact page or formula you were studying;
-- ❌ **Cross-device sync barrier**: Mobile or tablet reading cannot access literature-specific checklists;
-- ❌ **No academic workflow abstractions**: Lack structured stages for literature surveys, methodology, experiments, and review deadlines.
+**Todolist for Zotero** is a task and reading-workflow add-on for the Zotero desktop application. It links tasks to Zotero library items and carries PDF page references, excerpts, subtasks, and reading progress into your day-to-day task workflow. Plan work in list, kanban, calendar, or statistics views, then review and update linked tasks from the Zotero item details pane.
 
-**Todolist for Zotero** provides four task views, task time tracking, and integration with Zotero items, the PDF reader, child notes, and the item details pane.
+Use it to organize paper reading, writing, experiments and code reproduction, submission deadlines, peer review, or general study and personal tasks. The add-on does not require a separate online account or third-party task service.
 
----
+## Features
 
-## 🎓 Core Features
+### Task management
 
-### 1. Deep Academic Literature Integration
-- 🎯 **Bi-directional Item Linking**: Tasks bind directly to Zotero items (title, authors, year, journal). Click to highlight the item in your library;
-- 📖 **Native PDF Reader Page Navigation**: Click `[📖 Read P.xx]` to open the Zotero reader and jump directly to the target page;
-- 📝 **Cloud Note Synchronization**: Sync reading checklists into rich-text child notes (`📝 [Todolist] Reading Checklist & Progress`) with native Zotero cloud sync support;
-- ⚡ **5-Step Academic Reading Milestones**: Generate standard milestones with one click (Abstract, Methodology, Experiments, Data Validation, Summary Notes);
-- 📋 **Item Details Pane Widget (ItemPane)**: View and check tasks directly in the Zotero right-hand inspector pane;
-- 🏷️ **Automated Tags**: Automatically adds `To-Read` on task creation and `Reading Completed` on task completion;
-- 📋 **One-Click Citation Copying**: Export citations in standard formats (APA, IEEE, GB/T 7714).
+- Create, edit, complete, delete, and restore tasks. Tasks can include a title, description, due date and time, priority, category, tags, and subtasks.
+- Set daily, weekly, biweekly, monthly, quarterly, or yearly recurrence. Completing a recurring task generates its next occurrence.
+- Use built-in task types for literature reading, writing, experiments, submissions, and peer review. Create custom categories, tags, and task templates.
+- Find and filter tasks by keywords, status, date, priority, and category; sort by due date, priority, creation time, or title.
+- Review overdue, due today, upcoming, and completed tasks in the list view; complete or delete tasks in batches.
 
-### 2. Three Seamless Window Modes
-- 📑 **Tab Mode**: Embedded inside Zotero's main tab bar for wide-screen productivity;
-- 🗗 **Subwindow Mode (460×760)**: Compact split-screen companion placed beside the PDF reader;
-- ⬚ **Standalone Window (1120×760)**: Independent desktop window for multi-monitor setups.
+### Four task views
 
-### 3. Four Multidimensional Views
-- 📋 **List View**: Grouped by overdue, today, upcoming, priority, and academic tags;
-- 📊 **Kanban View**: Three fluid columns (Todo, In Progress, Done) with smooth drag-and-drop;
-- 📅 **Calendar View**: Monthly overview of research schedules and submission deadlines;
-- 📈 **Statistics View**: Completion rates, time tracking analytics, and category breakdowns.
+- **List**: Browse tasks by date and status, expand groups, review subtasks, and act on tasks.
+- **Kanban**: Organize tasks by status, including to do, in progress, and done; drag tasks to change their status or order.
+- **Calendar**: Review due dates and plans in a monthly view.
+- **Statistics**: See task totals, completion rate, overdue and due-today counts, the last seven days of completions, and priority and category distributions.
 
-### 4. Time & Focus Management
-- ⏱️ **Task Time Tracking**: Track reading time per paper with analytics. Focus countdowns and break cycles are not implemented yet;
-- ⏰ **Time Capsule Quick Presets**: Quick deadline selection (`09:00`, `12:00`, `14:00`, `18:00`, `20:00`);
-- 🔔 **Desktop & Audio Reminders**: Gentle alerts before deadlines.
+### Zotero items and PDFs
 
-### 5. Native Storage & Security
-- 💾 **Native IOUtils Persistence**: Stored locally in Zotero's data directory (`todolist-data.json`);
-- 📤 **Full Backup & Multi-format Export**: Supports JSON backup/restore, CSV, Markdown, and TXT export.
+- Create one or multiple reading tasks from selected Zotero library items. Tasks retain the item link and available bibliographic details.
+- Create a task from selected text in the Zotero PDF reader using a shortcut. The task can store the excerpt, PDF page, and a link to its reading location.
+- Open a linked Zotero item or PDF from a task. When a page or annotation anchor is available, the add-on can return to that reading position.
+- Review linked tasks and reading progress in the Zotero item details pane (ItemPane). The pane supports quick task creation and checking off subtasks.
+- Optionally sync reading tasks, subtasks, and excerpts to a child note on the Zotero item. Zotero's own sync can sync that note. **The add-on's task database remains in the local Zotero data directory and is not automatically synced across devices by this add-on.**
+- Choose whether to inherit tags from library items and maintain Zotero item tags when reading tasks are created or completed.
+- Copy a simple citation string for a linked item using its authors, year, and title. This is not a full APA, IEEE, or GB/T 7714 citation formatter.
 
----
+### Reading plans and time management
 
-## 📥 Installation
+- Start with one of five reading-checklist templates: general papers, theory, experiments, reviews, or algorithms and reproduction. Track each step as a subtask.
+- Use task timers to record focused sessions and review elapsed time for an individual task.
+- Set due reminders for tasks and optionally enable a daily task summary. The add-on checks for and delivers reminders while Zotero is running.
+- Open the workspace in a Zotero tab, a compact companion window, or a separate window to keep tasks alongside a PDF.
+- Choose the Zotero, light, dark, or system theme.
 
-### Method 1: Install XPI Package (Recommended)
-1. Download the latest XPI package from [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest);
-2. In Zotero 10 or newer, navigate to: **Tools → Plugins**;
-3. Click the gear icon ⚙️ in the top-right corner and select **"Install Add-on From File..."**;
-4. Select the downloaded `.xpi` file and confirm installation;
-5. Restart Zotero when prompted. The Todolist icon will appear in your toolbar.
+## A typical workflow
 
-### Method 2: Developer Debugging Mode
-1. Open Zotero profile directory under `extensions/`:
-   - **Windows**: `%APPDATA%\Zotero\Zotero\Profiles\<profile>\extensions\`
-   - **macOS**: `~/Library/Application Support/Zotero/Profiles/<profile>/extensions/`
-   - **Linux**: `~/.zotero/zotero/<profile>/extensions/`
-2. Create a text file named `todolist@groele.org` (no file extension);
-3. Enter the **absolute path** of this project folder into the file;
-4. Restart Zotero to debug live.
+1. Select one or more items in your Zotero library and add them to Todolist.
+2. Choose a reading type and checklist, then set a due date, priority, or note.
+3. While reading a PDF, press `Ctrl+Shift+T` (`Cmd+Shift+T` on macOS) to turn selected text and the current page into a task.
+4. Update tasks and check off subtasks in ItemPane, the list, or the kanban view. Open the linked item or PDF location when you need to return to the source.
+5. If child-note sync is enabled, send reading progress to a Zotero child note. Export a backup or report from Preferences when needed.
 
----
+## Installation
 
-## ⌨️ Shortcuts
+### Install the XPI (recommended)
 
-| Shortcut | Description | Context |
-| :--- | :--- | :--- |
-| `Ctrl + Alt + T` / `Cmd + Alt + T` | Open / Toggle Todolist workspace | Global |
-| `Ctrl + Shift + T` / `Cmd + Shift + T` | Extract selected text to create reading task | Zotero PDF Reader |
-| `Esc` | Close modal / exit full screen | Modals |
-| `Enter` | Save subtask / quick add | Input fields |
+1. Download the latest `.xpi` file from [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest).
+2. In Zotero, open **Tools → Plugins**.
+3. Click the gear menu in the plugin manager and choose **Install Add-on From File**.
+4. Select the downloaded XPI and confirm. Restart Zotero if prompted.
 
----
+### Install for development
 
-## 📜 License
+1. Locate the `extensions/` directory in your Zotero profile.
+   - Windows: `%APPDATA%\Zotero\Zotero\Profiles\<profile>\extensions\`
+   - macOS: `~/Library/Application Support/Zotero/Profiles/<profile>/extensions/`
+   - Linux: `~/.zotero/zotero/<profile>/extensions/`
+2. Create a plain-text file named `todolist@groele.org` with no file extension.
+3. Put the absolute path to this project directory in the file, save it, and start Zotero.
 
-Distributed under the [MIT License](LICENSE).
+## Data, sync, and export
+
+- In Zotero, task data is stored in `todolist-data.json` in the Zotero data directory. Export a JSON backup from Preferences before upgrading or moving a profile.
+- JSON supports backup and restore. Imports can merge with existing data or replace it. CSV, Markdown, and TXT are for reading, organizing, or sharing exported data; they cannot be imported for restoration.
+- Zotero child notes and item tags are Zotero item data. Their cross-device availability depends on your Zotero sync configuration. Creating a child note does not sync the add-on's task database.
+- Clearing task data removes the add-on's local tasks and cannot be undone. Export a backup first.
+
+## Scope and limitations
+
+- The add-on manifest supports Zotero **10.0 and later, through version 15.x**. Check the latest release notes when upgrading to a new major Zotero version.
+- Pomodoro countdowns, automatic archiving, and sound alerts are not currently wired up. Preference controls without runtime support are disabled or marked unavailable.
+- Task reminders and daily summaries depend on Zotero running; they are not a replacement for an operating-system calendar or cloud reminder service.
+- PDF page navigation and annotation links require a linked PDF and an available page or annotation anchor.
+- The toolbar and native Zotero menus use an SVG icon. The 16, 32, 48, and 128 px PNG files are separate raster assets and do not set the native toolbar control's display size.
+
+## Shortcuts
+
+| Shortcut | Action | Context |
+| --- | --- | --- |
+| `Ctrl+Alt+T` / macOS `Cmd+Alt+T` | Open or toggle the Todolist workspace | Zotero |
+| `Ctrl+Shift+T` / macOS `Cmd+Shift+T` | Turn selected PDF text and the current page into a reading task | Zotero PDF reader |
+
+Preferences let you choose whether the PDF shortcut creates a task immediately or opens the task editor first.
+
+## Project information
+
+- Latest release: [GitHub Releases](https://github.com/groele/Todolist-Zotero/releases/latest).
+- Bug reports and feature requests: [GitHub Issues](https://github.com/groele/Todolist-Zotero/issues).
+- License: [MIT](LICENSE).
+- Main application code lives under `chrome/content/`. `scripts/build-package.py` builds the Zotero XPI as a ZIP archive.
