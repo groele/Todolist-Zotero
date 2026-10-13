@@ -28,10 +28,10 @@ async function sidebar(t, native, target = paper()) {
 test('one-click sidebar creates linked reading task due in seven days; repeat clicks do not duplicate it', async t => {
   const native = makeHost(); const { body } = await sidebar(t, native);
   const button = body.querySelector('.td-add-reading');
-  assert.equal(button.textContent, '+ 加入待办事项');
+  assert.equal(button.textContent, '＋ 添加到论文研读');
   button.click(); button.click();
   await waitFor(() => native.disk().tasks.length === 1);
-  await waitFor(() => body.querySelector('.td-add-reading')?.textContent === '已加入待办事项');
+  await waitFor(() => body.querySelector('.td-add-reading')?.textContent === '已加入论文研读');
   const task = native.disk().tasks[0];
   assert.equal(task.title, '研读：Two-dimensional ferroelectric materials');
   assert.equal(task.dueDate, nextWeek());
@@ -88,7 +88,7 @@ test('sidebar save failure leaves data unchanged and one-click button can retry'
   assert.equal(native.disk().tasks.length, 0);
   native.failWrites(false); body.querySelector('.td-add-reading').click();
   await waitFor(() => native.disk().tasks.length === 1);
-  await waitFor(() => body.querySelector('.td-add-reading')?.textContent === '已加入待办事项');
+  await waitFor(() => body.querySelector('.td-add-reading')?.textContent === '已加入论文研读');
 });
 
 test('custom sidebar draft survives a failed save and retries with a one-week deadline', async t => {

@@ -74,6 +74,65 @@ test('native sidebar exposes keyboard-accessible edit and date controls that per
   option.click(); await waitFor(() => native.disk().tasks[0].dueDate === date(10));
 });
 
+test('item-pane synchronous render keeps add and per-task Zotero jump buttons visible before async rendering', async t => {
+  const item = paper(1, 'PAPER', 1);
+  const linked = { id: 'linked-task', title: 'Read the paper', zoteroItemKey: 'PAPER', zoteroLibraryID: 1,
+    zoteroItemTitle: 'Old paper title', zoteroUri: 'zotero://select/library/items/PAPER', completed: false };
+  const native = makeHost({ tasks: [linked], settings: {} });
+  native.host.registerItemPaneSection();
+  const dom = new JSDOM('<body><div id="pane"></div></body>'); t.after(() => dom.window.close());
+  const doc = dom.window.document, body = doc.getElementById('pane'), pane = native.pane();
+  native.context.Zotero.getMainWindow = () => ({ ZoteroPane: { getSelectedItems: () => [item] } });
+  pane.onInit({ doc, body, item: null, refresh: () => {} }); t.after(() => pane.onDestroy({ body }));
+  let enabled = false;
+  pane.onItemChange({ body, item: null, setEnabled: value => { enabled = value; } });
+  pane.onRender({ body, item: null });
+  assert.equal(enabled, true);
+  assert.equal(body.querySelector('.td-add-reading')?.textContent, '＋ 添加到论文研读');
+  assert.equal(body.querySelector('.td-add-reading').disabled, false);
+  await waitFor(() => body.querySelector('.td-task-card-fallback'));
+  const taskRows = body.querySelectorAll('.td-task-card-fallback');
+  assert.equal(taskRows.length, 1);
+  const jump = taskRows[0].querySelector('.td-task-locate');
+  assert.equal(jump?.textContent, '↗ Zotero');
+  const calls = [];
+  native.host.locateLiteratureItem = async (...args) => { calls.push(args); return true; };
+  jump.click(); await waitFor(() => calls.length === 1);
+  assert.equal(calls[0][0], linked.zoteroUri);
+  assert.equal(calls[0][1], linked.zoteroLibraryID);
+});
+
+test('item-pane keeps the add button available when task storage cannot be read', async t => {
+  const native = makeHost(); const item = paper();
+  native.host.registerItemPaneSection();
+  native.failReads(new Error('storage unavailable'));
+  const dom = new JSDOM('<body><div id="pane"></div></body>'); t.after(() => dom.window.close());
+  const doc = dom.window.document, body = doc.getElementById('pane'), pane = native.pane();
+  pane.onInit({ doc, body, item, refresh: () => {} }); t.after(() => pane.onDestroy({ body }));
+  pane.onRender({ body, item });
+  await pane.onAsyncRender({ doc, body, item });
+  assert.equal(body.querySelector('.td-add-reading')?.textContent, '＋ 添加到论文研读');
+  assert(body.textContent.includes('读取失败'));
+});
+
+test('item-pane styles keep only the Todolist sidenav icon visible and preserve accessible labels', async t => {
+  const native = makeHost(); const dom = new JSDOM('<body><div id="pane"></div></body>'); t.after(() => dom.window.close());
+  native.host.registerItemPaneSection();
+  const doc = dom.window.document, body = doc.getElementById('pane');
+  native.pane().onInit({ doc, body, item: paper(), refresh: () => {} });
+  const styles = doc.getElementById('todolist-itempane-styles').textContent;
+  assert.match(styles, /item-pane-sidenav\s+\.btn\[data-pane\*="todolist-item-pane"\]/);
+  assert.match(styles, /font-size\s*:\s*0/);
+  assert.doesNotMatch(styles, /item-pane-sidenav\s+\.btn(?!\[data-pane\*="todolist-item-pane"\])/);
+  const zh = read('locale/zh-CN/todolist.ftl'), en = read('locale/en-US/todolist.ftl');
+  for (const locale of [zh, en]) {
+    const message = locale.match(/todolist-item-pane-sidenav =([\s\S]*?)(?=\ntodolist-|$)/)?.[1] || '';
+    assert.match(message, /\.title\s*=/);
+    assert.match(message, /\.aria-label\s*=/);
+    assert.doesNotMatch(message, /\n\s{4,}[^.\s]/, 'sidenav message must not have a visible Fluent value');
+  }
+});
+
 test('failed sidebar reschedule preserves deadline and leaves controls available for retry', async t => {
   const native = makeHost(); const item = paper(); referenceHost(native, [item]);
   await native.host.addLiteratureReadingTask(item); const { body } = await paneFixture(t, native, item);

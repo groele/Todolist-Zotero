@@ -198,6 +198,20 @@
           : doc.createElement('style');
         style.id = 'todolist-itempane-styles';
         style.textContent = `
+          /* Zotero's ItemPane sidenav is a narrow icon rail. Keep this
+             rule limited to Todolist's own button so core labels stay intact. */
+          item-pane-sidenav .btn[data-pane*="todolist-item-pane"] {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            padding: 4px !important;
+            overflow: hidden !important;
+            font-size: 0 !important;
+            line-height: 0 !important;
+            color: transparent !important;
+            white-space: nowrap !important;
+          }
+
           .td-pane-wrap {
             display: flex;
             flex-direction: column;
@@ -614,26 +628,6 @@
             background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(59, 130, 246, 0.18)) !important;
             border-color: #2563eb !important;
             color: #1e40af !important;
-          }
-
-          /* The ItemPane sidenav is an icon rail. Keep its localized name as
-             a tooltip/accessibility label without allowing it to wrap beside
-             the icon in narrow Zotero panes. */
-          item-pane-sidenav .btn[data-pane*="todolist-item-pane"] {
-            width: 28px !important;
-            height: 28px !important;
-            min-width: 28px !important;
-            padding: 4px !important;
-            overflow: hidden !important;
-            font-size: 0 !important;
-            line-height: 0 !important;
-            color: transparent !important;
-            text-indent: -9999px !important;
-            white-space: nowrap !important;
-          }
-          item-pane-sidenav .btn[data-pane*="todolist-item-pane"]::before,
-          item-pane-sidenav .btn[data-pane*="todolist-item-pane"]::after {
-            content: none !important;
           }
 
           /* Dark theme support */
@@ -1963,7 +1957,9 @@
             sectionStates.delete(body);
           },
           onItemChange: ({ body, item, setEnabled }) => {
-            const target = getLiteratureItem(item);
+            const target = getLiteratureItem(item) || getLiteratureItem(
+              Zotero.getMainWindow?.()?.ZoteroPane?.getSelectedItems?.()?.[0]
+            );
             const state = sectionStates.get(body);
             if (state) {
               if (state.itemKey !== target?.key || state.libraryID !== target?.libraryID) state.profileID = null;
@@ -1974,8 +1970,93 @@
             setEnabled(Boolean(target));
           },
           onRender: ({ body, item, setSectionSummary }) => {
-            if (!getLiteratureItem(item)) body?.replaceChildren();
+            if (!body) return;
+            const document = body.ownerDocument;
+            const target = getLiteratureItem(item) || getLiteratureItem(
+              Zotero.getMainWindow?.()?.ZoteroPane?.getSelectedItems?.()?.[0]
+            );
+            const state = sectionStates.get(body);
             setSectionSummary?.('文献研读待办');
+            body.replaceChildren();
+            const html = 'http://www.w3.org/1999/xhtml';
+            const createEl = (tag, className = '', text = null) => {
+              const el = document.createElementNS ? document.createElementNS(html, tag) : document.createElement(tag);
+              if (className) el.className = className;
+              if (text !== null && text !== undefined) el.textContent = text;
+              return el;
+            };
+            const fallback = createEl('div', 'td-pane-wrap td-pane-fallback');
+            const fallbackVersion = state ? ++state.renderVersion : 0;
+            const addButton = createEl('button', 'td-add-reading', '＋ 添加到论文研读');
+            addButton.type = 'button';
+            addButton.disabled = !target || Boolean(state?.saving);
+            addButton.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;min-height:38px;padding:8px 12px;border:1px solid #a91f22;border-radius:6px;background:#c5282a;color:#fff;font:inherit;font-weight:600;cursor:pointer;';
+            addButton.setAttribute('aria-label', '添加到论文研读');
+            addButton.title = target ? '创建关联当前文献的研读待办，默认一周后截止' : '请先在 Zotero 文献库中选中一篇文献';
+            addButton.addEventListener('click', async () => {
+              if (!target || addButton.disabled) return;
+              addButton.disabled = true;
+              try {
+                const result = await this.addLiteratureReadingTask(target);
+                this.showNotice(result.created ? '已加入论文研读' : '该文献已有关联待办',
+                  `截止日期：${result.task?.dueDate || '未设置'}`);
+                await state?.refresh?.();
+              } catch (error) {
+                addButton.disabled = false;
+                this.showNotice('保存失败', String(error));
+              }
+            });
+            fallback.appendChild(addButton);
+
+            const fallbackTaskList = createEl('div', 'td-fallback-task-list');
+            fallback.appendChild(fallbackTaskList);
+            if (target) {
+              const renderFallbackTasks = tasks => {
+                fallbackTaskList.replaceChildren();
+                if (tasks.length) {
+                  for (const task of tasks) {
+                    const row = createEl('div', 'td-task-card td-task-card-fallback');
+                    const taskRow = createEl('div', 'td-task-row');
+                    const title = createEl('span', 'td-task-title-fallback', task.title || '未命名待办');
+                    title.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;';
+                    const locate = createEl('button', 'td-task-locate', '↗ Zotero');
+                    locate.type = 'button';
+                    locate.title = '在 Zotero 文献库中定位这篇文献';
+                    locate.setAttribute('aria-label', `跳转到文献：${task.zoteroItemTitle || task.title || target.key}`);
+                    locate.addEventListener('click', event => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      this.locateLiteratureItem(task.zoteroUri || task.zoteroItemKey, task.zoteroLibraryID,
+                        Zotero.getMainWindow?.()).catch(error => this.showNotice('无法跳转文献', String(error)));
+                    });
+                    taskRow.append(title, locate);
+                    row.appendChild(taskRow);
+                    fallbackTaskList.appendChild(row);
+                  }
+                } else {
+                  fallbackTaskList.appendChild(createEl('div', 'td-add-hint', '当前文献还没有关联的研读待办。'));
+                }
+              };
+              const matchesTarget = task => task.zoteroItemKey === target.key &&
+                (task.zoteroLibraryID || Zotero.Libraries.userLibraryID) === target.libraryID;
+              renderFallbackTasks((this._cachedData?.tasks || []).filter(matchesTarget));
+              if (!this._cachedData) {
+                this.loadData().then(data => {
+                  if (state && state.renderVersion !== fallbackVersion) return;
+                  if (body.querySelector('.td-pane-fallback') !== fallback) return;
+                  renderFallbackTasks((data.tasks || []).filter(matchesTarget));
+                }).catch(error => {
+                  if (state && state.renderVersion !== fallbackVersion) return;
+                  if (body.querySelector('.td-pane-fallback') === fallback) {
+                    fallbackTaskList.replaceChildren(createEl('div', 'td-add-hint', '待办读取失败；添加按钮仍可使用，请重新选择条目重试。'));
+                  }
+                  Zotero.logError?.('[Todolist] ItemPane fallback data load failed: ' + error);
+                });
+              }
+            } else {
+              fallbackTaskList.appendChild(createEl('div', 'td-add-hint', '请在文献库中选中一篇文献以查看关联待办和跳转按钮。'));
+            }
+            body.appendChild(fallback);
           },
           onAsyncRender: async ({ doc, body, item, setSectionSummary }) => {
             if (!body) return;
@@ -1983,8 +2064,9 @@
             if (document) {
               this.ensureItemPaneStyles(document);
             }
-            body.replaceChildren();
-            const target = getLiteratureItem(item);
+            const target = getLiteratureItem(item) || getLiteratureItem(
+              Zotero.getMainWindow?.()?.ZoteroPane?.getSelectedItems?.()?.[0]
+            );
             if (!target) return;
 
             const state = sectionStates.get(body);
@@ -2011,6 +2093,7 @@
               return;
             }
             if (state && renderVersion !== state.renderVersion) return;
+            body.replaceChildren();
             const targetKey = target.key;
             const tasks = (data.tasks || []).filter(t => t.zoteroItemKey === targetKey &&
               (t.zoteroLibraryID || Zotero.Libraries.userLibraryID) === target.libraryID);

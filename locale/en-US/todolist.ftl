@@ -10,7 +10,9 @@ todolist-reader-add-task = Convert Selection/Annotation to Task (Ctrl+Shift+T)
 todolist-item-pane-header = Academic Tasks
     .label = Academic Tasks
     .tooltiptext = Todolist Academic Tasks & Milestones
-todolist-item-pane-sidenav = Academic Tasks
+todolist-item-pane-sidenav =
+    .title = Open Academic Tasks
+    .aria-label = Academic Tasks
     .tooltiptext = Open Academic Tasks
 todolist-item-pane-count =
     { $count ->
