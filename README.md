@@ -78,6 +78,8 @@
 
 ### 更新与错误诊断
 
+- v11.2.0 增加右键多选批量加入、侧边栏改期和直接编辑、PDF 批注待办与准确回跳、五类学科研读清单，以及跟随 Zotero 外观和文献元数据更新。详见 [v11.2.0 发行说明](docs/releases/v11.2.0.md)。
+- v11.1.0 在文献侧边栏新增“加入待办事项”按钮：一键关联当前文献，默认一周后截止；编辑窗口可点击文献标题或“跳转文献条目”返回 Zotero。支持群组库关联与重复点击保护。详见 [v11.1.0 发行说明](docs/releases/v11.1.0.md)。
 - v11.0.4 全面系统性重构 UI 风格，深度对齐 Zotero 7 原生桌面美学（浅色/深色模式），升级流畅弹性动效，修复子任务编辑异常并增强模板健壮性。详见 [v11.0.4 发行说明](docs/releases/v11.0.4.md)。
 - v11.0.3 自动启用错误诊断。控制台和 Zotero 数据目录中的 `todolist-debug.json` 会记录操作名称、错误原因、堆栈、版本与时间；文件仅保留最近 50 条记录。
 - 保存失败时，快捷添加和行内编辑会保留草稿，可在解决错误原因后重试。诊断日志与 `todolist-data.json` 分开存储。
@@ -111,10 +113,10 @@
 Todolist-Zotero/
 ├── bootstrap.js                      # Gecko 插件生命周期与资源映射
 ├── chrome.manifest                   # 协议资源注册
-├── manifest.json                     # 扩展清单与版本声明 (v11.0.4, Zotero 10+)
+├── manifest.json                     # 扩展清单与版本声明 (v11.2.0, Zotero 10+)
 ├── prefs.js                          # 插件默认偏好配置
 ├── update.json                       # 自动更新配置元数据
-├── todolist-zotero-11.0.4.xpi        # 发布安装包产物
+├── todolist-zotero-11.2.0.xpi        # 本地安装包产物
 ├── locale/                           # 多语言国际化 (zh-CN, en-US)
 │   ├── en-US/todolist.ftl
 │   └── zh-CN/todolist.ftl

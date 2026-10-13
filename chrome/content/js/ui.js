@@ -766,7 +766,7 @@ const UI = {
           const m = String(task.zoteroPdfUri).match(/[?&]page=(\d+)/);
           if (m) page = Number(m[1]);
         }
-        ZoteroBridge.openPdf(task.zoteroUri || task.zoteroItemKey, task.zoteroLibraryID, page);
+        ZoteroBridge.openPdf(task.zoteroPdfUri || task.zoteroUri || task.zoteroItemKey, task.zoteroLibraryID, page, task.zoteroAnnotationKey);
       }
       return;
     }
@@ -889,7 +889,7 @@ const UI = {
       if (typeof ZoteroBridge !== 'undefined' && task?.zoteroItemKey) {
         let page = null;
         if (task.zoteroPage) page = Number(task.zoteroPage);
-        ZoteroBridge.openPdf(task.zoteroUri || task.zoteroItemKey, task.zoteroLibraryID, page);
+        ZoteroBridge.openPdf(task.zoteroPdfUri || task.zoteroUri || task.zoteroItemKey, task.zoteroLibraryID, page, task.zoteroAnnotationKey);
       }
       return;
     }
@@ -1085,7 +1085,7 @@ const UI = {
 
   // Toggle theme
   async toggleTheme() {
-    const themes = ['light', 'dark', 'auto'];
+    const themes = ZoteroBridge.isZotero ? ['zotero', 'light', 'dark', 'auto'] : ['light', 'dark', 'auto'];
     const currentIndex = themes.indexOf(this.currentTheme);
     const nextIndex = (currentIndex + 1) % themes.length;
     this.currentTheme = themes[nextIndex];
@@ -1101,12 +1101,12 @@ const UI = {
       return;
     }
 
-    this.showToast(`主题已切换：${this.currentTheme === 'light' ? '浅色' : this.currentTheme === 'dark' ? '深色' : '跟随系统'}`);
+    this.showToast(`主题已切换：${this.currentTheme === 'zotero' ? '跟随 Zotero' : this.currentTheme === 'light' ? '浅色' : this.currentTheme === 'dark' ? '深色' : '跟随系统'}`);
   },
 
   // Apply theme
   applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', theme === 'zotero' ? (ZoteroBridge._hostTheme || 'auto') : theme);
 
     // Update theme button icon
     const btns = document.querySelectorAll('#btn-theme');
@@ -1116,8 +1116,8 @@ const UI = {
       auto: `<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>`
     };
     btns.forEach(btn => {
-      btn.innerHTML = svgIcons[theme] || svgIcons.light;
-      btn.title = `当前主题：${theme === 'light' ? '浅色' : theme === 'dark' ? '深色' : '跟随系统'}`;
+      btn.innerHTML = svgIcons[theme] || svgIcons.auto;
+      btn.title = `当前主题：${theme === 'zotero' ? '跟随 Zotero' : theme === 'light' ? '浅色' : theme === 'dark' ? '深色' : '跟随系统'}`;
     });
   },
 
@@ -1692,7 +1692,7 @@ const UI = {
       const authorChip = authorYear ? `<span class="zotero-badge-author-year" title="作者/年份">${this.highlightText(authorYear)}</span>` : '';
       const pubChip = task.zoteroPublication ? `<span class="zotero-badge-pub" title="发表期刊/会议">${this.highlightText(task.zoteroPublication)}</span>` : '';
       const openPdfBtn = (task.zoteroPdfUri || task.zoteroItemKey) ? 
-        `<button type="button" class="btn-card-open-pdf" data-item-key="${Utils.escapeHtml(task.zoteroItemKey || '')}" data-page="${Utils.escapeHtml(task.zoteroPage || '')}" title="在 Zotero 阅读器中打开 PDF 并跳转至对应页面">📖 伴读</button>` : '';
+        `<button type="button" class="btn-card-open-pdf" data-item-key="${Utils.escapeHtml(task.zoteroItemKey || '')}" data-page="${Utils.escapeHtml(task.zoteroPage || '')}" title="在 Zotero 阅读器中返回原文位置">${task.zoteroAnnotationKey ? '↗ 回到批注' : '📖 伴读'}</button>` : '';
 
       const quoteHtml = task.zoteroQuote ? `
         <blockquote class="task-lit-quote" title="论文关键摘录/观点">
@@ -1705,6 +1705,7 @@ const UI = {
           <div class="task-zotero-badge-main" title="点击在 Zotero 文献库中高亮定位：${Utils.escapeHtml(task.zoteroItemTitle || '')}">
             <span class="zotero-badge-icon">📄</span>
             <span class="zotero-badge-title">${this.highlightText(task.zoteroItemTitle || '关联文献')}</span>
+            ${['missing', 'trashed'].includes(task.zoteroLinkStatus) ? `<span class="zotero-link-warning">${task.zoteroLinkStatus === 'trashed' ? '文献在回收站' : '文献已删除'}</span>` : ''}
             ${pageChip}
             ${authorChip}
             ${pubChip}

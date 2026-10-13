@@ -148,7 +148,7 @@ test('host milestone creation uses additions and unique IDs even when another wi
     }
     return data;
   };
-  await Promise.all([native.host.createReadingMilestones(item), native.host.createReadingMilestones(item)]);
+  await Promise.all([native.host.createReadingMilestones(item, null, 'theory'), native.host.createReadingMilestones(item, null, 'experiment')]);
   assert.equal(native.disk().tasks.length, 3);
   assert.equal(new Set(native.disk().tasks.map(t => t.id)).size, 3);
 });

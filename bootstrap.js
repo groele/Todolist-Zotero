@@ -124,6 +124,7 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     ctx._globalThis = ctx;
 
     Services.scriptloader.loadSubScript(`${rootURI}chrome/content/js/taskRules.js`, ctx);
+    Services.scriptloader.loadSubScript(`${rootURI}chrome/content/js/literatureWorkflow.js`, ctx);
     Services.scriptloader.loadSubScript(`${rootURI}chrome/content/scripts/index.js`, ctx);
   } catch (error) {
     Zotero?.logError?.('Failed to startup Todolist addon: ' + error);

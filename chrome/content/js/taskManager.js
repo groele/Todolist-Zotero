@@ -78,6 +78,13 @@ const TaskManager = {
       recurringFrom: taskData.recurringFrom || null,
       zoteroUri: taskData.zoteroUri || null,
       zoteroPdfUri: taskData.zoteroPdfUri || null,
+      zoteroItemID: taskData.zoteroItemID || null,
+      zoteroAttachmentKey: taskData.zoteroAttachmentKey || null,
+      zoteroAnnotationKey: taskData.zoteroAnnotationKey || null,
+      zoteroLinkStatus: taskData.zoteroLinkStatus || null,
+      zoteroAutoTitle: Boolean(taskData.zoteroAutoTitle),
+      literatureWorkflowId: taskData.literatureWorkflowId || null,
+      readingProfile: taskData.readingProfile || null,
       academicType: taskData.academicType || null
     };
 

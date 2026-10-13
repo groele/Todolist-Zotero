@@ -63,7 +63,10 @@ test('native side-pane deletion is visible, preserves newer tasks, and supports 
   native.host.registerItemPaneSection();
   const pane = native.pane();
   let render;
-  const refresh = () => { render = pane.onRender({ doc, body, item: target }); return render; };
+  const refresh = () => {
+    pane.onRender({ doc, body, item: target });
+    render = pane.onAsyncRender({ doc, body, item: target }); return render;
+  };
   pane.onInit({ doc, body, item: target, refresh });
   t.after(() => { pane.onDestroy({ body }); clearTimeout(native.host._paneUndoTimer); });
   await refresh();
@@ -90,7 +93,8 @@ test('native side-pane completion persists status and subtask completion; recurr
   const doc = dom.window.document, body = doc.getElementById('pane');
   native.host.registerItemPaneSection(); const pane = native.pane();
   pane.onInit({ doc, body, item: target, refresh: () => {} }); t.after(() => pane.onDestroy({ body }));
-  await pane.onRender({ doc, body, item: target });
+  pane.onRender({ doc, body, item: target });
+  await pane.onAsyncRender({ doc, body, item: target });
   const checkbox = body.querySelector('.td-task-row input');
   checkbox.checked = true; checkbox.dispatchEvent(new dom.window.Event('change'));
   await waitFor(() => native.disk().tasks.length === 2);
@@ -108,10 +112,12 @@ test('native side-pane quick-add suppresses a double click while saving', async 
   native.host.registerItemPaneSection(); const pane = native.pane();
   pane.onInit({ doc, body, item: target, refresh: () => {} }); t.after(() => pane.onDestroy({ body }));
   let sectionSummary = '';
-  await pane.onRender({ doc, body, item: target, setSectionSummary: value => { sectionSummary = value; } });
+  pane.onRender({ doc, body, item: target });
+  await pane.onAsyncRender({ doc, body, item: target, setSectionSummary: value => { sectionSummary = value; } });
   const paneContent = body.querySelector('.td-pane-wrap');
   assert.equal(paneContent.children[0].className, 'td-header-card');
-  assert.equal(paneContent.children[1].className, 'td-quick-box');
+  assert.equal(paneContent.children[1].className, 'td-add-reading');
+  assert(body.querySelector('.td-quick-box'));
   assert.equal(sectionSummary, '展开后快速新建');
   assert.equal(body.querySelector('.td-quick-input').getAttribute('aria-label'), '新待办事项');
   assert.equal(body.querySelector('.td-quick-submit').getAttribute('aria-label'), '添加待办任务');

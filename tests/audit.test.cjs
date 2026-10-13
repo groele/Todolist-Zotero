@@ -250,6 +250,6 @@ test('resetting preferences commits once, refreshes controls and rolls back on d
   assert.equal(native.writes(), 1);
   assert.equal(native.disk().settings.defaultView, 'list');
   assert.equal(win.document.getElementById('pref-defaultView').value, 'list');
-  assert.equal(win.document.getElementById('pref-theme').value, 'light');
+  assert.equal(win.document.getElementById('pref-theme').value, 'zotero');
   assert.equal(reset.disabled, false);
 });

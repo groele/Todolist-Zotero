@@ -60,6 +60,7 @@ function makeHost(seed = { tasks: [], settings: {}, customTags: [] }) {
       Libraries: { userLibraryID: 1 }, Items: { get: () => null, getByLibraryAndKey: () => null },
       ItemPaneManager: { registerSection: options => { pane = options; return 'test-section'; } } } });
   vm.runInContext(read('chrome/content/js/taskRules.js'), context);
+  vm.runInContext(read('chrome/content/js/literatureWorkflow.js'), context);
   const runtime = read('chrome/content/scripts/index.js').replace('  Zotero.Todolist.init();', '  // init is supplied by the fixture');
   vm.runInContext(runtime, context);
   const host = context.Zotero.Todolist;

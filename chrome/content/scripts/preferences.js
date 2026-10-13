@@ -24,7 +24,7 @@ window.Todolist_Preferences = (() => {
 
     // Display & Views
     defaultView: 'list',
-    theme: 'light',
+    theme: 'zotero',
     showCompleted: true,
     sortOrder: 'dueDate',
     showWelcomeOnStartup: true,
@@ -54,6 +54,8 @@ window.Todolist_Preferences = (() => {
     academicPresets: true,
     defaultTaskType: 'literature_reading',
     defaultPriority: 'medium',
+    defaultDueDays: 7,
+    readingProfile: 'general',
     readerShortcutAction: 'create_instant',
     pdfReaderJumpPage: true,
 
@@ -87,6 +89,7 @@ window.Todolist_Preferences = (() => {
         ['stats', '📊 进度统计分析']
       ]],
       ['theme', '默认视觉主题', 'select', [
+        ['zotero', '跟随 Zotero 原生外观'],
         ['light', '☀️ 清爽明亮'],
         ['dark', '🌙 专注暗黑'],
         ['auto', '🔄 跟随操作系统']
@@ -122,6 +125,8 @@ window.Todolist_Preferences = (() => {
       ['autoTagFromItem', '从文献新建待办时自动继承文献在 Zotero 的标签', 'check'],
     ],
     academic: [
+      ['defaultDueDays', '研读任务默认截止天数', 'select', [['3', '3 天'], ['7', '一周'], ['14', '两周'], ['30', '30 天']]],
+      ['readingProfile', '默认精读清单', 'select', [['general', '通用研读'], ['theory', '理论论文'], ['experiment', '实验论文'], ['review', '综述论文'], ['algorithm', '算法与复现']]],
       ['academicPresets', '启用学术研读 5 大场景预设与快捷分类', 'check'],
       ['defaultTaskType', '默认待办学术类型', 'select', [
         ['literature_reading', '📖 论文研读与精读'],

@@ -469,6 +469,29 @@
           }
 
           /* Compound Quick Add Row */
+          .td-add-reading {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid #b52123;
+            border-radius: 6px;
+            background: #c5282a;
+            color: #fff;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+          }
+          .td-add-reading:hover:not(:disabled) { background: #ae2224; }
+          .td-add-reading:disabled { opacity: 0.65; cursor: default; }
+          .td-add-reading:focus-visible { outline: 2px solid #c5282a; outline-offset: 2px; }
+          .td-add-hint { color: var(--fill-secondary, #64748b); font-size: 11px; line-height: 1.5; }
+          .td-reading-profile, .td-task-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+          .td-reading-profile select { flex: 1; min-width: 0; font: inherit; padding: 4px; border: 1px solid var(--fill-quinary, #cbd5e1); border-radius: 4px; background: transparent; color: inherit; }
+          .td-task-controls { padding-top: 4px; }
+          .td-task-controls button, .td-reschedule summary { font: inherit; font-size: 11px; color: inherit; background: transparent; border: 1px solid var(--fill-quinary, #cbd5e1); border-radius: 4px; padding: 3px 7px; cursor: pointer; }
+          .td-task-controls button:focus-visible, .td-reschedule summary:focus-visible { outline: 2px solid #c5282a; outline-offset: 2px; }
+          .td-reschedule[open] { width: 100%; }
+          .td-reschedule[open] summary { margin-bottom: 4px; }
+          button.td-task-title { border: 0; padding: 0; background: transparent; text-align: left; font: inherit; cursor: pointer; }
           .td-quick-box {
             display: flex;
             align-items: center;
@@ -654,6 +677,16 @@
               color: #60a5fa !important;
             }
           }
+          /* Follow Zotero's semantic colors and native control metrics. */
+          .td-pane-wrap { color: var(--fill-primary, CanvasText); color-scheme: light dark; }
+          .td-header-card, .td-empty-card, .td-task-card, .td-quick-box, .td-action-btn {
+            background: var(--material-background, Canvas) !important;
+            border-color: var(--fill-quinary, #cbd5e1) !important; box-shadow: none;
+          }
+          .td-empty-title, .td-task-title, .td-quick-input, .td-prio-select, .td-action-btn { color: var(--fill-primary, CanvasText) !important; }
+          .td-empty-desc, .td-add-hint { color: var(--fill-secondary, GrayText); }
+          .td-prio-select { background: transparent; }
+          .td-quick-submit, .td-btn-milestone-primary { background: #c5282a !important; }
         `;
         (doc.head || doc.documentElement || doc.body).appendChild(style);
       } catch (e) {
@@ -692,7 +725,8 @@
           this._cachedData = data;
         } else {
           this._cachedData = { tasks: [], settings: { defaultView: 'list', showCompleted: true,
-            sortOrder: 'dueDate', theme: 'light', dailySummary: false, summaryTime: '09:00' }, customTags: [] };
+            sortOrder: 'dueDate', theme: this.getPref('theme', 'zotero'), defaultDueDays: this.getPref('defaultDueDays', 7),
+            readingProfile: this.getPref('readingProfile', 'general'), dailySummary: false, summaryTime: '09:00' }, customTags: [] };
         }
         return this._cachedData;
       } catch (error) {
@@ -719,11 +753,34 @@
           const removed = new Set(deleted);
           next.tasks = current.tasks.filter(t => !removed.has(t.id)).map(t => {
             const update = updated.find(u => u.id === t.id);
-            return update ? { ...t, ...update.changes, id: t.id } : t;
+            if (!update) return t;
+            const changes = { ...update.changes };
+            if (update.literatureRefresh) {
+              if (t.zoteroItemKey !== update.itemKey || (t.zoteroLibraryID || Zotero.Libraries.userLibraryID) !== update.libraryID) return t;
+              if (t.title !== update.originalTitle) { delete changes.title; changes.zoteroAutoTitle = false; }
+            }
+            return { ...t, ...changes, id: t.id };
           });
-          for (const task of added) if (!next.tasks.some(t => t.id === task.id)) next.tasks.push(task);
+          for (const task of added) {
+            if (next.tasks.some(t => t.id === task.id)) continue;
+            if (patch.deduplicateLiterature && next.tasks.some(t => LiteratureWorkflow.samePending(t, task,
+              Zotero.Libraries.userLibraryID, patch.deduplicateLiterature === 'item'))) continue;
+            next.tasks.push(task);
+          }
           delete next.taskChanges;
         }
+        delete next.deduplicateLiterature;
+        if (patch.rescheduleTask) {
+          const { taskID, days, fromDeadline } = patch.rescheduleTask;
+          const task = next.tasks.find(t => t.id === taskID);
+          if (!task) throw new Error('任务已被删除，请刷新后重试');
+          if (![0, 3, 7].includes(days)) throw new Error('不支持的改期选项');
+          const today = LiteratureWorkflow.dateAfter(0);
+          const base = fromDeadline && task.dueDate && task.dueDate > today ? new Date(task.dueDate + 'T12:00:00') : new Date();
+          next.tasks = next.tasks.map(t => t.id === taskID ? { ...t, dueDate: LiteratureWorkflow.dateAfter(days, base),
+            reminder: { ...t.reminder, notified: false } } : t);
+        }
+        delete next.rescheduleTask;
         if (patch.activeTimerChanges) {
           next.activeTimers = { ...current.activeTimers };
           for (const [id, timer] of Object.entries(patch.activeTimerChanges)) {
@@ -865,9 +922,25 @@
       }
     },
 
-    openPdfAttachment(item, page = null) {
+    async locateLiteratureItem(reference, libraryID, ownerWindow = null) {
+      const item = resolveItemReference(reference, libraryID);
+      const mainWindow = ownerWindow?.ZoteroPane ? ownerWindow : Zotero.getMainWindow?.();
+      if (!item || item.deleted || !mainWindow?.ZoteroPane?.selectItem) {
+        this.showNotice('无法跳转文献', '文献可能已被删除，或 Zotero 文献库窗口尚未打开。');
+        return false;
+      }
+      const tabs = mainWindow.Zotero_Tabs;
+      const libraryTab = tabs?._tabs?.find(tab => tab && (tab.type === 'library' || tab.id === 'zotero-pane'));
+      if (libraryTab) tabs.select(libraryTab.id);
+      mainWindow.focus?.();
+      await mainWindow.ZoteroPane.selectItem(item.id);
+      return true;
+    },
+
+    async openPdfAttachment(item, page = null, annotationKey = null) {
       if (!item) return;
-      const target = getLiteratureItem(item) || item;
+      const target = (item.isPDFAttachment?.() ? item : getLiteratureItem(item)) || item;
+      if (target.deleted) { this.showNotice('无法打开 PDF', '文献或附件已在回收站中。'); return false; }
       let pdfAtt = null;
       if (typeof target.isAttachment === 'function' && target.isAttachment() && target.isPDFAttachment && target.isPDFAttachment()) {
         pdfAtt = target;
@@ -882,14 +955,60 @@
         }
       }
       if (pdfAtt && Zotero.Reader && typeof Zotero.Reader.open === 'function') {
-        const openOptions = { itemID: pdfAtt.id };
+        const location = {};
         if (page && Number.isInteger(Number(page)) && Number(page) > 0) {
-          openOptions.pageIndex = Number(page) - 1;
+          location.pageIndex = Number(page) - 1;
         }
-        Promise.resolve(Zotero.Reader.open(openOptions)).catch((err) => {
-          Zotero.logError?.('[Todolist] PDF reader opening failed: ' + err);
-        });
+        if (annotationKey) location.annotationID = annotationKey;
+        await Zotero.Reader.open(pdfAtt.id, Object.keys(location).length ? location : undefined);
+        return true;
       }
+      this.showNotice('未找到 PDF', '当前文献没有可打开的 PDF 附件。');
+      return false;
+    },
+
+    async openTaskPdf(task) {
+      const item = resolveItemReference(task.zoteroPdfUri || task.zoteroItemKey, task.zoteroLibraryID);
+      if (!item) { this.showNotice('无法打开 PDF', '关联的文献或附件已删除。'); return false; }
+      let annotationKey = task.zoteroAnnotationKey || null;
+      if (annotationKey) {
+        const annotation = resolveItemReference(annotationKey, task.zoteroLibraryID);
+        if (!annotation || annotation.deleted || annotation.parentItemID !== item.id) {
+          annotationKey = null;
+          this.showNotice('批注已不可用', '将返回记录的 PDF 页码。');
+        }
+      }
+      const page = task.zoteroPage || Number(String(task.zoteroPdfUri || '').match(/[?&]page=(\d+)/)?.[1]) || null;
+      return this.openPdfAttachment(item, page, annotationKey);
+    },
+
+    async createTaskFromAnnotation(reader, annotationKey, { forceInstant = false } = {}) {
+      const attachment = Zotero.Items.get(reader.itemID);
+      const annotation = resolveItemReference(annotationKey, attachment?.libraryID);
+      const parent = getLiteratureItem(attachment);
+      if (!parent || !annotation?.isAnnotation?.() || annotation.deleted || annotation.parentItemID !== attachment.id) {
+        throw new Error('批注已删除或不属于当前 PDF');
+      }
+      let position;
+      try { position = JSON.parse(annotation.annotationPosition || '{}'); } catch (_) { position = {}; }
+      const page = Number.isInteger(position.pageIndex) && position.pageIndex >= 0 ? position.pageIndex + 1 : null;
+      const quote = annotation.annotationText || '';
+      const title = `批注：${String(annotation.annotationComment || quote || '核查文献批注').slice(0, 60)}`;
+      const task = this.buildLiteratureTask(parent, { title, workflowId: `annotation:${annotationKey}` });
+      task.zoteroAnnotationKey = annotationKey;
+      task.zoteroAttachmentKey = attachment.key;
+      task.zoteroPage = page; task.zoteroQuote = quote;
+      task.description = [quote, annotation.annotationComment].filter(Boolean).join('\n\n');
+      const groupID = Zotero.Libraries?.get?.(attachment.libraryID)?.groupID;
+      task.zoteroPdfUri = `zotero://open-pdf/${groupID ? 'groups/' + groupID : 'library'}/items/${attachment.key}?annotation=${annotationKey}${page ? '&page=' + page : ''}`;
+      const data = await this.loadData(); task.order = Math.max(-1, ...data.tasks.map(t => t.order || 0)) + 1;
+      if (!forceInstant && this.getPref('readerShortcutAction', 'create_instant') === 'open_modal') {
+        this.openTodolist({ mode: 'open_modal_prefill', prefill: task }, Zotero.getMainWindow?.()); return;
+      }
+      const saved = await this.saveData({ taskChanges: { added: [task] }, deduplicateLiterature: true, syncLinkedItems: true });
+      const created = saved.tasks.some(t => t.id === task.id);
+      this.showNotice(created ? '批注已加入待办' : '该批注已有待办', '点击任务的“回到批注”即可返回原文位置。');
+      return saved.tasks.find(t => LiteratureWorkflow.samePending(t, task, Zotero.Libraries.userLibraryID));
     },
 
     getZoteroCollections(libraryID = null) {
@@ -943,6 +1062,9 @@
             }
             if (this.getPref('childNoteIncludeQuotes', true) && t.description && t.description.trim()) {
               noteHtml += `<blockquote>${escapeHtml(t.description).replace(/\n/g, '<br/>')}</blockquote>`;
+            }
+            if (this.getPref('childNoteIncludeQuotes', true) && /^zotero:\/\/open-pdf\/(?:library|groups\/\d+)\/items\/[A-Za-z0-9_]+(?:\?|$)/.test(t.zoteroPdfUri || '')) {
+              noteHtml += ` <a href="${escapeHtml(t.zoteroPdfUri)}">${t.zoteroAnnotationKey ? '返回原文批注' : '打开原文页码'}</a>`;
             }
             noteHtml += `</li>`;
           }
@@ -1077,7 +1199,7 @@
             id: taskId,
             title: `📖 研读：${meta.title}`,
             description: `分类专题：${collection.name}\n作者：${meta.authors} (${meta.year})\n出版物：${meta.publication}\n文献链接：${meta.zoteroUri}`,
-            dueDate: null,
+            dueDate: LiteratureWorkflow.dateAfter(LiteratureWorkflow.days(this.getPref('defaultDueDays', 7))),
             dueTime: null,
             priority: 'medium',
             category: '论文研读',
@@ -1088,6 +1210,10 @@
             reminder: { enabled: false, before: 15, notified: false },
             order: (data.tasks || []).length,
             zoteroItemKey: meta.key,
+            zoteroItemID: meta.id,
+            zoteroLinkStatus: 'active',
+            readingProfile: this.getPref('readingProfile', 'general'),
+            literatureWorkflowId: 'reading',
             zoteroItemTitle: meta.title,
             zoteroAuthors: meta.authors,
             zoteroLibraryID: meta.libraryID,
@@ -1096,12 +1222,8 @@
             zoteroUri: meta.zoteroUri,
             zoteroPdfUri: meta.pdfUri,
             academicType: 'literature_reading',
-            subtasks: [
-              { id: 'sub_' + Date.now() + '_1', title: '1. 快速通读 Abstract 与核心贡献', completed: false },
-              { id: 'sub_' + Date.now() + '_2', title: '2. 梳理方法论、算法架构与公式推导', completed: false },
-              { id: 'sub_' + Date.now() + '_3', title: '3. 对比实验分析与关键指标验证', completed: false },
-              { id: 'sub_' + Date.now() + '_4', title: '4. 提炼核心启发并记录文献笔记', completed: false },
-            ]
+            subtasks: LiteratureWorkflow.steps(this.getPref('readingProfile', 'general'),
+              () => 'sub_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10))
           };
           data.tasks.push(mainTask);
           addedTasks.push(mainTask);
@@ -1110,7 +1232,7 @@
         }
 
         if (addedCount > 0) {
-          await this.saveData({ taskChanges: { added: addedTasks }, syncLinkedItems: true });
+          await this.saveData({ taskChanges: { added: addedTasks }, deduplicateLiterature: 'item', syncLinkedItems: true });
           this.showNotice(
             '专题研读规划已建立',
             `已为【${collection.name}】下的 ${addedCount} 篇文献批量生成研读清单！`
@@ -1128,10 +1250,10 @@
       }
     },
 
-    async createTaskFromReader(window = null) {
+    async createTaskFromReader(window = null, sourceReader = null, selection = null) {
       const win = window || (Zotero.getMainWindow ? Zotero.getMainWindow() : null);
       const tabs = win?.Zotero_Tabs || (typeof Zotero_Tabs !== 'undefined' ? Zotero_Tabs : null);
-      if (!tabs || !tabs.selectedTab || tabs.selectedTab.type !== 'reader') {
+      if (!sourceReader && (!tabs || !tabs.selectedTab || tabs.selectedTab.type !== 'reader')) {
         const selected = this.getSelectedRegularItems(win);
         if (selected.length > 0) {
           this.openTodolist({ mode: 'create_from_item', item: serializeLiteratureItem(selected[0]) }, win);
@@ -1142,8 +1264,8 @@
       }
 
       try {
-        const reader = Zotero.Reader?.getByTabID?.(tabs.selectedTab.id);
-        const itemID = reader?.itemID || tabs.selectedTab.data?.itemID;
+        const reader = sourceReader || Zotero.Reader?.getByTabID?.(tabs.selectedTab.id);
+        const itemID = reader?.itemID || tabs?.selectedTab?.data?.itemID;
         if (!itemID) return;
 
         const attachmentItem = Zotero.Items.get(itemID);
@@ -1153,9 +1275,9 @@
         const meta = serializeLiteratureItem(regularItem);
 
         // Get selected text if any
-        let selectedText = '';
+        let selectedText = selection?.text || '';
         try {
-          if (typeof reader.getSelectedText === 'function') {
+          if (!selectedText && typeof reader.getSelectedText === 'function') {
             selectedText = await reader.getSelectedText();
           }
         } catch (_) {}
@@ -1170,7 +1292,11 @@
         // Get page index
         let pageIndex = 0;
         try {
-          if (reader.state && typeof reader.state.pageIndex === 'number') {
+          if (Number.isInteger(selection?.position?.pageIndex)) {
+            pageIndex = selection.position.pageIndex;
+          } else if (Number.isInteger(reader._internalReader?._state?.primaryViewState?.pageIndex)) {
+            pageIndex = reader._internalReader._state.primaryViewState.pageIndex;
+          } else if (reader.state && typeof reader.state.pageIndex === 'number') {
             pageIndex = reader.state.pageIndex;
           } else if (reader._iframeWindow?.PDFViewerApplication?.page) {
             pageIndex = reader._iframeWindow.PDFViewerApplication.page - 1;
@@ -1202,7 +1328,7 @@
           id: taskId,
           title: `📌 [P.${pageNum}] ${taskTitle}`,
           description,
-          dueDate: null,
+          dueDate: LiteratureWorkflow.dateAfter(LiteratureWorkflow.days(this.getPref('defaultDueDays', 7))),
           dueTime: null,
           priority: 'medium',
           category: '论文研读',
@@ -1221,6 +1347,11 @@
           zoteroYear: meta.year,
           zoteroUri: meta.zoteroUri,
           zoteroPdfUri: pageLink,
+          zoteroAttachmentKey: attachmentItem.key,
+          zoteroItemID: regularItem.id,
+          zoteroPage: pageNum,
+          zoteroQuote: selectedText,
+          zoteroLinkStatus: 'active',
           academicType: 'literature_reading'
         };
 
@@ -1230,14 +1361,7 @@
           return;
         }
 
-        await this.saveData({ taskChanges: { added: [newTask] } });
-
-        if (this.getPref('autoTagOnCreate', true)) {
-          await this.tagItemOnTaskEvent(meta.key, 'create', regularItem.libraryID);
-        }
-        if (this.getPref('autoSyncChildNote', true)) {
-          await this.syncTasksToChildNote(regularItem);
-        }
+        await this.saveData({ taskChanges: { added: [newTask] }, syncLinkedItems: true });
 
         this.showNotice(
           '已从 PDF 提取待办',
@@ -1245,6 +1369,7 @@
         );
       } catch (err) {
         Zotero.logError?.('[Todolist] createTaskFromReader error: ' + err);
+        this.showNotice('从阅读器创建待办失败', String(err));
       }
     },
 
@@ -1542,13 +1667,18 @@
               {
                 menuType: 'menuitem',
                 label: '添加为待办',
-                onCommand: () => {
+                onCommand: (event) => {
                   try {
-                    this.createTaskFromSelection();
+                    this.createTaskFromSelection(event?.target?.ownerDocument?.defaultView);
                   } catch (err) {
                     Zotero.logError?.('[Todolist] Failed to create task: ' + err);
                   }
                 },
+              },
+              {
+                menuType: 'menuitem', label: '批量加入研读待办',
+                onCommand: event => this.addSelectedLiteratureTasks(event?.target?.ownerDocument?.defaultView)
+                  .catch(error => this.showNotice('批量加入失败', String(error)))
               },
             ],
           });
@@ -1556,6 +1686,100 @@
           Zotero.logError?.('[Todolist] MenuManager.registerMenu failed: ' + err);
         }
       }
+    },
+
+    getHostTheme() {
+      try { return Zotero.getMainWindow?.()?.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+      catch (_) { return 'light'; }
+    },
+
+    registerThemeListener(listener) {
+      this._themeListeners ||= new Set(); this._themeListeners.add(listener);
+      listener(this.getHostTheme());
+      return () => this._themeListeners.delete(listener);
+    },
+
+    async refreshLinkedLiterature(itemIDs = null, removed = []) {
+      const data = await this.loadData(); const updated = [];
+      for (const task of data.tasks || []) {
+        if (!task.zoteroItemKey) continue;
+        const libraryID = task.zoteroLibraryID || Zotero.Libraries.userLibraryID;
+        const item = resolveItemReference(task.zoteroItemKey, libraryID);
+        const matchesRemoved = removed.some(ref => ref.key === task.zoteroItemKey && ref.libraryID === libraryID);
+        if (itemIDs && !itemIDs.has(item?.id) && !itemIDs.has(task.zoteroItemID) && !matchesRemoved) continue;
+        let changes = { zoteroLinkStatus: !item ? 'missing' : item.deleted ? 'trashed' : 'active' };
+        if (item) {
+          const meta = serializeLiteratureItem(item);
+          if (!meta) continue;
+          Object.assign(changes, { zoteroItemID: meta.id, zoteroItemTitle: meta.title, zoteroAuthors: meta.authors,
+            zoteroYear: meta.year, zoteroPublication: meta.publication, zoteroUri: meta.zoteroUri });
+          if (task.zoteroAutoTitle || (task.zoteroAutoTitle == null && task.title === `研读：${task.zoteroItemTitle}`)) changes.title = `研读：${meta.title}`;
+        }
+        changes = Object.fromEntries(Object.entries(changes).filter(([key, value]) => value !== task[key]));
+        if (Object.keys(changes).length) updated.push({ id: task.id, changes, literatureRefresh: true,
+          originalTitle: task.title, itemKey: task.zoteroItemKey, libraryID });
+      }
+      if (updated.length && !this._shuttingDown) await this.saveData({ taskChanges: { updated },
+        expectedTasksGeneration: data.tasksGeneration || 0 });
+      return updated.length;
+    },
+
+    registerZoteroIntegration() {
+      if (this._integrationRegistered) return;
+      this._integrationRegistered = true; this._shuttingDown = false;
+      const scheduleLinks = (ids = null, extraData = {}) => {
+        this._pendingLinkIDs ||= new Set(); this._removedLinkRefs ||= [];
+        if (!ids) this._refreshAllLinks = true;
+        else ids.forEach(id => this._pendingLinkIDs.add(id));
+        this._removedLinkRefs.push(...Object.values(extraData || {}).map(entry => entry?.old || entry).filter(entry => entry?.key && entry?.libraryID));
+        clearTimeout(this._linkRefreshTimer);
+        this._linkRefreshTimer = setTimeout(() => {
+          const ids = this._refreshAllLinks ? null : this._pendingLinkIDs;
+          const removed = this._removedLinkRefs;
+          this._pendingLinkIDs = new Set(); this._removedLinkRefs = []; this._refreshAllLinks = false;
+          this._linkRefreshQueue = (this._linkRefreshQueue || Promise.resolve()).then(() => {
+            if (!this._shuttingDown) return this.refreshLinkedLiterature(ids, removed);
+          }).catch(error => Zotero.logError?.('[Todolist] 文献状态更新失败: ' + error));
+        }, 100);
+      };
+      if (Zotero.Notifier?.registerObserver) {
+        this._notifierID = Zotero.Notifier.registerObserver({ notify: (event, type, ids, extraData) => {
+          if (type === 'item' && ['modify', 'delete', 'trash', 'add', 'refresh'].includes(event)) scheduleLinks(ids, extraData);
+        } }, ['item'], 'todolist-literature');
+        scheduleLinks();
+      }
+      this._readerHooks = [];
+      if (Zotero.Reader?.registerEventListener) {
+        const annotationMenu = ({ reader, params, append }) => {
+          if (!params?.ids?.length) return;
+          append({ label: '加入研读待办', onCommand: () => {
+            // Use saved annotation IDs; completion never modifies the annotation itself.
+            const run = async () => { for (const key of params.ids) await this.createTaskFromAnnotation(reader, key, { forceInstant: params.ids.length > 1 }); };
+            run().catch(error => this.showNotice('批注加入失败', String(error)));
+          } });
+        };
+        const selectionPopup = ({ reader, doc, params, append }) => {
+          if (!params?.annotation?.text) return;
+          const button = doc.createElement('button'); button.type = 'button'; button.textContent = '加入研读待办';
+          button.title = '将选中文字与当前页加入待办';
+          button.addEventListener('click', async () => {
+            if (button.disabled) return; button.disabled = true;
+            try { await this.createTaskFromReader(null, reader, params.annotation); }
+            finally { button.disabled = false; }
+          });
+          append(button);
+        };
+        for (const [type, handler] of [['createAnnotationContextMenu', annotationMenu], ['renderTextSelectionPopup', selectionPopup]]) {
+          Zotero.Reader.registerEventListener(type, handler, ADDON_ID); this._readerHooks.push([type, handler]);
+        }
+      }
+      this._hostColorQuery = Zotero.getMainWindow?.()?.matchMedia?.('(prefers-color-scheme: dark)');
+      this._hostThemeChanged = () => {
+        const theme = this.getHostTheme();
+        for (const listener of this._themeListeners || []) { try { listener(theme); } catch (_) {} }
+        for (const client of this._uiClients || []) { try { client.postMessage({ type: 'TODOLIST_HOST_THEME', theme }, '*'); } catch (_) {} }
+      };
+      this._hostColorQuery?.addEventListener?.('change', this._hostThemeChanged);
     },
 
     init() {
@@ -1617,8 +1841,76 @@
 
       // Register ItemPane Section (Literature details inspector panel)
       this.registerItemPaneSection();
+      this.registerZoteroIntegration();
 
       Zotero.log('[Todolist] Initialized successfully in Zotero');
+    },
+
+    buildLiteratureTask(item, { title = '', priority = null, academicType = 'literature_reading', profileID = null,
+      dueDate = null, workflowId = null } = {}) {
+      const meta = serializeLiteratureItem(item);
+      if (!meta || item.deleted) throw new Error('请先选中文献条目，回收站中的文献无法加入待办');
+      const customTitle = String(title).trim();
+      const taskTitle = customTitle || `研读：${meta.title}`;
+      const generateId = () => 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+      return {
+        id: generateId(), title: taskTitle,
+        description: `文献研读待办：${meta.title} (${meta.authors} ${meta.year})`,
+        dueDate: dueDate || LiteratureWorkflow.dateAfter(LiteratureWorkflow.days(this.getPref('defaultDueDays', 7))),
+        dueTime: null, priority: priority || this.getPref('defaultPriority', 'medium'),
+        category: '论文研读', academicType, status: 'todo', repeat: null,
+        completed: false, createdAt: new Date().toISOString(), completedAt: null,
+        subtasks: profileID ? LiteratureWorkflow.steps(profileID, generateId) : [],
+        readingProfile: profileID,
+        literatureWorkflowId: workflowId || (profileID ? `milestones:${profileID}` : customTitle ? null : 'reading'),
+        tags: this.getPref('autoTagFromItem', true) ? (meta.tags || []) : [],
+        reminder: { enabled: false, before: 15, notified: false },
+        zoteroItemKey: meta.key, zoteroItemID: meta.id, zoteroItemTitle: meta.title, zoteroAutoTitle: !customTitle,
+        zoteroAuthors: meta.authors, zoteroLibraryID: meta.libraryID,
+        zoteroPublication: meta.publication, zoteroYear: meta.year,
+        zoteroUri: meta.zoteroUri, zoteroPdfUri: meta.pdfUri, zoteroLinkStatus: 'active'
+      };
+    },
+
+    addLiteratureReadingTask(item, options = {}) {
+      let task;
+      try { task = this.buildLiteratureTask(item, options); }
+      catch (error) { return Promise.reject(error); }
+      const requestKey = JSON.stringify([task.zoteroLibraryID, task.zoteroItemKey, task.title, task.literatureWorkflowId]);
+      this._literatureTaskAdds ||= new Map();
+      if (this._literatureTaskAdds.has(requestKey)) return this._literatureTaskAdds.get(requestKey);
+      const run = async () => {
+        const data = await this.loadData();
+        task.order = Math.max(-1, ...(data.tasks || []).map(t => t.order || 0)) + 1;
+        const saved = await this.saveData({ taskChanges: { added: [task] },
+          deduplicateLiterature: Boolean(task.literatureWorkflowId), syncLinkedItems: true });
+        const actual = saved.tasks.find(t => t.id === task.id) || saved.tasks.find(t =>
+          LiteratureWorkflow.samePending(t, task, Zotero.Libraries.userLibraryID));
+        return { task: actual, created: actual?.id === task.id };
+      };
+      const result = run().finally(() => this._literatureTaskAdds.delete(requestKey));
+      this._literatureTaskAdds.set(requestKey, result);
+      return result;
+    },
+
+    async addSelectedLiteratureTasks(window = null) {
+      const selected = this.getSelectedRegularItems(window || Zotero.getMainWindow?.()).filter(item => !item.deleted);
+      if (!selected.length) { this.showNotice('请先选中文献', '可在文献列表中多选后批量加入。'); return { added: 0, skipped: 0 }; }
+      const data = await this.loadData();
+      const candidates = selected.map((item, index) => ({ ...this.buildLiteratureTask(item),
+        order: Math.max(-1, ...(data.tasks || []).map(task => task.order || 0)) + 1 + index }));
+      const saved = await this.saveData({ taskChanges: { added: candidates }, deduplicateLiterature: 'item', syncLinkedItems: true });
+      const ids = new Set(saved.tasks.map(task => task.id));
+      const added = candidates.filter(task => ids.has(task.id)).length;
+      const skipped = selected.length - added;
+      this.showNotice('批量加入完成', `新增 ${added} 篇，跳过已有待办 ${skipped} 篇；新任务截止 ${candidates[0].dueDate}。`);
+      return { added, skipped };
+    },
+
+    async rescheduleLiteratureTask(taskID, days, fromDeadline = false) {
+      if (![0, 3, 7].includes(days)) throw new Error('不支持的改期选项');
+      const data = await this.saveData({ rescheduleTask: { taskID, days, fromDeadline }, syncLinkedItems: true });
+      return data.tasks.find(task => task.id === taskID);
     },
 
     registerItemPaneSection() {
@@ -1642,6 +1934,9 @@
             const target = getLiteratureItem(item);
             const state = {
               itemKey: target?.key || null,
+              libraryID: target?.libraryID || null,
+              renderVersion: 0,
+              saving: false,
               refresh,
               onDataChanged: () => {
                 Promise.resolve(refresh?.()).catch((err) => {
@@ -1654,6 +1949,7 @@
           },
           onDestroy: ({ body }) => {
             const state = sectionStates.get(body);
+            if (state) state.renderVersion++;
             if (state?.onDataChanged) {
               this.unregisterDataListener(state.onDataChanged);
             }
@@ -1662,10 +1958,19 @@
           onItemChange: ({ body, item, setEnabled }) => {
             const target = getLiteratureItem(item);
             const state = sectionStates.get(body);
-            if (state) state.itemKey = target?.key || null;
+            if (state) {
+              if (state.itemKey !== target?.key || state.libraryID !== target?.libraryID) state.profileID = null;
+              state.itemKey = target?.key || null;
+              state.libraryID = target?.libraryID || null;
+              state.renderVersion++;
+            }
             setEnabled(Boolean(target));
           },
-          onRender: async ({ doc, body, item, setSectionSummary }) => {
+          onRender: ({ body, item, setSectionSummary }) => {
+            if (!getLiteratureItem(item)) body?.replaceChildren();
+            setSectionSummary?.('文献研读待办');
+          },
+          onAsyncRender: async ({ doc, body, item, setSectionSummary }) => {
             if (!body) return;
             const document = doc || body.ownerDocument;
             if (document) {
@@ -1676,6 +1981,7 @@
             if (!target) return;
 
             const state = sectionStates.get(body);
+            const renderVersion = state ? ++state.renderVersion : 0;
             const html = 'http://www.w3.org/1999/xhtml';
             const createEl = (tag, className = '', text = null) => {
               const el = document.createElementNS
@@ -1688,7 +1994,16 @@
               return el;
             };
 
-            const data = await this.loadData();
+            let data;
+            try {
+              data = await this.loadData();
+            } catch (error) {
+              if (state && renderVersion !== state.renderVersion) return;
+              body.appendChild(createEl('div', 'td-add-hint', '待办数据读取失败，请重新选择条目后重试。'));
+              Zotero.logError?.('[Todolist] ItemPane data load failed: ' + error);
+              return;
+            }
+            if (state && renderVersion !== state.renderVersion) return;
             const targetKey = target.key;
             const tasks = (data.tasks || []).filter(t => t.zoteroItemKey === targetKey &&
               (t.zoteroLibraryID || Zotero.Libraries.userLibraryID) === target.libraryID);
@@ -1764,72 +2079,72 @@
             quickBtn.title = '添加待办任务';
             quickBtn.setAttribute('aria-label', '添加待办任务');
 
-            const handleQuickAdd = async () => {
-              if (quickBtn.disabled) return;
-              const text = quickInput.value.trim();
-              if (!text) {
+            const literatureTitle = serializeLiteratureItem(target).title;
+            const existingReadingTask = uncompletedTasks.find(task =>
+              (task.literatureWorkflowId === 'reading' || task.title === `研读：${literatureTitle}`) &&
+              (task.academicType || 'literature_reading') === 'literature_reading');
+            const addReadingBtn = createEl('button', 'td-add-reading', existingReadingTask ? '已加入待办事项' : '+ 加入待办事项');
+            addReadingBtn.type = 'button';
+            addReadingBtn.title = `为当前文献创建论文研读待办，默认 ${LiteratureWorkflow.days(this.getPref('defaultDueDays', 7))} 天后截止`;
+            addReadingBtn.disabled = Boolean(existingReadingTask || state?.saving);
+            const addHint = createEl('div', 'td-add-hint', existingReadingTask
+              ? `截止日期：${existingReadingTask.dueDate || '未设置'} · 可在待办看板中调整`
+              : `自动关联当前文献 · 默认 ${LiteratureWorkflow.days(this.getPref('defaultDueDays', 7))} 天后截止`);
+            addHint.setAttribute('role', 'status');
+            addHint.setAttribute('aria-live', 'polite');
+            wrapper.appendChild(addReadingBtn);
+            wrapper.appendChild(addHint);
+
+            let saving = false;
+            const handleQuickAdd = async (useLiteratureTitle = false) => {
+              if (saving || state?.saving || (useLiteratureTitle && existingReadingTask)) return;
+              const text = useLiteratureTitle ? '' : quickInput.value.trim();
+              if (!useLiteratureTitle && !text) {
                 quickInput.focus();
                 return;
               }
-              const meta = serializeLiteratureItem(target);
               const selectedPrio = prioSelect.value || defaultPrio;
-              const defaultType = this.getPref('defaultTaskType', 'literature_reading');
-              const inheritTags = this.getPref('autoTagFromItem', true);
-              const newTask = {
-                id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                title: text,
-                description: `文献研读待办：${meta.title} (${meta.authors} ${meta.year})`,
-                dueDate: null,
-                dueTime: null,
-                priority: selectedPrio,
-                category: '论文研读',
-                completed: false,
-                createdAt: new Date().toISOString(),
-                completedAt: null,
-                subtasks: [],
-                tags: inheritTags ? (meta.tags || []) : [],
-                reminder: { enabled: false, before: 15, notified: false },
-                order: (data.tasks || []).length,
-                zoteroItemKey: meta.key,
-                zoteroItemTitle: meta.title,
-                zoteroAuthors: meta.authors,
-                zoteroLibraryID: meta.libraryID,
-                zoteroPublication: meta.publication,
-                zoteroYear: meta.year,
-                zoteroUri: meta.zoteroUri,
-                zoteroPdfUri: meta.pdfUri,
-                academicType: defaultType
-              };
+              saving = true;
+              if (state) state.saving = true;
+              addReadingBtn.disabled = true;
               quickBtn.disabled = true;
               quickInput.disabled = true;
               prioSelect.disabled = true;
               try {
-                await this.saveData({ taskChanges: { added: [newTask] } });
+                const result = await this.addLiteratureReadingTask(target, {
+                  title: text, priority: selectedPrio,
+                  academicType: useLiteratureTitle ? 'literature_reading' : this.getPref('defaultTaskType', 'literature_reading')
+                });
+                quickInput.value = '';
+                this.showNotice(result.created ? '已加入待办事项' : '该文献已加入待办', `截止日期：${result.task.dueDate || '未设置'}`);
               } catch (error) {
+                addHint.textContent = '保存失败，请重试。';
                 this.showNotice('保存失败', String(error));
                 return;
               } finally {
+                saving = false;
+                if (state) state.saving = false;
+                addReadingBtn.disabled = Boolean(existingReadingTask);
                 quickBtn.disabled = false;
                 quickInput.disabled = false;
                 prioSelect.disabled = false;
               }
-              quickInput.value = '';
-              await this.tagItemOnTaskEvent(target.key, 'create', target.libraryID);
-              if (this.getPref('autoSyncChildNote', true)) {
-                await this.syncTasksToChildNote(target);
-              }
-              state?.refresh?.();
+              await state?.refresh?.();
             };
+
+            addReadingBtn.addEventListener('click', () => {
+              handleQuickAdd(true).catch(error => Zotero.logError?.('[Todolist] Quick add refresh failed: ' + error));
+            });
 
             quickInput.addEventListener('keydown', (e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                handleQuickAdd();
+                handleQuickAdd().catch(error => Zotero.logError?.('[Todolist] Quick add refresh failed: ' + error));
               }
             });
             quickBtn.addEventListener('click', (e) => {
               e.preventDefault();
-              handleQuickAdd();
+              handleQuickAdd().catch(error => Zotero.logError?.('[Todolist] Quick add refresh failed: ' + error));
             });
 
             quickBox.appendChild(prioSelect);
@@ -1837,19 +2152,31 @@
             quickBox.appendChild(quickBtn);
             wrapper.appendChild(quickBox);
 
+            const profileBox = createEl('label', 'td-reading-profile', '研读模板');
+            const profileSelect = createEl('select');
+            profileSelect.setAttribute('aria-label', '研读模板');
+            const selectedProfile = state?.profileID || tasks.find(task => task.readingProfile)?.readingProfile || this.getPref('readingProfile', 'general');
+            for (const [id, profile] of Object.entries(LiteratureWorkflow.profiles)) {
+              const option = createEl('option', '', profile.label); option.value = id;
+              option.selected = id === selectedProfile;
+              profileSelect.appendChild(option);
+            }
+            profileSelect.addEventListener('change', () => { if (state) state.profileID = profileSelect.value; });
+            profileBox.appendChild(profileSelect); wrapper.appendChild(profileBox);
+
             // 2. Empty State Card
             if (total === 0) {
               const emptyCard = createEl('div', 'td-empty-card');
 
               const emptyTitle = createEl('div', 'td-empty-title', '📚 暂未建立学术研读清单');
-              const emptyDesc = createEl('div', 'td-empty-desc', '可一键为本文献自动规划 5 步精读里程碑，或在下方快速添加待办');
+              const emptyDesc = createEl('div', 'td-empty-desc', '点击上方“加入待办事项”即可开始研读，也可生成 5 步精读里程碑');
 
               const btnCreateMilestones = createEl('button', 'td-btn-milestone-primary', '⚡ 一键生成 5 步精读清单');
               btnCreateMilestones.type = 'button';
-              btnCreateMilestones.title = '为本文献快速拆解：通读、算法、实验、复现与批判性总结';
+              btnCreateMilestones.title = '按所选研读模板为本文献建立精读清单';
               btnCreateMilestones.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                await this.createReadingMilestones(target, Zotero.getMainWindow?.());
+                await this.createReadingMilestones(target, Zotero.getMainWindow?.(), profileSelect.value);
                 state?.refresh?.();
               });
 
@@ -1866,6 +2193,7 @@
 
               for (const t of tasks) {
                 const taskCard = createEl('div', `td-task-card ${t.completed ? 'is-completed' : ''}`);
+                taskCard.dataset.taskId = t.id;
 
                 const row = createEl('div', 'td-task-row');
 
@@ -1898,7 +2226,8 @@
                 row.appendChild(checkbox);
 
                 // Title
-                const titleSpan = createEl('span', `td-task-title ${t.completed ? 'is-done' : ''}`, t.title);
+                const titleSpan = createEl('button', `td-task-title ${t.completed ? 'is-done' : ''}`, t.title);
+                titleSpan.type = 'button';
                 titleSpan.title = `${t.title} (点击在看板中查看详情)`;
                 titleSpan.addEventListener('click', () => {
                   this.openTodolist({ mode: 'view_task', taskId: t.id }, Zotero.getMainWindow?.());
@@ -1992,6 +2321,36 @@
                 row.appendChild(delBtn);
 
                 taskCard.appendChild(row);
+                const controls = createEl('div', 'td-task-controls');
+                const editBtn = createEl('button', 'td-task-edit', '编辑'); editBtn.type = 'button';
+                editBtn.addEventListener('click', () => this.openTodolist({ mode: 'edit_task', taskId: t.id }, Zotero.getMainWindow?.()));
+                controls.appendChild(editBtn);
+                if (!t.completed) {
+                  const menu = createEl('details', 'td-reschedule');
+                  const summary = createEl('summary', '', '改期'); menu.appendChild(summary);
+                  for (const [days, label] of [[0, '今天'], [3, '延后三天'], [7, '延后一周']]) {
+                    const dateBtn = createEl('button', 'td-reschedule-option', label); dateBtn.type = 'button';
+                    dateBtn.title = days ? '从当前截止日期延后；未设置或已逾期时从今天计算' : '截止日期设为今天';
+                    dateBtn.addEventListener('click', async () => {
+                      if (dateBtn.disabled) return;
+                      menu.querySelectorAll('button').forEach(btn => { btn.disabled = true; });
+                      try {
+                        await this.rescheduleLiteratureTask(t.id, days, days > 0);
+                        menu.open = false;
+                      } catch (error) { this.showNotice('改期失败', String(error)); }
+                      finally { menu.querySelectorAll('button').forEach(btn => { btn.disabled = false; }); }
+                      Promise.resolve(state?.refresh?.()).catch(error => Zotero.logError?.('[Todolist] 改期刷新失败: ' + error));
+                    });
+                    menu.appendChild(dateBtn);
+                  }
+                  controls.appendChild(menu);
+                }
+                if (t.zoteroPdfUri || t.zoteroAnnotationKey) {
+                  const pdfBtn = createEl('button', 'td-task-pdf', t.zoteroAnnotationKey ? '回到批注' : '打开 PDF'); pdfBtn.type = 'button';
+                  pdfBtn.addEventListener('click', () => this.openTaskPdf(t).catch(error => this.showNotice('打开 PDF 失败', String(error))));
+                  controls.appendChild(pdfBtn);
+                }
+                taskCard.appendChild(controls);
                 if (subList) taskCard.appendChild(subList);
                 taskList.appendChild(taskCard);
               }
@@ -2040,7 +2399,7 @@
             btnMilestones.type = 'button';
             btnMilestones.title = '一键为本篇文献生成 5 项精读里程碑待办';
             btnMilestones.addEventListener('click', async () => {
-              await this.createReadingMilestones(target, Zotero.getMainWindow?.());
+              await this.createReadingMilestones(target, Zotero.getMainWindow?.(), profileSelect.value);
               state?.refresh?.();
             });
             actionGrid.appendChild(btnMilestones);
@@ -2171,6 +2530,7 @@
       const staleMenuIds = [
         'todolist-itemmenu-separator',
         'todolist-itemmenu-create',
+        'todolist-itemmenu-batch',
         'todolist-collectionmenu-create',
         'todolist-collectionmenu-plan',
         'todolist-reader-context-create',
@@ -2237,6 +2597,13 @@
 
           itemMenu.appendChild(createFromItem);
           windowElements.push(createFromItem);
+          const batchFromItems = this.createXULElement(doc, 'menuitem');
+          batchFromItems.id = 'todolist-itemmenu-batch';
+          batchFromItems.setAttribute('label', '批量加入研读待办');
+          batchFromItems.addEventListener('command', () => {
+            this.addSelectedLiteratureTasks(window).catch(error => this.showNotice('批量加入失败', String(error)));
+          });
+          itemMenu.appendChild(batchFromItems); windowElements.push(batchFromItems);
         }
       }
 
@@ -2323,6 +2690,7 @@
               replyResult({
                 type: 'TODOLIST_INIT_DATA',
                 data: storedData,
+                hostTheme: this.getHostTheme(),
                 pending: pendingNav
               });
             }).catch(error => {
@@ -2355,29 +2723,14 @@
 
           // C. Locate and select item in Zotero library pane
           if (data.type === 'TODOLIST_LOCATE_ITEM' && data.key) {
-            const tabs = window.Zotero_Tabs;
-            if (tabs && Array.isArray(tabs._tabs)) {
-              const libTab = tabs._tabs.find((t) => t && (t.type === 'library' || t.id === 'zotero-pane'));
-              if (libTab) tabs.select(libTab.id);
-            }
-            const item = resolveItemReference(data.key, data.libraryID);
-            if (item && window.ZoteroPane) {
-              await window.ZoteroPane.selectItem(item.id);
-            }
+            await this.locateLiteratureItem(data.key, data.libraryID, window);
             return;
           }
 
           // D. Open PDF Reader in Zotero (with optional page navigation)
           if (data.type === 'TODOLIST_OPEN_PDF' && data.key) {
-            const item = resolveItemReference(data.key, data.libraryID);
-            if (item) {
-              let page = data.page || null;
-              if (!page && data.pdfUri) {
-                const match = String(data.pdfUri).match(/[?&]page=(\d+)/);
-                if (match) page = Number(match[1]);
-              }
-              await this.openPdfAttachment(item, page);
-            }
+            await this.openTaskPdf({ zoteroPdfUri: data.key, zoteroLibraryID: data.libraryID,
+              zoteroPage: data.page, zoteroAnnotationKey: data.annotationKey });
             return;
           }
 
@@ -2724,6 +3077,7 @@
         'todolist-tools-preferences',
         'todolist-itemmenu-separator',
         'todolist-itemmenu-create',
+        'todolist-itemmenu-batch',
         'todolist-collectionmenu-create',
         'todolist-collectionmenu-plan',
         'todolist-reader-context-create',
@@ -2820,57 +3174,14 @@
       }
     },
 
-    async createReadingMilestones(item, window = null) {
-      const meta = serializeLiteratureItem(item);
-      if (!meta) return;
-
-      const data = await this.loadData();
-      const parentTaskId = 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
-      const nowStr = new Date().toISOString();
-
-      const mainTask = {
-        id: parentTaskId,
-        title: `📖 精读研读：${meta.title}`,
-        description: `文献作者：${meta.authors} (${meta.year})\n出版物：${meta.publication}\n文献链接：${meta.zoteroUri}`,
-        dueDate: null,
-        dueTime: null,
-        priority: 'high',
-        category: '论文研读',
-        completed: false,
-        createdAt: nowStr,
-        completedAt: null,
-        tags: [...(meta.tags || []), '精读计划'],
-        reminder: { enabled: false, before: 15, notified: false },
-        order: (data.tasks || []).length,
-        zoteroItemKey: meta.key,
-        zoteroItemTitle: meta.title,
-        zoteroAuthors: meta.authors,
-            zoteroLibraryID: meta.libraryID,
-            zoteroPublication: meta.publication,
-        zoteroYear: meta.year,
-        zoteroUri: meta.zoteroUri,
-        zoteroPdfUri: meta.pdfUri,
-        academicType: 'literature_reading',
-        subtasks: [
-          { id: 'sub_' + Date.now() + '_1', title: '1. 快速通读 Abstract、Introduction 与 Conclusion', completed: false },
-          { id: 'sub_' + Date.now() + '_2', title: '2. 深度梳理核心算法架构、数学公式与创新点', completed: false },
-          { id: 'sub_' + Date.now() + '_3', title: '3. 仔细评估 Baseline 对比与 Ablation 消融实验', completed: false },
-          { id: 'sub_' + Date.now() + '_4', title: '4. 查阅开源代码并跑通最小测试 Demo', completed: false },
-          { id: 'sub_' + Date.now() + '_5', title: '5. 提炼批判性思考、局限性并整理学术笔记', completed: false },
-        ]
-      };
-
-      await this.saveData({ taskChanges: { added: [mainTask] } });
-
-      if (this.getPref('autoTagOnCreate', true)) {
-        await this.tagItemOnTaskEvent(meta.key, 'create', item.libraryID);
-      }
-      if (this.getPref('autoSyncChildNote', true)) {
-        await this.syncTasksToChildNote(item);
-      }
-
-      this.showNotice('精读清单创建成功', `已为《${meta.title.slice(0, 25)}...》生成 5 项研读里程碑`);
-      this.openTodolist({ mode: 'view_task', taskId: parentTaskId }, window);
+    async createReadingMilestones(item, window = null, profileID = null) {
+      const selectedProfile = Object.hasOwn(LiteratureWorkflow.profiles, profileID)
+        ? profileID : this.getPref('readingProfile', 'general');
+      const result = await this.addLiteratureReadingTask(item, { profileID: selectedProfile });
+      this.showNotice(result.created ? '精读清单已创建' : '该精读清单已存在',
+        `${LiteratureWorkflow.profile(selectedProfile).label} · 截止 ${result.task.dueDate}`);
+      this.openTodolist({ mode: 'view_task', taskId: result.task.id }, window);
+      return result;
     },
 
     triggerTodolistOpen(window = null) {
@@ -3064,6 +3375,15 @@
     },
 
     async shutdown() {
+      this._shuttingDown = true;
+      clearTimeout(this._linkRefreshTimer);
+      this._hostColorQuery?.removeEventListener?.('change', this._hostThemeChanged);
+      this._themeListeners?.clear();
+      if (this._notifierID != null) Zotero.Notifier?.unregisterObserver?.(this._notifierID);
+      this._notifierID = null;
+      for (const [type, handler] of this._readerHooks || []) Zotero.Reader?.unregisterEventListener?.(type, handler);
+      this._readerHooks = [];
+      this._integrationRegistered = false;
       clearTimeout(this._paneUndoTimer);
       this._paneDeleted = [];
       this._uiClients?.clear();

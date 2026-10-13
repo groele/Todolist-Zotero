@@ -6,7 +6,7 @@ pref("extensions.todolist.subwindowCompactMode", true);
 
 // Group 2: Display & Views
 pref("extensions.todolist.defaultView", "list");
-pref("extensions.todolist.theme", "light");
+pref("extensions.todolist.theme", "zotero");
 pref("extensions.todolist.showCompleted", true);
 pref("extensions.todolist.sortOrder", "dueDate");
 pref("extensions.todolist.showWelcomeOnStartup", true);
@@ -36,6 +36,8 @@ pref("extensions.todolist.autoTagFromItem", true);
 pref("extensions.todolist.academicPresets", true);
 pref("extensions.todolist.defaultTaskType", "literature_reading");
 pref("extensions.todolist.defaultPriority", "medium");
+pref("extensions.todolist.defaultDueDays", 7);
+pref("extensions.todolist.readingProfile", "general");
 pref("extensions.todolist.readerShortcutAction", "create_instant");
 pref("extensions.todolist.pdfReaderJumpPage", true);
 

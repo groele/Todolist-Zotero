@@ -18,6 +18,10 @@ const ZoteroBridge = {
       });
       this._readyPromise.catch(() => {});
       const host = Storage.getZoteroInstance()?.Todolist;
+      if (host?.registerThemeListener) {
+        const unsubscribe = host.registerThemeListener(theme => this.setHostTheme(theme));
+        window.addEventListener('unload', () => unsubscribe?.(), { once: true });
+      }
       if (host?.registerDataListener) {
         this._dataListener = data => Storage.acceptData(data);
         host.registerDataListener(this._dataListener);
@@ -89,6 +93,7 @@ const ZoteroBridge = {
         this._rejectReady?.(new Error(data.error || 'Zotero 数据初始化失败'));
       }
       if (data.type === 'TODOLIST_INIT_DATA') {
+        if (data.hostTheme) this.setHostTheme(data.hostTheme);
         if (data.data && typeof Storage !== 'undefined') {
           Storage.acceptData(data.data);
           clearTimeout(this._readyTimer);
@@ -100,6 +105,7 @@ const ZoteroBridge = {
       }
 
       if (data.type === 'TODOLIST_DATA_CHANGED' && data.data) Storage.acceptData(data.data);
+      if (data.type === 'TODOLIST_HOST_THEME') this.setHostTheme(data.theme);
 
       // Handle direct navigation request from host
       if (data.type === 'TODOLIST_NAVIGATE') {
@@ -129,6 +135,7 @@ const ZoteroBridge = {
               window.postMessage({
                 type: 'TODOLIST_INIT_DATA',
                 data: storedData,
+                hostTheme: todolist.getHostTheme?.(),
                 pending: window.arguments?.[0]?.options || window._todolistPending || null
               }, '*');
             });
@@ -141,6 +148,10 @@ const ZoteroBridge = {
             this.runHostAction(msg, () => todolist.openPreferencesPane?.(mainWin || window));
             break;
           case 'TODOLIST_LOCATE_ITEM': {
+            if (todolist.locateLiteratureItem) {
+              this.runHostAction(msg, () => todolist.locateLiteratureItem(msg.key, msg.libraryID, mainWin));
+              break;
+            }
             const item = todolist.resolveItemReference?.(msg.key, msg.libraryID);
             if (item) {
               const pane = mainWin?.ZoteroPane || window.Zotero.getActiveZoteroPane?.();
@@ -149,8 +160,8 @@ const ZoteroBridge = {
             break;
           }
           case 'TODOLIST_OPEN_PDF': {
-            const item = todolist.resolveItemReference?.(msg.key, msg.libraryID);
-            if (item) this.runHostAction(msg, () => todolist.openPdfAttachment?.(item, msg.page));
+            this.runHostAction(msg, () => todolist.openTaskPdf({ zoteroPdfUri: msg.key, zoteroLibraryID: msg.libraryID,
+              zoteroPage: msg.page, zoteroAnnotationKey: msg.annotationKey }));
             break;
           }
           case 'TODOLIST_EXPORT_DATA':
@@ -277,8 +288,13 @@ const ZoteroBridge = {
         Modal.openAdd({
           title: `研读：${item.title}`,
           category: '论文研读',
+          dueDate: LiteratureWorkflow.dateAfter(LiteratureWorkflow.days(Storage._zoteroCache?.settings?.defaultDueDays)),
           tags: item.tags || [],
           zoteroItemKey: item.key,
+          zoteroLibraryID: item.libraryID,
+          zoteroItemID: item.id,
+          zoteroAutoTitle: true,
+          zoteroLinkStatus: 'active',
           zoteroItemTitle: item.title,
           zoteroAuthors: item.authors,
           zoteroYear: item.year,
@@ -309,6 +325,10 @@ const ZoteroBridge = {
       this.executeWhenReady(() => {
         Modal.openAdd(options.prefill);
       });
+    } else if (options.mode === 'edit_task' && options.taskId) {
+      this.executeWhenReady(() => {
+        Promise.resolve(Modal.openEdit(options.taskId)).catch(error => console.error('[Todolist] 编辑任务失败', error));
+      });
     } else if (options.mode === 'view_task' && options.taskId) {
       this.executeWhenReady(() => {
         const card = [...document.querySelectorAll('.task-card')].find(el => el.dataset.taskId === options.taskId);
@@ -325,8 +345,16 @@ const ZoteroBridge = {
     this.sendToHost({ type: 'TODOLIST_LOCATE_ITEM', key, libraryID });
   },
 
-  openPdf(key, libraryID, page = null) {
-    this.sendToHost({ type: 'TODOLIST_OPEN_PDF', key, libraryID, page });
+  setHostTheme(theme) {
+    if (!['light', 'dark'].includes(theme)) return;
+    this._hostTheme = theme;
+    Promise.resolve().then(() => {
+      if (typeof UI !== 'undefined' && UI.currentTheme === 'zotero') UI.applyTheme('zotero');
+    });
+  },
+
+  openPdf(key, libraryID, page = null, annotationKey = null) {
+    this.sendToHost({ type: 'TODOLIST_OPEN_PDF', key, libraryID, page, annotationKey });
   },
 
   openPreferences() {

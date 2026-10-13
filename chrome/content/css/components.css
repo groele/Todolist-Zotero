@@ -1754,6 +1754,28 @@
   gap: 8px;
 }
 
+.modal-lit-link {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.modal-lit-link:hover .modal-lit-title {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.modal-lit-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
 .modal-lit-info {
   flex: 1;
   min-width: 0;
@@ -1840,8 +1862,13 @@
 .modal-lit-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
+
+.zotero-link-warning { color: var(--warning, #b45309); font-size: 11px; }
+.subtask-header-row { gap: 8px; flex-wrap: wrap; }
+#task-reading-profile { max-width: 150px; padding: 3px 6px; font: inherit; font-size: 11px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; }
 
 .btn-lit-action {
   font-size: 11px;

@@ -79,13 +79,8 @@ const Modal = {
     // 5-step milestone injector button
     document.getElementById('btn-inject-milestones')?.addEventListener('click', (e) => {
       e.preventDefault();
-      const milestones = [
-        '1. 快速通读 Abstract、Introduction 与 Conclusion',
-        '2. 深度梳理核心算法架构、数学公式与创新点',
-        '3. 仔细评估 Baseline 对比与 Ablation 消融实验',
-        '4. 查阅开源代码并跑通最小测试 Demo',
-        '5. 提炼批判性思考、局限性并整理学术笔记'
-      ];
+      const profile = document.getElementById('task-reading-profile')?.value || 'general';
+      const milestones = LiteratureWorkflow.steps(profile, () => Utils.generateId()).map(step => step.title);
       let added = 0;
       milestones.forEach(title => {
         if (!this.currentSubtasks.some(st => st.title === title)) {
@@ -319,7 +314,9 @@ const Modal = {
     }
 
     this.form.reset();
+    this.setReadingProfile(prefill?.readingProfile);
     this.currentTaskId = null;
+    this._originalTask = null;
     this._editSnapshot = null;
     this._creationState = { completed: Boolean(prefill?.completed), status: prefill?.status || 'todo' };
     document.getElementById('btn-delete-task')?.classList.add('hidden');
@@ -332,6 +329,13 @@ const Modal = {
 
     this.currentZoteroLiterature = prefill?.zoteroItemKey ? {
       key: prefill.zoteroItemKey,
+      itemID: prefill.zoteroItemID,
+      attachmentKey: prefill.zoteroAttachmentKey,
+      annotationKey: prefill.zoteroAnnotationKey,
+      linkStatus: prefill.zoteroLinkStatus,
+      autoTitle: prefill.zoteroAutoTitle,
+      initialTitle: prefill.title,
+      workflowId: prefill.literatureWorkflowId,
       title: prefill.zoteroItemTitle,
       authors: prefill.zoteroAuthors,
       year: prefill.zoteroYear,
@@ -400,6 +404,7 @@ const Modal = {
 
     const task = await Storage.getTaskById(taskId);
     if (!task) return;
+    this.setReadingProfile(task.readingProfile);
 
     this.currentTaskId = taskId;
     this._creationState = null;
@@ -417,6 +422,13 @@ const Modal = {
 
     this.currentZoteroLiterature = task.zoteroItemKey ? {
       key: task.zoteroItemKey,
+      itemID: task.zoteroItemID,
+      attachmentKey: task.zoteroAttachmentKey,
+      annotationKey: task.zoteroAnnotationKey,
+      linkStatus: task.zoteroLinkStatus,
+      autoTitle: task.zoteroAutoTitle,
+      initialTitle: task.title,
+      workflowId: task.literatureWorkflowId,
       title: task.zoteroItemTitle,
       authors: task.zoteroAuthors,
       year: task.zoteroYear,
@@ -593,10 +605,10 @@ const Modal = {
       section.innerHTML = `
         <div class="modal-lit-card zotero-native-card">
           <div class="modal-lit-header">
-            <div class="modal-lit-title-row">
+            <button type="button" id="btn-modal-literature-link" class="modal-lit-title-row modal-lit-link" title="在 Zotero 中跳转到对应文献条目" aria-label="跳转到 Zotero 文献：${Utils.escapeHtml(lit.title)}">
               <span class="modal-lit-badge">📄 ZOTERO 文献</span>
               <span class="modal-lit-title" title="${Utils.escapeHtml(lit.title)}">${Utils.escapeHtml(lit.title)}</span>
-            </div>
+            </button>
             <button type="button" id="btn-modal-unlink-lit" class="btn-lit-unlink" title="解除文献关联">×</button>
           </div>
           <div class="modal-lit-meta">
@@ -613,7 +625,7 @@ const Modal = {
             </div>
             <div class="modal-lit-actions">
               ${lit.pdfUri ? `<button type="button" id="btn-modal-open-pdf" class="btn-lit-action pdf">📖 打开 PDF 伴读</button>` : ''}
-              <button type="button" id="btn-modal-locate-item" class="btn-lit-action locate">🔍 在文库中定位</button>
+              <button type="button" id="btn-modal-locate-item" class="btn-lit-action locate">↗ 跳转文献条目</button>
             </div>
           </div>
 
@@ -643,15 +655,17 @@ const Modal = {
 
       section.querySelector('#btn-modal-open-pdf')?.addEventListener('click', () => {
         if (typeof ZoteroBridge !== 'undefined') {
-          ZoteroBridge.openPdf(lit.zoteroUri || lit.key, lit.libraryID, lit.page);
+          ZoteroBridge.openPdf(lit.pdfUri || lit.zoteroUri || lit.key, lit.libraryID, lit.page, lit.annotationKey);
         }
       });
 
-      section.querySelector('#btn-modal-locate-item')?.addEventListener('click', () => {
+      const locateLiterature = () => {
         if (typeof ZoteroBridge !== 'undefined') {
           ZoteroBridge.locateItem(lit.zoteroUri || lit.key, lit.libraryID);
         }
-      });
+      };
+      section.querySelector('#btn-modal-literature-link')?.addEventListener('click', locateLiterature);
+      section.querySelector('#btn-modal-locate-item')?.addEventListener('click', locateLiterature);
 
       section.querySelector('#btn-modal-unlink-lit')?.addEventListener('click', () => {
         this.currentZoteroLiterature = null;
@@ -695,6 +709,18 @@ const Modal = {
     }
   },
 
+  setReadingProfile(profileID = null) {
+    const select = document.getElementById('task-reading-profile');
+    if (!select) return;
+    select.replaceChildren();
+    for (const [id, profile] of Object.entries(LiteratureWorkflow.profiles)) {
+      const option = document.createElement('option'); option.value = id; option.textContent = profile.label;
+      select.appendChild(option);
+    }
+    const preferred = profileID || Storage._zoteroCache?.settings?.readingProfile || 'general';
+    select.value = Object.hasOwn(LiteratureWorkflow.profiles, preferred) ? preferred : 'general';
+  },
+
   // Handle form submission
   getFormData() {
     const repeatSelect = document.getElementById('task-repeat');
@@ -716,6 +742,13 @@ const Modal = {
         notified: false
       },
       zoteroItemKey: this.currentZoteroLiterature?.key || null,
+      zoteroItemID: this.currentZoteroLiterature?.itemID || null,
+      zoteroAttachmentKey: this.currentZoteroLiterature?.attachmentKey || null,
+      zoteroAnnotationKey: this.currentZoteroLiterature?.annotationKey || null,
+      zoteroLinkStatus: this.currentZoteroLiterature?.linkStatus || null,
+      zoteroAutoTitle: Boolean(this.currentZoteroLiterature?.autoTitle) && this.currentZoteroLiterature.initialTitle === document.getElementById('task-title').value.trim(),
+      literatureWorkflowId: this.currentZoteroLiterature?.workflowId || null,
+      readingProfile: document.getElementById('task-reading-profile')?.value || null,
       zoteroItemTitle: this.currentZoteroLiterature?.title || null,
       zoteroAuthors: this.currentZoteroLiterature?.authors || null,
       zoteroYear: this.currentZoteroLiterature?.year || null,

@@ -3,25 +3,7 @@
 const Templates = {
   // Built-in templates
   builtinTemplates: [
-    {
-      id: 'paper-reading-milestones',
-      name: '📖 论文精读与复现清单',
-      icon: '📖',
-      task: {
-        title: '[精读] 论文研读与复现',
-        description: '深度剖析文献创新点、关键推导、对比实验与开源代码复现',
-        priority: 'high',
-        category: '论文研读',
-        academicType: 'literature_reading',
-        subtasks: [
-          { title: '1. 快速通读 Abstract、Intro 与 Conclusion' },
-          { title: '2. 深入理解核心方法论与数学模型推导' },
-          { title: '3. 仔细评估 Baseline 对比与 Ablation 消融结果' },
-          { title: '4. 查阅开源代码并跑通最小测试 Demo' },
-          { title: '5. 提炼创新亮点与局限性，整理研读笔记' }
-        ]
-      }
-    },
+    ...LiteratureWorkflow.templates(),
     {
       id: 'paper-writing-pipeline',
       name: '✍️ 论文写作与修改规划',
@@ -285,6 +267,8 @@ const Templates = {
     // Open modal with prefilled data
     Modal.openAdd({
       ...template.task,
+      dueDate: template.task?.dueDate || (template.task?.academicType === 'literature_reading'
+        ? LiteratureWorkflow.dateAfter(LiteratureWorkflow.days(Storage._zoteroCache?.settings?.defaultDueDays)) : null),
       subtasks: (template.task?.subtasks || []).map(st => ({
         id: Utils.generateId(),
         title: st.title,
