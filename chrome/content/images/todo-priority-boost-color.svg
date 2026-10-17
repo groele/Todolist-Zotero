@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
+  <defs>
+    <linearGradient id="boost-top" x1="32" y1="56" x2="96" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F43F5E" />
+      <stop offset="100%" stop-color="#FB923C" />
+    </linearGradient>
+    <linearGradient id="boost-mid" x1="44" y1="84" x2="84" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#3B82F6" />
+    </linearGradient>
+  </defs>
+  <!-- 双重破界上升箭头 -->
+  <path d="M 30 58 L 64 24 L 98 58" stroke="url(#boost-top)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M 42 86 L 64 64 L 86 86" stroke="url(#boost-mid)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+  <!-- 底部待办基座流线 -->
+  <rect x="24" y="102" width="80" height="12" rx="6" fill="#64748B" opacity="0.35" />
+</svg>

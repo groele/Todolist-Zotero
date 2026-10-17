@@ -11,12 +11,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_ROOTS = ("chrome", "locale")
-PACKAGE_FILES = ("bootstrap.js", "chrome.manifest", "manifest.json", "prefs.js")
+PACKAGE_FILES = ("bootstrap.js", "chrome.manifest", "manifest.json", "prefs.js", "icon.png", "icon@2x.png")
 REQUIRED_FILES = (
     "bootstrap.js",
     "chrome.manifest",
     "manifest.json",
     "prefs.js",
+    "icon.png",
+    "icon@2x.png",
     "chrome/content/scripts/index.js",
     "chrome/content/js/taskRules.js",
     "chrome/content/js/literatureWorkflow.js",

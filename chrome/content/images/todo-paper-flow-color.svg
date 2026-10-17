@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
+  <defs>
+    <linearGradient id="page-arc" x1="20" y1="16" x2="104" y2="72" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#38BDF8" />
+    </linearGradient>
+    <linearGradient id="check-flow" x1="48" y1="92" x2="116" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+  </defs>
+  <!-- 开放式双层书页流（无封闭底边与左边） -->
+  <path d="M 24 20 H 76 L 104 48 V 68" stroke="url(#page-arc)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M 72 20 V 48 H 104" stroke="#38BDF8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.65" />
+  <!-- 文献内容胶囊流 -->
+  <rect x="16" y="46" width="44" height="12" rx="6" fill="#3B82F6" />
+  <rect x="16" y="72" width="30" height="12" rx="6" fill="#0EA5E9" />
+  <!-- 破界完成勾 -->
+  <path d="M 52 92 L 74 112 L 116 66" stroke="url(#check-flow)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

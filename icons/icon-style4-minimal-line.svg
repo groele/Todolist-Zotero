@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient: Ultra-clean Dark Titanium -->
+    <linearGradient id="bgGrad4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181B" />
+      <stop offset="100%" stop-color="#09090B" />
+    </linearGradient>
+
+    <!-- Golden Bookmark Gradient -->
+    <linearGradient id="goldRibbon4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+
+    <!-- Subtle Book Surface Glow -->
+    <radialGradient id="pageGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Container Squircle -->
+  <rect x="32" y="32" width="448" height="448" rx="108" fill="url(#bgGrad4)" />
+  <rect x="34" y="34" width="444" height="444" rx="106" fill="none" stroke="#27272A" stroke-width="2" />
+
+  <!-- Ambient Light -->
+  <circle cx="256" cy="256" r="180" fill="url(#pageGlow)" />
+
+  <!-- Hanging Bookmark Ribbon: Top Tab + Bottom Split Tail -->
+  <!-- Top protruding ribbon tab -->
+  <path d="M 244 136 H 268 V 164 H 244 Z" fill="url(#goldRibbon4)" />
+  <!-- Bottom hanging ribbon with chevron cut -->
+  <path d="M 244 340 H 268 V 408 L 256 394 L 244 408 Z" fill="url(#goldRibbon4)" />
+
+  <!-- Open Academic Book Spread (Vector Stroke Art) -->
+  <!-- Left Page Outline & Semi-transparent Fill -->
+  <path d="M 256 164 C 206 148 140 148 96 168 V 368 C 140 348 206 348 256 364 Z"
+        fill="rgba(255, 255, 255, 0.04)"
+        stroke="#F4F4F5"
+        stroke-width="20"
+        stroke-linecap="round"
+        stroke-linejoin="round" />
+
+  <!-- Right Page Outline & Semi-transparent Fill -->
+  <path d="M 256 164 C 306 148 372 148 416 168 V 368 C 372 348 306 348 256 364 Z"
+        fill="rgba(255, 255, 255, 0.04)"
+        stroke="#F4F4F5"
+        stroke-width="20"
+        stroke-linecap="round"
+        stroke-linejoin="round" />
+
+  <!-- Center Spine Seam -->
+  <line x1="256" y1="170" x2="256" y2="390" stroke="#F4F4F5" stroke-width="20" stroke-linecap="round" />
+
+  <!-- LEFT PAGE: Zotero Academic Monogram "Z" -->
+  <path d="M 144 206 H 208 L 144 294 H 208"
+        stroke="#EF4444"
+        stroke-width="20"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none" />
+  
+  <!-- Left Page Metadata Note Line -->
+  <line x1="144" y1="324" x2="196" y2="324" stroke="#71717A" stroke-width="12" stroke-linecap="round" />
+
+  <!-- RIGHT PAGE: Checklist Completion Items (Todolist) -->
+  <!-- Row 1: Checkmark 1 (Emerald) -->
+  <path d="M 296 214 L 312 230 L 338 200"
+        stroke="#10B981"
+        stroke-width="16"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none" />
+  <line x1="358" y1="214" x2="388" y2="214" stroke="#A1A1AA" stroke-width="12" stroke-linecap="round" />
+
+  <!-- Row 2: Checkmark 2 (Emerald) -->
+  <path d="M 296 266 L 312 282 L 338 252"
+        stroke="#10B981"
+        stroke-width="16"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none" />
+  <line x1="358" y1="266" x2="388" y2="266" stroke="#A1A1AA" stroke-width="12" stroke-linecap="round" />
+
+  <!-- Row 3: Pending Step (Dashed Circle) -->
+  <circle cx="316" cy="318" r="14" fill="none" stroke="#71717A" stroke-width="8" stroke-dasharray="8 6" />
+  <line x1="348" y1="318" x2="388" y2="318" stroke="#52525B" stroke-width="12" stroke-linecap="round" />
+</svg>

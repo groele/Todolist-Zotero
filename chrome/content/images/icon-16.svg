@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="16" height="16" fill="none">
+  <defs>
+    <!-- 顶部文献流渐变 -->
+    <linearGradient id="todo-bar-1" x1="16" y1="28" x2="88" y2="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#60A5FA" stop-opacity="0.85" />
+    </linearGradient>
+
+    <!-- 中部文献流渐变 -->
+    <linearGradient id="todo-bar-2" x1="16" y1="56" x2="72" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0284C7" />
+      <stop offset="100%" stop-color="#22D3EE" stop-opacity="0.9" />
+    </linearGradient>
+
+    <!-- 破界主对勾渐变 -->
+    <linearGradient id="unbounded-check" x1="20" y1="96" x2="114" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="45%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+
+    <!-- 悬浮焦点微光 -->
+    <linearGradient id="zotero-spark" x1="92" y1="14" x2="112" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F43F5E" />
+      <stop offset="100%" stop-color="#FB923C" />
+    </linearGradient>
+  </defs>
+
+  <g>
+    <!-- 第一层：待办文献条目 1（开放式胶囊流 + 悬浮状态点） -->
+    <circle cx="24" cy="30" r="7" fill="#3B82F6" />
+    <rect x="40" y="23" width="52" height="14" rx="7" fill="url(#todo-bar-1)" />
+
+    <!-- 第二层：待办文献条目 2（向内缩进，形成给对勾让位的负空间） -->
+    <circle cx="24" cy="58" r="7" fill="#0EA5E9" />
+    <rect x="40" y="51" width="34" height="14" rx="7" fill="url(#todo-bar-2)" />
+
+    <!-- 第三层：破界而出的动态对勾 -->
+    <path d="M 22 86 
+             L 46 108 
+             C 50 111.5, 56 111, 59.5 106.5 
+             L 112 38" 
+          stroke="url(#unbounded-check)" 
+          stroke-width="16" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+
+    <!-- 破界星芒/高优标记 -->
+    <path d="M 102 12 C 102 19, 105 22, 112 22 C 105 22, 102 25, 102 32 C 102 25, 99 22, 92 22 C 99 22, 102 19, 102 12 Z" 
+          fill="url(#zotero-spark)" />
+  </g>
+</svg>

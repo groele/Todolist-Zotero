@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient: Slate Indigo to Deep Obsidian -->
+    <linearGradient id="bgGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" />
+      <stop offset="50%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Metallic Clamp Gradient -->
+    <linearGradient id="metalClamp" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#94A3B8" />
+      <stop offset="25%" stop-color="#E2E8F0" />
+      <stop offset="50%" stop-color="#FFFFFF" />
+      <stop offset="75%" stop-color="#CBD5E1" />
+      <stop offset="100%" stop-color="#64748B" />
+    </linearGradient>
+
+    <!-- Board Gradient -->
+    <linearGradient id="boardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="100%" stop-color="#1E293B" />
+    </linearGradient>
+
+    <!-- Progress Green Gradient -->
+    <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#34D399" />
+    </linearGradient>
+
+    <!-- Shadow filters -->
+    <filter id="boardShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+
+    <filter id="paperShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0F172A" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Container Squircle -->
+  <rect x="32" y="32" width="448" height="448" rx="108" fill="url(#bgGrad3)" />
+  <rect x="34" y="34" width="444" height="444" rx="106" fill="none" stroke="rgba(255, 255, 255, 0.12)" stroke-width="2" />
+
+  <!-- Clipboard Main Backboard -->
+  <g filter="url(#boardShadow)">
+    <rect x="94" y="74" width="324" height="384" rx="26" fill="url(#boardGrad)" stroke="#475569" stroke-width="2" />
+
+    <!-- Zotero Red Bookmark Ribbon peeking from top-right -->
+    <path d="M 346 74 L 378 74 L 378 152 L 362 138 L 346 152 Z" fill="#DC2626" />
+    <path d="M 346 74 L 378 74 L 378 80 L 346 80 Z" fill="#991B1B" />
+
+    <!-- Literature Paper Stack (Foreground) -->
+    <g filter="url(#paperShadow)">
+      <rect x="118" y="112" width="276" height="326" rx="16" fill="#FFFFFF" />
+
+      <!-- Folded Paper Top-Right Corner -->
+      <path d="M 364 112 L 394 142 L 364 142 Z" fill="#E2E8F0" />
+      <path d="M 364 112 L 394 142 L 364 112 Z" fill="none" stroke="#CBD5E1" stroke-width="1" />
+
+      <!-- Paper Header: Mini PDF tag + Document Title Line -->
+      <rect x="144" y="142" width="36" height="20" rx="5" fill="#EF4444" />
+      <text x="162" y="156" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">PDF</text>
+      <rect x="188" y="144" width="132" height="12" rx="6" fill="#0F172A" />
+      <rect x="188" y="162" width="80" height="7" rx="3.5" fill="#94A3B8" />
+
+      <!-- Divider Line -->
+      <line x1="144" y1="184" x2="368" y2="184" stroke="#F1F5F9" stroke-width="2" stroke-linecap="round" />
+
+      <!-- Task 1: Complete Item (Milestone finished) -->
+      <rect x="144" y="202" width="26" height="26" rx="7" fill="#10B981" />
+      <path d="M 150 215 L 155 220 L 164 210" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      <rect x="180" y="210" width="136" height="10" rx="5" fill="#94A3B8" />
+      <line x1="176" y1="215" x2="322" y2="215" stroke="#10B981" stroke-width="2" stroke-linecap="round" />
+
+      <!-- Task 2: Active Reading Item with Page Anchor [P.24] -->
+      <rect x="144" y="246" width="26" height="26" rx="7" fill="#EFF6FF" stroke="#3B82F6" stroke-width="2" />
+      <circle cx="157" cy="259" r="4.5" fill="#3B82F6" />
+      <rect x="180" y="254" width="80" height="10" rx="5" fill="#1E293B" />
+      <!-- Page Anchor Badge -->
+      <rect x="268" y="249" width="60" height="20" rx="10" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5" />
+      <text x="298" y="263" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="800" fill="#B45309" text-anchor="middle">📖 P.24</text>
+
+      <!-- Task 3: Pending Reading Step -->
+      <rect x="144" y="290" width="26" height="26" rx="7" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="3 3" />
+      <rect x="180" y="298" width="118" height="10" rx="5" fill="#CBD5E1" />
+
+      <!-- Bottom Progress Section -->
+      <line x1="144" y1="334" x2="368" y2="334" stroke="#F1F5F9" stroke-width="2" stroke-linecap="round" />
+      <text x="144" y="352" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="700" fill="#64748B">精读进度</text>
+      <text x="368" y="352" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="800" fill="#10B981" text-anchor="end">68%</text>
+      
+      <!-- Progress Bar Track & Bar -->
+      <rect x="144" y="362" width="224" height="10" rx="5" fill="#F1F5F9" />
+      <rect x="144" y="362" width="152" height="10" rx="5" fill="url(#progressGrad)" />
+    </g>
+
+    <!-- Metallic Clamp at the very top (holds the papers onto the board) -->
+    <rect x="194" y="56" width="124" height="44" rx="10" fill="url(#metalClamp)" stroke="#475569" stroke-width="2" />
+    <!-- Clamp Inner Grip Hole -->
+    <rect x="232" y="66" width="48" height="14" rx="7" fill="#1E293B" />
+    <circle cx="214" cy="78" r="4" fill="#64748B" />
+    <circle cx="298" cy="78" r="4" fill="#64748B" />
+  </g>
+</svg>

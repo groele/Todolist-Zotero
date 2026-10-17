@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient: Official Zotero Scarlet to Rich Wine -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E11D48" />
+      <stop offset="50%" stop-color="#CC292B" />
+      <stop offset="100%" stop-color="#881337" />
+    </linearGradient>
+
+    <!-- Golden Bookmark Ribbon -->
+    <linearGradient id="ribbonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+
+    <!-- Emerald Check Badge Gradient -->
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+
+    <!-- Soft Drop Shadows -->
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#4C0519" flood-opacity="0.4" />
+    </filter>
+
+    <filter id="badgeShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#064E3B" flood-opacity="0.38" />
+    </filter>
+
+    <filter id="innerGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#FFFFFF" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Container Squircle -->
+  <rect x="32" y="32" width="448" height="448" rx="104" fill="url(#bgGrad)" />
+  <rect x="34" y="34" width="444" height="444" rx="102" fill="none" stroke="rgba(255, 255, 255, 0.22)" stroke-width="4" />
+
+  <!-- Background Decorative Paper Sheet (Layer 1 - Depth) -->
+  <rect x="146" y="86" width="260" height="326" rx="22" fill="#FFFFFF" opacity="0.28" transform="rotate(7 276 249)" />
+
+  <!-- Background Decorative Paper Sheet (Layer 2 - Subtitle) -->
+  <rect x="120" y="96" width="268" height="326" rx="22" fill="#FFFFFF" opacity="0.6" transform="rotate(3 254 259)" />
+
+  <!-- Foreground Main Literature Document -->
+  <g filter="url(#cardShadow)">
+    <rect x="96" y="106" width="280" height="320" rx="24" fill="#FFFFFF" />
+
+    <!-- Bookmark Ribbon Hanging Over Document -->
+    <path d="M 278 78 L 322 78 L 322 152 L 300 138 L 278 152 Z" fill="url(#ribbonGrad)" filter="url(#innerGlow)" />
+
+    <!-- Top Academic Bar: Zotero Emblem Box & Title Placeholder -->
+    <!-- Zotero Red Monogram Badge -->
+    <rect x="130" y="142" width="46" height="46" rx="12" fill="#CC292B" />
+    <path d="M 143 154 H 163 L 143 176 H 163" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+    <!-- Document Header Meta Lines -->
+    <rect x="188" y="150" width="136" height="12" rx="6" fill="#1E293B" />
+    <rect x="188" y="170" width="84" height="9" rx="4.5" fill="#94A3B8" />
+
+    <!-- Divider Line -->
+    <line x1="130" y1="206" x2="336" y2="206" stroke="#F1F5F9" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- Task Row 1: Completed Literature Task (Green Check) -->
+    <circle cx="153" cy="242" r="17" fill="#10B981" />
+    <path d="M 146 242 L 151 247 L 161 236" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    <rect x="184" y="236" width="138" height="12" rx="6" fill="#64748B" opacity="0.75" />
+    <line x1="180" y1="242" x2="326" y2="242" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- Task Row 2: In-Progress Literature Task (Reading Badge P.36) -->
+    <circle cx="153" cy="296" r="17" fill="#EFF6FF" stroke="#3B82F6" stroke-width="3" />
+    <circle cx="153" cy="296" r="6" fill="#3B82F6" />
+    <rect x="184" y="290" width="76" height="12" rx="6" fill="#1E293B" />
+    <!-- Page Anchor Pill [P.36] -->
+    <rect x="268" y="286" width="58" height="20" rx="10" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1.5" />
+    <text x="297" y="300" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="700" fill="#4F46E5" text-anchor="middle">P.36</text>
+
+    <!-- Task Row 3: Pending Task Item -->
+    <circle cx="153" cy="350" r="16" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2.5" stroke-dasharray="4 3" />
+    <rect x="184" y="344" width="116" height="12" rx="6" fill="#CBD5E1" />
+  </g>
+
+  <!-- Big Floating Completion Badge (Bottom-Right Overlap) -->
+  <g filter="url(#badgeShadow)">
+    <circle cx="366" cy="366" r="56" fill="url(#emeraldGrad)" />
+    <circle cx="366" cy="366" r="50" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" />
+    <path d="M 346 366 L 360 380 L 388 350" stroke="#FFFFFF" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  </g>
+</svg>

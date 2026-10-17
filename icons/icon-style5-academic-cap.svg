@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient: Royal Academic Indigo to Deep Midnight -->
+    <linearGradient id="bgGrad5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4338CA" />
+      <stop offset="50%" stop-color="#312E81" />
+      <stop offset="100%" stop-color="#1E1B4B" />
+    </linearGradient>
+
+    <!-- Golden Tassel & Bookmark Gradient -->
+    <linearGradient id="goldTassel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047" />
+      <stop offset="40%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+
+    <!-- Emerald Achievement Badge -->
+    <linearGradient id="badgeGrad5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+
+    <!-- Crimson Book Cover -->
+    <linearGradient id="crimsonBook" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444" />
+      <stop offset="100%" stop-color="#B91C1C" />
+    </linearGradient>
+
+    <!-- Shadows -->
+    <filter id="capShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#020617" flood-opacity="0.5" />
+    </filter>
+
+    <filter id="badgeShadow5" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#064E3B" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <!-- Container Squircle -->
+  <rect x="32" y="32" width="448" height="448" rx="108" fill="url(#bgGrad5)" />
+  <rect x="34" y="34" width="444" height="444" rx="106" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="2.5" />
+
+  <!-- Background Ambient Rays / Glow -->
+  <circle cx="256" cy="220" r="160" fill="#6366F1" opacity="0.25" filter="url(#capShadow)" />
+
+  <!-- Academic Hardcover Books Stack at Base -->
+  <g filter="url(#capShadow)">
+    <!-- Bottom Book (Slate Teal) -->
+    <rect x="110" y="340" width="292" height="46" rx="10" fill="#0F766E" />
+    <!-- Page Edge (Ivory) -->
+    <rect x="134" y="348" width="260" height="30" rx="4" fill="#FEF3C7" opacity="0.9" />
+    <line x1="140" y1="358" x2="388" y2="358" stroke="#D97706" stroke-width="1.5" opacity="0.4" />
+    <line x1="140" y1="368" x2="388" y2="368" stroke="#D97706" stroke-width="1.5" opacity="0.4" />
+
+    <!-- Top Book (Zotero Crimson) -->
+    <rect x="126" y="280" width="260" height="48" rx="10" fill="url(#crimsonBook)" />
+    <!-- Page Edge (Ivory) -->
+    <rect x="148" y="288" width="232" height="32" rx="4" fill="#FFFBEB" />
+    <line x1="154" y1="298" x2="374" y2="298" stroke="#E2E8F0" stroke-width="1.5" />
+    <line x1="154" y1="308" x2="374" y2="308" stroke="#E2E8F0" stroke-width="1.5" />
+
+    <!-- Bookmark Ribbon protruding from top book -->
+    <path d="M 346 328 L 368 328 L 368 376 L 357 366 L 346 376 Z" fill="url(#goldTassel)" />
+  </g>
+
+  <!-- Academic Mortarboard Cap (学士帽) -->
+  <g filter="url(#capShadow)">
+    <!-- Skull Cap Base Underneath Diamond -->
+    <path d="M 194 198 V 232 C 194 256 318 256 318 232 V 198 Z" fill="#090D16" />
+    <path d="M 200 230 C 220 248 292 248 312 230" fill="none" stroke="#334155" stroke-width="3" />
+
+    <!-- Diamond Mortarboard Top -->
+    <!-- Top Rhombus Face -->
+    <polygon points="256,118 392,164 256,210 120,164" fill="#0F172A" />
+    <!-- Edge Bevel giving 3D thickness -->
+    <polygon points="120,164 256,210 256,218 120,172" fill="#020617" />
+    <polygon points="256,210 392,164 392,172 256,218" fill="#1E293B" />
+    <polygon points="256,120 390,164 256,208 122,164" fill="none" stroke="rgba(255, 255, 255, 0.15)" stroke-width="2" />
+
+    <!-- Center Button on Mortarboard -->
+    <ellipse cx="256" cy="164" rx="10" ry="6" fill="#F59E0B" />
+
+    <!-- Golden Tassel & Fringe flowing to right -->
+    <!-- Tassel Cord -->
+    <path d="M 256 164 Q 352 176 374 218 L 378 266" fill="none" stroke="url(#goldTassel)" stroke-width="4.5" stroke-linecap="round" />
+    <!-- Tassel Ring & Brush -->
+    <circle cx="378" cy="270" r="5" fill="#D97706" />
+    <polygon points="372,274 384,274 388,312 368,312" fill="url(#goldTassel)" />
+  </g>
+
+  <!-- Front Academic Milestone Checkmark Badge -->
+  <g filter="url(#badgeShadow5)">
+    <circle cx="256" cy="386" r="48" fill="url(#badgeGrad5)" />
+    <circle cx="256" cy="386" r="43" fill="none" stroke="rgba(255, 255, 255, 0.4)" stroke-width="2.5" />
+    <!-- Crisp Checkmark -->
+    <path d="M 238 386 L 250 398 L 276 372" stroke="#FFFFFF" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  </g>
+
+  <!-- Sparkle Stars for Milestone Feeling -->
+  <g fill="#FDE047" opacity="0.85">
+    <!-- Star Left -->
+    <path d="M 104 220 L 107 228 L 115 231 L 107 234 L 104 242 L 101 234 L 93 231 L 101 228 Z" />
+    <!-- Star Right -->
+    <path d="M 408 116 L 410 122 L 416 124 L 410 126 L 408 132 L 406 126 L 400 124 L 406 122 Z" />
+  </g>
+</svg>
